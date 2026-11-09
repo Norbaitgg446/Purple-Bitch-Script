@@ -1780,4 +1780,24 @@ end
 
 ------------------------------------------------------------
 -- LOOP PRINCIPAL
----------------------------------------
+------------------------------------------------------------
+RunService.RenderStepped:Connect(function()
+	atualizarESP()
+	atualizarFly()
+	atualizarVFly()
+	atualizarSwim()
+end)
+
+-- Ao morrer/respawnar, desliga os voos
+player.CharacterAdded:Connect(function()
+	estado.fly = false
+	estado.vfly = false
+	estado.swim = false
+	pararFly()
+	pararVFly()
+	pararSwim()
+	pintarBotao(botaoSwim, "SWIM", false)
+	pintarBotao(botaoFly, "FLY", false)
+	pintarBotao(botaoVFly, "VFLY", false)
+	atualizarBotaoVertical()
+end)
