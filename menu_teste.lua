@@ -151,12 +151,18 @@ painel.ClipsDescendants = true
 painel.Parent = gui
 Instance.new("UICorner", painel).CornerRadius = UDim.new(0, 14)
 
--- FOTO DE FUNDO DO PAINEL
+-- FOTOS DE FUNDO DO PAINEL (até 4, troca a cada vez que abre o menu)
+local proximaFotoFundo -- chamada em alternarPainel; definida logo abaixo
 do
-	-- >>> COLE AQUI O LINK DIRETO DA FOTO (termina em .png ou .jpg) <<<
-	local LINK_FOTO = "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR9Iiv00phL--lhkgtq-jLsfL_zsUNZ7VCn4ztV62_rgi1_grgpy-1ZSTPW&s=10"
+	-- >>> COLE AQUI OS LINKS DIRETOS DAS FOTOS (terminam em .png ou .jpg) <<<
+	-- Deixe "" nas que não for usar. Pode usar de 1 a 4.
+	local LINKS_FOTOS = {
+		"https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR3fzheHWw3pkVYtTMu1lK00H1X86EpBXBfg1FsQWxCsqWsxw_YgGjt9MQ&s=10", -- foto 1
+		"https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTdsojKLsiKD8WGLWCtDIQ5OHQJaT_35CgmRYYBYCt6sZKTzGT181tVR6Y&s=10", -- foto 2
+		"https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRo72Vsot2aEMyHqbb1Nij43mYDpQUqGgGLHYvYOu84BD4Y-agSFZXu4U0&s=10", -- foto 3
+		"https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTjMDaLibyw_z3-75JPKtAxs7BIO66Fqutk0A_NLEZARoPFTCiNsN0-l5N7&s=10", -- foto 4
+	}
 	local TRANSPARENCIA_FOTO = 0.4 -- 0 = foto forte, 1 = invisível
-	local NOME_ARQUIVO_FOTO = "foto_fundo.png" -- arquivo criado pelo script na pasta workspace
 	local ID_FOTO_FUNDO = "rbxassetid://0" -- plano B (opcional): ID do Roblox
 
 	local fundo = Instance.new("ImageLabel")
@@ -167,22 +173,48 @@ do
 	fundo.ImageTransparency = TRANSPARENCIA_FOTO
 	fundo.ZIndex = 0 -- fica atrás de tudo
 	fundo.Image = ID_FOTO_FUNDO
-
-	-- Baixa a foto (só na primeira vez) e usa o arquivo; se algo falhar, usa o ID
-	local ok, imagem = pcall(function()
-		if LINK_FOTO ~= "" and not (isfile and isfile(NOME_ARQUIVO_FOTO)) then
-			writefile(NOME_ARQUIVO_FOTO, game:HttpGet(LINK_FOTO))
-		end
-		if getcustomasset and isfile and isfile(NOME_ARQUIVO_FOTO) then
-			return getcustomasset(NOME_ARQUIVO_FOTO)
-		end
-	end)
-	if ok and imagem then
-		fundo.Image = imagem
-	end
-
 	fundo.Parent = painel
 	Instance.new("UICorner", fundo).CornerRadius = UDim.new(0, 14)
+
+	local imagens = {} -- [número da foto] = imagem pronta para usar
+	local indice = 0 -- foto que está aparecendo agora
+
+	-- Baixa a foto (só se for nova ou mudou o link) e devolve a imagem pronta
+	local function prepararFoto(i, link)
+		local arquivo = "foto_fundo" .. i .. ".png"
+		local marca = "foto_fundo" .. i .. ".txt" -- guarda qual link gerou o arquivo
+		local atual = isfile(arquivo) and isfile(marca) and readfile(marca) == link
+		if not atual then
+			writefile(arquivo, game:HttpGet(link))
+			writefile(marca, link)
+		end
+		return getcustomasset(arquivo)
+	end
+
+	-- Baixa as fotos em segundo plano, sem travar o menu
+	task.spawn(function()
+		for i, link in ipairs(LINKS_FOTOS) do
+			if link ~= "" then
+				local ok, imagem = pcall(prepararFoto, i, link)
+				if ok and imagem then
+					imagens[i] = imagem
+				end
+			end
+		end
+	end)
+
+	-- Mostra a próxima foto da fila (pula as vazias) e volta pra 1 depois da última
+	proximaFotoFundo = function()
+		local total = #LINKS_FOTOS
+		for passo = 1, total do
+			local i = (indice + passo - 1) % total + 1
+			if imagens[i] then
+				indice = i
+				fundo.Image = imagens[i]
+				return
+			end
+		end
+	end
 end
 
 local titulo = Instance.new("TextLabel")
@@ -244,6 +276,30 @@ ligarArrasto(alcaResize,
 local COR_OFF = Color3.fromRGB(170, 50, 50)
 local COR_ON = Color3.fromRGB(50, 170, 80)
 
+-- ESTILO "BOLHA" (vidro transparente) dos botões do menu principal
+-- Mude aqui para ajustar: transparência maior = mais transparente
+local VIDRO = {
+	corOff = Color3.fromRGB(255, 255, 255), transpOff = 0.82, -- desligado: quase só o contorno
+	corOn = Color3.fromRGB(110, 235, 150), transpOn = 0.55, -- ligado: leve brilho verde
+	transpTexto = 0.15, -- texto um pouquinho apagado (0 = forte)
+	transpContorno = 0.45, -- contorno fininho
+}
+function VIDRO.aplicar(b, ligado)
+	b.BackgroundColor3 = ligado and VIDRO.corOn or VIDRO.corOff
+	b.BackgroundTransparency = ligado and VIDRO.transpOn or VIDRO.transpOff
+	b.TextColor3 = Color3.new(1, 1, 1)
+	b.TextTransparency = VIDRO.transpTexto
+	b.TextStrokeTransparency = 0.75 -- sombrinha no texto para continuar legível
+	local contorno = b:FindFirstChildOfClass("UIStroke")
+	if not contorno then
+		contorno = Instance.new("UIStroke")
+		contorno.Parent = b
+	end
+	contorno.Color = Color3.new(1, 1, 1)
+	contorno.Thickness = 1.2
+	contorno.Transparency = VIDRO.transpContorno
+end
+
 -- Grade de botões em 3 colunas (menu deitado). O "y" antigo (50, 100, ...) vira a posição na grade.
 local COLUNAS = 3
 local LARG_CEL = (1 - 0.04 - (COLUNAS - 1) * 0.02) / COLUNAS
@@ -259,9 +315,8 @@ local function criarLinha(y, nome, comVelocidade, velocidadePadrao)
 	b.Name = "Botao" .. nome
 	b.Position = UDim2.new(cx, 0, 0, cy)
 	b.Size = comVelocidade and UDim2.new(LARG_CEL * 0.62, 0, 0, 40) or UDim2.new(LARG_CEL, 0, 0, 40)
-	b.BackgroundColor3 = COR_OFF
 	b.Text = nome .. ": DESLIGADO"
-	b.TextColor3 = Color3.new(1, 1, 1)
+	VIDRO.aplicar(b, false)
 	b.Font = Enum.Font.GothamBold
 	b.TextSize = 15
 	b.TextScaled = true -- o texto encolhe se não couber
@@ -278,10 +333,9 @@ local function criarLinha(y, nome, comVelocidade, velocidadePadrao)
 		caixa.Name = "Velocidade" .. nome
 		caixa.Position = UDim2.new(cx + LARG_CEL * 0.66, 0, 0, cy)
 		caixa.Size = UDim2.new(LARG_CEL * 0.34, 0, 0, 40)
-		caixa.BackgroundColor3 = Color3.fromRGB(45, 45, 52)
+		VIDRO.aplicar(caixa, false)
 		caixa.Text = tostring(velocidadePadrao)
 		caixa.PlaceholderText = "vel."
-		caixa.TextColor3 = Color3.new(1, 1, 1)
 		caixa.PlaceholderColor3 = Color3.fromRGB(140, 140, 140)
 		caixa.Font = Enum.Font.GothamBold
 		caixa.TextSize = 15
@@ -299,18 +353,15 @@ local botaoVFly, caixaVFly = criarLinha(200, "VFLY", true, VELOCIDADE_VFLY_PADRA
 
 local botaoRejoin = criarLinha(250, "REJOIN", false)
 botaoRejoin.Text = "REJOIN (reentrar no server)"
-botaoRejoin.BackgroundColor3 = Color3.fromRGB(50, 110, 200)
 
 local botaoNoclip = criarLinha(300, "NOCLIP", false)
 local botaoSwim, caixaSwim = criarLinha(350, "SWIM", true, VELOCIDADE_SWIM_PADRAO)
 
 local botaoSpawns = criarLinha(400, "SPAWNS", false)
 botaoSpawns.Text = "SPAWNS (abrir lista)"
-botaoSpawns.BackgroundColor3 = Color3.fromRGB(50, 110, 200)
 
 local botaoTP = criarLinha(450, "TP", false)
 botaoTP.Text = "TP (ir até jogadores)"
-botaoTP.BackgroundColor3 = Color3.fromRGB(50, 110, 200)
 
 local botaoXray, caixaXray = criarLinha(500, "XRAY", true, 0.6)
 
@@ -370,7 +421,7 @@ end
 
 local function pintarBotao(b, nome, ligado)
 	b.Text = nome .. (ligado and ": LIGADO" or ": DESLIGADO")
-	b.BackgroundColor3 = ligado and COR_ON or COR_OFF
+	VIDRO.aplicar(b, ligado)
 end
 
 ------------------------------------------------------------
@@ -391,6 +442,7 @@ local aberto = false
 local function alternarPainel()
 	aberto = not aberto
 	if aberto then
+		pcall(proximaFotoFundo) -- troca a foto de fundo a cada abertura
 		painel.Visible = true
 		TweenService:Create(painel, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
 			Size = tamanhoPainel,
@@ -1719,24 +1771,4 @@ end
 
 ------------------------------------------------------------
 -- LOOP PRINCIPAL
-------------------------------------------------------------
-RunService.RenderStepped:Connect(function()
-	atualizarESP()
-	atualizarFly()
-	atualizarVFly()
-	atualizarSwim()
-end)
-
--- Ao morrer/respawnar, desliga os voos
-player.CharacterAdded:Connect(function()
-	estado.fly = false
-	estado.vfly = false
-	estado.swim = false
-	pararFly()
-	pararVFly()
-	pararSwim()
-	pintarBotao(botaoSwim, "SWIM", false)
-	pintarBotao(botaoFly, "FLY", false)
-	pintarBotao(botaoVFly, "VFLY", false)
-	atualizarBotaoVertical()
-end)
+---------------------------------------
