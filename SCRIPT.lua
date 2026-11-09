@@ -22,6 +22,12 @@ local TRANSPARENCIA_PREENCHIMENTO = 0.6 -- 1 = só o contorno, 0 = totalmente pr
 local VELOCIDADE_FLY_PADRAO = 10
 local MULTIPLICADOR_FLY = 10 -- cada ponto de velocidade do FLY vale isso em studs/s (aumente para ficar mais rápido)
 local POSE_HEROI = true -- true = personagem voa deitado, braço esticado (pose de herói); false = só voa
+local GANHO_INCLINACAO = 1 -- quanto o corpo acompanha a câmera ao olhar pra cima/baixo (1 = total: olhou pra baixo = deitado de barriga pra baixo; 0.5 = metade)
+local EFEITO_VELOCIDADE = true -- true = riscos de vento + tremida + FOV maior quando o FLY chega na velocidade máxima
+local EFEITO_VEL_MINIMA = 60 -- studs/s: abaixo disso o efeito nunca aparece (voo lento)
+local EFEITO_TREMIDA = 1 -- força da tremida da tela (0 = sem tremer)
+local EFEITO_FOV_EXTRA = 15 -- quanto o campo de visão abre na velocidade máxima (0 = não muda)
+local EFEITO_QTD_RISCOS = 18 -- quantidade de riscos brancos na tela
 local VELOCIDADE_VFLY_PADRAO = 80
 local VELOCIDADE_MIN, VELOCIDADE_MAX = 1, 500
 
@@ -303,21 +309,52 @@ function VIDRO.aplicar(b, ligado)
 	contorno.Transparency = VIDRO.transpContorno
 end
 
--- Grade de botões em 3 colunas (menu deitado). O "y" antigo (50, 100, ...) vira a posição na grade.
+-- LISTA ORGANIZADA: todos os botões do mesmo tamanho, em grade colada (3 colunas), em ordem por grupo.
+-- O 1º número de criarLinha é só a ordem na grade (menor = primeiro).
 local COLUNAS = 3
-local LARG_CEL = (1 - 0.04 - (COLUNAS - 1) * 0.02) / COLUNAS
-local function celula(y)
-	local i = (y - 50) / 50
-	return 0.02 + (i % COLUNAS) * (LARG_CEL + 0.02), 8 + math.floor(i / COLUNAS) * 50
-end
+local ALTURA_BOTAO = 36
+local ESPACO = 6
 
--- Cria uma célula do menu: botão liga/desliga (+ caixa de velocidade opcional)
-local function criarLinha(y, nome, comVelocidade, velocidadePadrao)
-	local cx, cy = celula(y)
+local lista = Instance.new("UIListLayout") -- empilha: grade de botões em cima, dicas embaixo
+lista.SortOrder = Enum.SortOrder.LayoutOrder
+lista.Padding = UDim.new(0, 8)
+lista.Parent = conteudo
+
+local margem = Instance.new("UIPadding")
+margem.PaddingTop = UDim.new(0, 6)
+margem.PaddingBottom = UDim.new(0, 40) -- espaço para a alça de redimensionar não cobrir o fim
+margem.PaddingLeft = UDim.new(0, ESPACO)
+margem.PaddingRight = UDim.new(0, ESPACO)
+margem.Parent = conteudo
+
+local grade = Instance.new("Frame")
+grade.Name = "Grade"
+grade.LayoutOrder = 1
+grade.Size = UDim2.new(1, 0, 0, 0)
+grade.AutomaticSize = Enum.AutomaticSize.Y
+grade.BackgroundTransparency = 1
+grade.Parent = conteudo
+
+local gradeLayout = Instance.new("UIGridLayout")
+gradeLayout.SortOrder = Enum.SortOrder.LayoutOrder
+gradeLayout.CellPadding = UDim2.fromOffset(ESPACO, ESPACO)
+gradeLayout.CellSize = UDim2.new(1 / COLUNAS, -ESPACO * (COLUNAS - 1) / COLUNAS - 0.5, 0, ALTURA_BOTAO)
+gradeLayout.FillDirection = Enum.FillDirection.Horizontal
+gradeLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
+gradeLayout.Parent = grade
+
+-- Cria uma célula: botão liga/desliga (+ caixa de velocidade opcional, colada no botão)
+local function criarLinha(ordem, nome, comVelocidade, velocidadePadrao)
+	local celulaFrame = Instance.new("Frame")
+	celulaFrame.Name = "Celula" .. nome
+	celulaFrame.LayoutOrder = ordem
+	celulaFrame.BackgroundTransparency = 1
+	celulaFrame.Parent = grade
+
 	local b = Instance.new("TextButton")
 	b.Name = "Botao" .. nome
-	b.Position = UDim2.new(cx, 0, 0, cy)
-	b.Size = comVelocidade and UDim2.new(LARG_CEL * 0.62, 0, 0, 40) or UDim2.new(LARG_CEL, 0, 0, 40)
+	b.Position = UDim2.new(0, 0, 0, 0)
+	b.Size = comVelocidade and UDim2.new(0.64, 0, 1, 0) or UDim2.new(1, 0, 1, 0)
 	b.Text = nome .. ": DESLIGADO"
 	VIDRO.aplicar(b, false)
 	b.Font = Enum.Font.GothamBold
@@ -327,15 +364,15 @@ local function criarLinha(y, nome, comVelocidade, velocidadePadrao)
 	limite.MaxTextSize = 15
 	limite.MinTextSize = 8
 	limite.Parent = b
-	b.Parent = conteudo
+	b.Parent = celulaFrame
 	Instance.new("UICorner", b).CornerRadius = UDim.new(0, 10)
 
 	local caixa = nil
 	if comVelocidade then
 		caixa = Instance.new("TextBox")
 		caixa.Name = "Velocidade" .. nome
-		caixa.Position = UDim2.new(cx + LARG_CEL * 0.66, 0, 0, cy)
-		caixa.Size = UDim2.new(LARG_CEL * 0.34, 0, 0, 40)
+		caixa.Position = UDim2.new(0.66, 0, 0, 0)
+		caixa.Size = UDim2.new(0.34, 0, 1, 0)
 		VIDRO.aplicar(caixa, false)
 		caixa.Text = tostring(velocidadePadrao)
 		caixa.PlaceholderText = "vel."
@@ -343,43 +380,46 @@ local function criarLinha(y, nome, comVelocidade, velocidadePadrao)
 		caixa.Font = Enum.Font.GothamBold
 		caixa.TextSize = 15
 		caixa.ClearTextOnFocus = false
-		caixa.Parent = conteudo
+		caixa.Parent = celulaFrame
 		Instance.new("UICorner", caixa).CornerRadius = UDim.new(0, 10)
 	end
 	return b, caixa
 end
 
-local botaoESP = criarLinha(50, "ESP", false)
-local botaoChams = criarLinha(100, "CHAMS", false)
-local botaoFly, caixaFly = criarLinha(150, "FLY", true, VELOCIDADE_FLY_PADRAO)
-local botaoVFly, caixaVFly = criarLinha(200, "VFLY", true, VELOCIDADE_VFLY_PADRAO)
+-- Grupo 1: voo e movimento
+local botaoFly, caixaFly = criarLinha(1, "FLY", true, VELOCIDADE_FLY_PADRAO)
+local botaoVFly, caixaVFly = criarLinha(2, "VFLY", true, VELOCIDADE_VFLY_PADRAO)
+local botaoSwim, caixaSwim = criarLinha(3, "SWIM", true, VELOCIDADE_SWIM_PADRAO)
+local botaoNoclip = criarLinha(4, "NOCLIP", false)
+local botaoShiftLock = criarLinha(5, "SHIFTLOCK", false)
+local botaoTPTool = criarLinha(6, "TPTOOL", false)
 
-local botaoRejoin = criarLinha(250, "REJOIN", false)
-botaoRejoin.Text = "REJOIN (reentrar no server)"
+-- Grupo 2: visão
+local botaoESP = criarLinha(7, "ESP", false)
+local botaoChams = criarLinha(8, "CHAMS", false)
+local botaoXray, caixaXray = criarLinha(9, "XRAY", true, 0.6)
 
-local botaoNoclip = criarLinha(300, "NOCLIP", false)
-local botaoSwim, caixaSwim = criarLinha(350, "SWIM", true, VELOCIDADE_SWIM_PADRAO)
+-- Grupo 3: teleporte e servidor
+local botaoTP = criarLinha(10, "TP", false)
+botaoTP.Text = "TP"
+local botaoSpawns = criarLinha(11, "SPAWNS", false)
+botaoSpawns.Text = "SPAWNS"
+local botaoRejoin = criarLinha(12, "REJOIN", false)
+botaoRejoin.Text = "REJOIN"
 
-local botaoSpawns = criarLinha(400, "SPAWNS", false)
-botaoSpawns.Text = "SPAWNS (abrir lista)"
-
-local botaoTP = criarLinha(450, "TP", false)
-botaoTP.Text = "TP (ir até jogadores)"
-
-local botaoXray, caixaXray = criarLinha(500, "XRAY", true, 0.6)
-
-local botaoTPTool = criarLinha(550, "TPTOOL", false)
-local botaoTeclado = criarLinha(600, "TECLADO", false)
-local botaoShiftLock = criarLinha(650, "SHIFTLOCK", false)
+-- Grupo 4: teclado de comandos (o AIMBOT fica entre o grupo 3 e este, ordens 13 a 16)
+local botaoTeclado = criarLinha(17, "TECLADO", false)
 
 local dica = Instance.new("TextLabel")
-dica.Position = UDim2.new(0.02, 0, 0, 266)
-dica.Size = UDim2.new(0.96, 0, 0, 0)
+dica.Name = "Dicas"
+dica.LayoutOrder = 2
+dica.Size = UDim2.new(1, 0, 0, 0)
 dica.AutomaticSize = Enum.AutomaticSize.Y
 dica.BackgroundTransparency = 1
 dica.TextWrapped = true
+dica.TextXAlignment = Enum.TextXAlignment.Left
 dica.TextYAlignment = Enum.TextYAlignment.Top
-dica.Text = "Mover: arraste o título do painel ou o botão MENU. Tamanho: arraste o ◢ do canto.\nFly: WASD/analógico para mover, mire a câmera para subir/descer.\nEspaço/E = subir, Shift/Q = descer.\nVFLY: use sentado em um veículo.\nNOCLIP: atravessa paredes (sem o Fly você cai pelo chão).\nSWIM: nada no ar como se estivesse na água.\nSPAWNS: salve posições, renomeie e volte a elas.\nTP: clique no nome de um jogador para ir até ele.\nXRAY: deixa o mapa transparente (caixa: 0 = normal, 0.95 = quase invisível).\nTPTOOL: dá um item no inventário; equipe e clique/toque onde quer ir.\nSHIFTLOCK: mostra o cadeado na tela (arraste para mover). Toque nele: azul = travado, branco = solto. Comando: sl / unsl.\nTECLADO: mostra o botão >_ no canto da tela; toque nele e digite comandos (ex.: fly 80, unfly, np, xy, rj). Digite cmds para ver todos."
+dica.Text = "Mover: arraste o título do painel ou o botão MENU. Tamanho: arraste o ◢ do canto.\nFly: WASD/analógico para mover, mire a câmera para subir/descer.\nEspaço/E = subir, Shift/Q = descer.\nVFLY: use sentado em um veículo.\nNOCLIP: atravessa paredes (sem o Fly você cai pelo chão).\nSWIM: nada no ar como se estivesse na água.\nSPAWNS: salve posições, renomeie e volte a elas.\nTP: clique no nome de um jogador para ir até ele.\nXRAY: deixa o mapa transparente (caixa: 0 = normal, 0.95 = quase invisível).\nTPTOOL: dá um item no inventário; equipe e clique/toque onde quer ir.\nSHIFTLOCK: mostra o cadeado na tela (arraste para mover). Toque nele: azul = travado, branco = solto. Comando: sl / unsl.\nAIMBOT: bolinha verde no centro = alcance (digite o tamanho na caixa). ALVO troca cabeça/tronco, PAREDE = mirar através de paredes, TIME = ignorar seu time. Comando: aim [tamanho] / unaim.\nTECLADO: mostra o botão >_ no canto da tela; toque nele e digite comandos (ex.: fly 80, unfly, np, xy, rj). Digite cmds para ver todos."
 dica.TextColor3 = Color3.fromRGB(170, 170, 180)
 dica.Font = Enum.Font.Gotham
 dica.TextSize = 12
@@ -742,7 +782,7 @@ local function aplicarPoseFly(char, hum, inclinacao)
 
 	-- cabeça olha para frente em vez de para o chão
 	if j.pescoco then
-		local ang = math.clamp(-inclinacao * 0.8, -R(70), R(70))
+		local ang = math.clamp(-inclinacao * 0.8, -R(80), R(80))
 		j.pescoco.Transform = CFrame.Angles(r15 and ang or -ang, 0, 0)
 	end
 end
@@ -774,11 +814,290 @@ local function iniciarFly(raiz, hum)
 	hum.PlatformStand = true
 end
 
+------------------------------------------------------------
+-- AIMBOT (bolinha verde = alcance; trava a câmera no alvo sem atraso)
+------------------------------------------------------------
+estado.aim = false
+local definirAimbot
+
+do
+	local aim = {
+		parte = "Head",       -- "Head" (cabeça) ou "Torso" (tronco)
+		ignorarParede = false, -- true = mira mesmo com parede no meio
+		ignorarTime = true,    -- true = não mira em quem é do seu time
+		tamanho = 150,         -- diâmetro da bolinha verde em pixels (= alcance)
+	}
+	local TAMANHO_MIN, TAMANHO_MAX = 40, 900
+
+	-- Botões (entram na grade do menu)
+	local botaoAim, caixaAim = criarLinha(13, "AIMBOT", true, aim.tamanho)
+	local botaoAlvo = criarLinha(14, "ALVO", false)
+	local botaoParede = criarLinha(15, "PAREDE", false)
+	local botaoTime = criarLinha(16, "TIME", false)
+
+	local function pintarOpcoes()
+		botaoAlvo.Text = "ALVO: " .. (aim.parte == "Head" and "CABEÇA" or "TRONCO")
+		VIDRO.aplicar(botaoAlvo, false)
+		botaoParede.Text = "PAREDE: " .. (aim.ignorarParede and "IGNORA" or "RESPEITA")
+		VIDRO.aplicar(botaoParede, aim.ignorarParede)
+		botaoTime.Text = "TIME: " .. (aim.ignorarTime and "IGNORA" or "MIRA")
+		VIDRO.aplicar(botaoTime, aim.ignorarTime)
+	end
+	pintarOpcoes()
+
+	-- Bolinha verde no centro da tela
+	local aimGui = Instance.new("ScreenGui")
+	aimGui.Name = "AimbotCirculo"
+	aimGui.ResetOnSpawn = false
+	aimGui.IgnoreGuiInset = true
+	aimGui.DisplayOrder = -1
+	aimGui.Parent = playerGui
+
+	local circulo = Instance.new("Frame")
+	circulo.AnchorPoint = Vector2.new(0.5, 0.5)
+	circulo.Position = UDim2.fromScale(0.5, 0.5)
+	circulo.Size = UDim2.fromOffset(aim.tamanho, aim.tamanho)
+	circulo.BackgroundColor3 = Color3.fromRGB(60, 255, 100)
+	circulo.BackgroundTransparency = 0.92
+	circulo.BorderSizePixel = 0
+	circulo.Active = false
+	circulo.Visible = false
+	circulo.Parent = aimGui
+	Instance.new("UICorner", circulo).CornerRadius = UDim.new(1, 0)
+	local contorno = Instance.new("UIStroke")
+	contorno.Color = Color3.fromRGB(60, 255, 100)
+	contorno.Thickness = 2
+	contorno.Parent = circulo
+
+	local function aplicarTamanho(n)
+		aim.tamanho = math.clamp(n, TAMANHO_MIN, TAMANHO_MAX)
+		caixaAim.Text = tostring(aim.tamanho)
+		circulo.Size = UDim2.fromOffset(aim.tamanho, aim.tamanho)
+	end
+
+	caixaAim.FocusLost:Connect(function()
+		local n = tonumber(caixaAim.Text)
+		aplicarTamanho(n or aim.tamanho)
+	end)
+
+	local alvoAtual -- jogador travado no momento
+	local raioParams = RaycastParams.new()
+	raioParams.FilterType = Enum.RaycastFilterType.Exclude
+
+	local function parteDoAlvo(char)
+		if aim.parte == "Head" then
+			return char:FindFirstChild("Head")
+		end
+		return char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso") or char:FindFirstChild("HumanoidRootPart")
+	end
+
+	-- Devolve (parte, distância ao centro) se o jogador pode ser mirado agora
+	local function podeMirar(p, cam, centro, raio)
+		if p == player then return end
+		local char = p.Character
+		local hum = char and char:FindFirstChildOfClass("Humanoid")
+		if not hum or hum.Health <= 0 then return end
+		if aim.ignorarTime and player.Team ~= nil and p.Team == player.Team then return end
+
+		local parte = parteDoAlvo(char)
+		if not parte then return end
+		local pos = cam:WorldToViewportPoint(parte.Position)
+		if pos.Z <= 0 then return end -- atrás da câmera
+		local dist = (Vector2.new(pos.X, pos.Y) - centro).Magnitude
+		if dist > raio then return end
+
+		if not aim.ignorarParede then
+			raioParams.FilterDescendantsInstances = { player.Character }
+			local origem = cam.CFrame.Position
+			local r = workspace:Raycast(origem, parte.Position - origem, raioParams)
+			if r and not r.Instance:IsDescendantOf(char) then return end
+		end
+		return parte, dist
+	end
+
+	-- Depois do script da câmera do Roblox: trava a câmera no alvo todo frame (sem delay)
+	RunService:BindToRenderStep("AimbotTravar", Enum.RenderPriority.Camera.Value + 2, function()
+		if not estado.aim then return end
+		local cam = workspace.CurrentCamera
+		if not cam then return end
+		local centro = cam.ViewportSize / 2
+		local raio = aim.tamanho / 2
+
+		-- mantém o alvo atual enquanto ele puder ser mirado
+		local parte
+		if alvoAtual then
+			parte = podeMirar(alvoAtual, cam, centro, raio)
+		end
+		-- senão, pega quem está mais perto do centro da bolinha
+		if not parte then
+			alvoAtual = nil
+			local melhor = math.huge
+			for _, p in ipairs(Players:GetPlayers()) do
+				local pt, dist = podeMirar(p, cam, centro, raio)
+				if pt and dist < melhor then
+					melhor, parte, alvoAtual = dist, pt, p
+				end
+			end
+		end
+
+		if parte then
+			cam.CFrame = CFrame.lookAt(cam.CFrame.Position, parte.Position)
+		end
+	end)
+
+	definirAimbot = function(v, tamanho)
+		if tamanho then aplicarTamanho(tamanho) end
+		estado.aim = v
+		alvoAtual = nil
+		circulo.Visible = v
+		pintarBotao(botaoAim, "AIMBOT", v)
+	end
+
+	botaoAim.MouseButton1Click:Connect(function() definirAimbot(not estado.aim) end)
+	botaoAlvo.MouseButton1Click:Connect(function()
+		aim.parte = (aim.parte == "Head") and "Torso" or "Head"
+		alvoAtual = nil
+		pintarOpcoes()
+	end)
+	botaoParede.MouseButton1Click:Connect(function()
+		aim.ignorarParede = not aim.ignorarParede
+		pintarOpcoes()
+	end)
+	botaoTime.MouseButton1Click:Connect(function()
+		aim.ignorarTime = not aim.ignorarTime
+		alvoAtual = nil
+		pintarOpcoes()
+	end)
+end
+
+------------------------------------------------------------
+-- EFEITO DE VELOCIDADE (riscos de vento + tremida + flash), estilo "Flash"
+------------------------------------------------------------
+local efeitoIntens = 0 -- 0 = nada, 1 = velocidade máxima
+local efeitoFlashFeito = false
+local efeitoFovBase
+local efeitoLinhas = {}
+local efeitoFlash
+
+do
+	local efeitoGui = Instance.new("ScreenGui")
+	efeitoGui.Name = "EfeitoVelocidade"
+	efeitoGui.ResetOnSpawn = false
+	efeitoGui.IgnoreGuiInset = true
+	efeitoGui.DisplayOrder = -1 -- fica atrás do menu
+	efeitoGui.Parent = playerGui
+
+	efeitoFlash = Instance.new("Frame")
+	efeitoFlash.Size = UDim2.fromScale(1, 1)
+	efeitoFlash.BackgroundColor3 = Color3.new(1, 1, 1)
+	efeitoFlash.BackgroundTransparency = 1
+	efeitoFlash.BorderSizePixel = 0
+	efeitoFlash.Active = false
+	efeitoFlash.Parent = efeitoGui
+
+	local function reiniciarLinha(l, inicio)
+		l.ang = math.random() * math.pi * 2
+		l.raio = inicio and (0.2 + math.random() * 0.9) or (0.2 + math.random() * 0.15)
+		l.vel = 1.6 + math.random() * 1.4
+		l.comp = 0.10 + math.random() * 0.15
+		l.grossura = math.random(1, 3)
+	end
+
+	for i = 1, EFEITO_QTD_RISCOS do
+		local f = Instance.new("Frame")
+		f.AnchorPoint = Vector2.new(0.5, 0.5)
+		f.BackgroundColor3 = Color3.new(1, 1, 1)
+		f.BackgroundTransparency = 1
+		f.BorderSizePixel = 0
+		f.Active = false
+		f.Parent = efeitoGui
+		local l = { frame = f }
+		reiniciarLinha(l, true)
+		efeitoLinhas[i] = l
+	end
+
+	local ultimoEfeito
+	RunService.RenderStepped:Connect(function()
+		local agora = os.clock()
+		local dt = math.min(agora - (ultimoEfeito or agora), 0.1)
+		ultimoEfeito = agora
+
+		-- alvo: 0 se não está voando ou está devagar; sobe de 0 a 1 perto da velocidade máxima
+		local alvo = 0
+		if EFEITO_VELOCIDADE and estado.fly and flyBV then
+			local vel = flyBV.Velocity.Magnitude
+			local maxima = velocidadeFly * MULTIPLICADOR_FLY
+			if vel >= EFEITO_VEL_MINIMA and maxima > 0 then
+				alvo = math.clamp((vel / maxima - 0.7) / 0.3, 0, 1)
+			end
+		end
+		efeitoIntens = efeitoIntens + (alvo - efeitoIntens) * (1 - math.exp(-dt * 4))
+		if efeitoIntens < 0.005 then efeitoIntens = 0 end
+
+		-- flash branco rápido quando chega na velocidade máxima
+		if efeitoIntens > 0.9 and not efeitoFlashFeito then
+			efeitoFlashFeito = true
+			efeitoFlash.BackgroundTransparency = 0.55
+			TweenService:Create(efeitoFlash, TweenInfo.new(0.35), { BackgroundTransparency = 1 }):Play()
+		elseif efeitoIntens < 0.3 then
+			efeitoFlashFeito = false
+		end
+
+		-- riscos de vento saindo do centro para as bordas
+		local tela = efeitoGui.AbsoluteSize
+		if tela.X <= 0 then tela = workspace.CurrentCamera.ViewportSize end
+		local centro = tela / 2
+		local metade = tela.Magnitude / 2
+		for _, l in ipairs(efeitoLinhas) do
+			local f = l.frame
+			if efeitoIntens <= 0 then
+				f.Visible = false
+			else
+				f.Visible = true
+				l.raio = l.raio + l.vel * dt * (0.8 + efeitoIntens)
+				if l.raio > 1.15 then
+					reiniciarLinha(l, false)
+				end
+				local dir = Vector2.new(math.cos(l.ang), math.sin(l.ang))
+				local pos = centro + dir * l.raio * metade
+				local entra = math.clamp((l.raio - 0.2) / 0.2, 0, 1)
+				local sai = math.clamp((1.15 - l.raio) / 0.3, 0, 1)
+				f.Position = UDim2.fromOffset(pos.X, pos.Y)
+				f.Size = UDim2.fromOffset(l.comp * metade * (0.5 + l.raio), l.grossura)
+				f.Rotation = math.deg(l.ang)
+				f.BackgroundTransparency = 1 - efeitoIntens * 0.7 * entra * sai
+			end
+		end
+	end)
+
+	-- tremida e FOV: depois do script da câmera do Roblox, senão ele desfaz
+	RunService:BindToRenderStep("EfeitoVelocidadeFly", Enum.RenderPriority.Camera.Value + 1, function()
+		local cam = workspace.CurrentCamera
+		if not cam then return end
+		if efeitoIntens > 0.01 then
+			if not efeitoFovBase then efeitoFovBase = cam.FieldOfView end
+			cam.FieldOfView = efeitoFovBase + EFEITO_FOV_EXTRA * efeitoIntens
+
+			local t = os.clock() * 35
+			local amp = EFEITO_TREMIDA * efeitoIntens
+			local nx, ny, nr = math.noise(t, 0, 0), math.noise(0, t, 0), math.noise(0, 0, t)
+			cam.CFrame = cam.CFrame
+				* CFrame.new(nx * 0.25 * amp, ny * 0.25 * amp, 0)
+				* CFrame.Angles(ny * 0.012 * amp, nx * 0.012 * amp, nr * 0.02 * amp)
+		elseif efeitoFovBase then
+			cam.FieldOfView = efeitoFovBase
+			efeitoFovBase = nil
+		end
+	end)
+end
+
 local ultimoFly
+local ultimoYawFly -- última direção horizontal válida
 local function atualizarFly()
 	if not estado.fly then
 		if flyBV then pararFly() end
 		ultimoFly = nil
+		ultimoYawFly = nil
 		return
 	end
 
@@ -811,17 +1130,29 @@ local function atualizarFly()
 
 	local look = workspace.CurrentCamera.CFrame.LookVector
 	local pitch = math.asin(math.clamp(look.Y, -1, 1))
-	local inclinacao
+
+	-- O corpo acompanha a câmera SEMPRE (mesmo parado):
+	-- olhou pra baixo = deita de barriga pra baixo; olhou pra cima = deita de barriga pra cima
+	local inclinacao = pitch * GANHO_INCLINACAO
 	if POSE_HEROI then
-		-- deitado (~75°), mas levanta ao subir e mergulha ao descer
-		local deitado = math.clamp(-math.rad(75) + pitch * 0.85, -math.rad(120), math.rad(20))
-		inclinacao = deitado * poseMov
-	else
-		inclinacao = movendo and (pitch * 0.6 - math.rad(15)) or 0
+		-- ao se mover, ainda "deita" mais (pose de herói), mantendo a liberdade de cima/baixo
+		inclinacao = math.clamp(inclinacao - math.rad(75) * poseMov, -math.rad(150), math.rad(100))
 	end
 
-	if flat.Magnitude > 0.001 then
-		local yaw = CFrame.lookAt(Vector3.zero, flat.Unit)
+	-- Direção horizontal (yaw): guarda a última boa, pois olhando reto pra baixo/cima ela some
+	local camCF = workspace.CurrentCamera.CFrame
+	local planoFrente = Vector3.new(look.X, 0, look.Z)
+	if planoFrente.Magnitude < 0.05 then
+		-- olhando quase vertical: usa o "topo" da câmera para saber pra onde está virada
+		local up = camCF.UpVector
+		planoFrente = Vector3.new(up.X, 0, up.Z) * (look.Y > 0 and -1 or 1)
+	end
+	if planoFrente.Magnitude > 0.001 then
+		ultimoYawFly = planoFrente.Unit
+	end
+
+	if ultimoYawFly then
+		local yaw = CFrame.lookAt(Vector3.zero, ultimoYawFly)
 		local alvo = CFrame.new(raiz.Position) * yaw * CFrame.Angles(inclinacao, 0, 0)
 		flyBG.CFrame = flyBG.CFrame:Lerp(alvo, 1 - math.exp(-dt * 10))
 	end
@@ -1420,7 +1751,7 @@ local function fazerRejoin()
 		warn("Rejoin falhou: " .. tostring(erro))
 		botaoRejoin.Text = "Falhou (só funciona no jogo publicado)"
 		task.wait(2)
-		botaoRejoin.Text = "REJOIN (reentrar no server)"
+		botaoRejoin.Text = "REJOIN"
 		reentrando = false
 	end
 end
@@ -1428,7 +1759,7 @@ botaoRejoin.MouseButton1Click:Connect(fazerRejoin)
 
 -- Se o teleporte falhar depois de iniciado, libera o botão de novo
 TeleportService.TeleportInitFailed:Connect(function()
-	botaoRejoin.Text = "REJOIN (reentrar no server)"
+	botaoRejoin.Text = "REJOIN"
 	reentrando = false
 end)
 
@@ -1832,6 +2163,16 @@ do
 	alternavel({ "cm" }, "cm / uncm - contorno nos jogadores", function(ligar)
 		definirChams(ligar)
 		return true, "Chams " .. (ligar and "ligado" or "desligado")
+	end)
+
+	alternavel({ "aim" }, "aim [tamanho] / unaim - aimbot (bolinha verde = alcance)", function(ligar, args)
+		local tam
+		if ligar and args[1] then
+			tam = tonumber(args[1])
+			if not tam then return false, "Valor inválido: " .. args[1] end
+		end
+		definirAimbot(ligar, tam)
+		return true, "Aimbot " .. (ligar and "ligado" or "desligado")
 	end)
 
 	alternavel({ "sl" }, "sl / unsl - cadeado de shift lock na tela", function(ligar)
