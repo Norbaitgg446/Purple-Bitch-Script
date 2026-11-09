@@ -157,10 +157,10 @@ do
 	-- >>> COLE AQUI OS LINKS DIRETOS DAS FOTOS (terminam em .png ou .jpg) <<<
 	-- Deixe "" nas que não for usar. Pode usar de 1 a 4.
 	local LINKS_FOTOS = {
-		"", -- foto 1
-		"", -- foto 2
-		"", -- foto 3
-		"", -- foto 4
+		"https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTjMDaLibyw_z3-75JPKtAxs7BIO66Fqutk0A_NLEZARoPFTCiNsN0-l5N7&s=10", -- foto 1
+		"https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRo72Vsot2aEMyHqbb1Nij43mYDpQUqGgGLHYvYOu84BD4Y-agSFZXu4U0&s=10", -- foto 2
+		"https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTdsojKLsiKD8WGLWCtDIQ5OHQJaT_35CgmRYYBYCt6sZKTzGT181tVR6Y&s=10", -- foto 3
+		"https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR3fzheHWw3pkVYtTMu1lK00H1X86EpBXBfg1FsQWxCsqWsxw_YgGjt9MQ&s=10", -- foto 4
 	}
 	local TRANSPARENCIA_FOTO = 0.4 -- 0 = foto forte, 1 = invisível
 	local ID_FOTO_FUNDO = "rbxassetid://0" -- plano B (opcional): ID do Roblox
@@ -1780,24 +1780,4 @@ end
 
 ------------------------------------------------------------
 -- LOOP PRINCIPAL
-------------------------------------------------------------
-RunService.RenderStepped:Connect(function()
-	atualizarESP()
-	atualizarFly()
-	atualizarVFly()
-	atualizarSwim()
-end)
-
--- Ao morrer/respawnar, desliga os voos
-player.CharacterAdded:Connect(function()
-	estado.fly = false
-	estado.vfly = false
-	estado.swim = false
-	pararFly()
-	pararVFly()
-	pararSwim()
-	pintarBotao(botaoSwim, "SWIM", false)
-	pintarBotao(botaoFly, "FLY", false)
-	pintarBotao(botaoVFly, "VFLY", false)
-	atualizarBotaoVertical()
-end)
+---------------------------------------
