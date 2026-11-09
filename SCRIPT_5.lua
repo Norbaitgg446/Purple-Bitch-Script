@@ -28,8 +28,19 @@ local EFEITO_VEL_MINIMA = 60 -- studs/s: abaixo disso o efeito nunca aparece (vo
 local EFEITO_TREMIDA = 1 -- força da tremida da tela (0 = sem tremer)
 local EFEITO_FOV_EXTRA = 15 -- quanto o campo de visão abre na velocidade máxima (0 = não muda)
 local EFEITO_QTD_RISCOS = 18 -- quantidade de riscos brancos na tela
+-- SUPER VOO: ao ficar na velocidade máxima, uma barrinha carrega e ativa o boost
+local SUPER = {
+	ativo = false,
+	tempoCarga = 10, -- segundos na velocidade máxima até ativar o super voo
+	mult = 3,         -- quantas vezes mais rápido fica no super voo
+	tremida = 2.5,    -- tremida extra da tela
+	fov = 25,         -- campo de visão extra
+}
 local VELOCIDADE_VFLY_PADRAO = 80
 local VELOCIDADE_MIN, VELOCIDADE_MAX = 1, 500
+-- REEXECUTAR APÓS O REJOIN (precisa de executor com queue_on_teleport). Preencha UM dos dois:
+local ARQUIVO_SCRIPT = "" -- nome deste script na pasta workspace do executor (ex.: "menu.lua")
+local URL_SCRIPT = ""     -- ou o link direto (raw) do script, se ele estiver hospedado
 
 ------------------------------------------------------------
 -- ESTADO
@@ -309,10 +320,9 @@ function VIDRO.aplicar(b, ligado)
 	contorno.Transparency = VIDRO.transpContorno
 end
 
--- LISTA ORGANIZADA: todos os botões do mesmo tamanho, em grade colada (3 colunas), em ordem por grupo.
+-- LISTA ORGANIZADA: duas colunas, todos os botões do mesmo tamanho, um embaixo do outro.
 -- O 1º número de criarLinha é só a ordem na grade (menor = primeiro).
-local COLUNAS = 3
-local ALTURA_BOTAO = 36
+local ALTURA_BOTAO = 38
 local ESPACO = 6
 
 local lista = Instance.new("UIListLayout") -- empilha: grade de botões em cima, dicas embaixo
@@ -335,26 +345,39 @@ grade.AutomaticSize = Enum.AutomaticSize.Y
 grade.BackgroundTransparency = 1
 grade.Parent = conteudo
 
-local gradeLayout = Instance.new("UIGridLayout")
-gradeLayout.SortOrder = Enum.SortOrder.LayoutOrder
-gradeLayout.CellPadding = UDim2.fromOffset(ESPACO, ESPACO)
-gradeLayout.CellSize = UDim2.new(1 / COLUNAS, -ESPACO * (COLUNAS - 1) / COLUNAS - 0.5, 0, ALTURA_BOTAO)
-gradeLayout.FillDirection = Enum.FillDirection.Horizontal
-gradeLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
-gradeLayout.Parent = grade
+-- Duas colunas lado a lado; cada coluna é uma lista de cima pra baixo.
+-- Ordens 1 a ULTIMA_COLUNA_ESQ ficam na esquerda, o resto na direita.
+local ULTIMA_COLUNA_ESQ = 9
+local function criarColuna(nome, posX, lado)
+	local col = Instance.new("Frame")
+	col.Name = nome
+	col.Position = UDim2.new(posX, lado, 0, 0)
+	col.Size = UDim2.new(0.5, -ESPACO / 2, 0, 0)
+	col.AutomaticSize = Enum.AutomaticSize.Y
+	col.BackgroundTransparency = 1
+	col.Parent = grade
+	local lay = Instance.new("UIListLayout")
+	lay.SortOrder = Enum.SortOrder.LayoutOrder
+	lay.Padding = UDim.new(0, ESPACO)
+	lay.Parent = col
+	return col
+end
+local colunaEsq = criarColuna("ColunaEsquerda", 0, 0)
+local colunaDir = criarColuna("ColunaDireita", 0.5, ESPACO / 2)
 
 -- Cria uma célula: botão liga/desliga (+ caixa de velocidade opcional, colada no botão)
 local function criarLinha(ordem, nome, comVelocidade, velocidadePadrao)
 	local celulaFrame = Instance.new("Frame")
 	celulaFrame.Name = "Celula" .. nome
 	celulaFrame.LayoutOrder = ordem
+	celulaFrame.Size = UDim2.new(1, 0, 0, ALTURA_BOTAO)
 	celulaFrame.BackgroundTransparency = 1
-	celulaFrame.Parent = grade
+	celulaFrame.Parent = (ordem <= ULTIMA_COLUNA_ESQ) and colunaEsq or colunaDir
 
 	local b = Instance.new("TextButton")
 	b.Name = "Botao" .. nome
 	b.Position = UDim2.new(0, 0, 0, 0)
-	b.Size = comVelocidade and UDim2.new(0.64, 0, 1, 0) or UDim2.new(1, 0, 1, 0)
+	b.Size = UDim2.new(0.68, 0, 1, 0) -- todos os botões têm o mesmo tamanho
 	b.Text = nome .. ": DESLIGADO"
 	VIDRO.aplicar(b, false)
 	b.Font = Enum.Font.GothamBold
@@ -371,8 +394,8 @@ local function criarLinha(ordem, nome, comVelocidade, velocidadePadrao)
 	if comVelocidade then
 		caixa = Instance.new("TextBox")
 		caixa.Name = "Velocidade" .. nome
-		caixa.Position = UDim2.new(0.66, 0, 0, 0)
-		caixa.Size = UDim2.new(0.34, 0, 1, 0)
+		caixa.Position = UDim2.new(0.70, 0, 0, 0)
+		caixa.Size = UDim2.new(0.30, 0, 1, 0)
 		VIDRO.aplicar(caixa, false)
 		caixa.Text = tostring(velocidadePadrao)
 		caixa.PlaceholderText = "vel."
@@ -419,7 +442,7 @@ dica.BackgroundTransparency = 1
 dica.TextWrapped = true
 dica.TextXAlignment = Enum.TextXAlignment.Left
 dica.TextYAlignment = Enum.TextYAlignment.Top
-dica.Text = "Mover: arraste o título do painel ou o botão MENU. Tamanho: arraste o ◢ do canto.\nFly: WASD/analógico para mover, mire a câmera para subir/descer.\nEspaço/E = subir, Shift/Q = descer.\nVFLY: use sentado em um veículo.\nNOCLIP: atravessa paredes (sem o Fly você cai pelo chão).\nSWIM: nada no ar como se estivesse na água.\nSPAWNS: salve posições, renomeie e volte a elas.\nTP: clique no nome de um jogador para ir até ele.\nXRAY: deixa o mapa transparente (caixa: 0 = normal, 0.95 = quase invisível).\nTPTOOL: dá um item no inventário; equipe e clique/toque onde quer ir.\nSHIFTLOCK: mostra o cadeado na tela (arraste para mover). Toque nele: azul = travado, branco = solto. Comando: sl / unsl.\nAIMBOT: bolinha verde no centro = alcance (digite o tamanho na caixa). ALVO troca cabeça/tronco, PAREDE = mirar através de paredes, TIME = ignorar seu time. Comando: aim [tamanho] / unaim.\nTECLADO: mostra o botão >_ no canto da tela; toque nele e digite comandos (ex.: fly 80, unfly, np, xy, rj). Digite cmds para ver todos."
+dica.Text = "Mover: arraste o título do painel ou o botão MENU. Tamanho: arraste o ◢ do canto.\nFly: WASD/analógico para mover, mire a câmera para subir/descer.\nEspaço/E = subir, Shift/Q = descer.\nVFLY: use sentado em um veículo.\nNOCLIP: atravessa paredes (sem o Fly você cai pelo chão).\nSWIM: nada no ar como se estivesse na água.\nSPAWNS: salve posições (ficam gravadas por jogo, se o executor permitir), renomeie, veja a distância e clique em IR para voar até lá. O nome aparece discreto em cima do spawn quando você está perto.\nTP: digite na busca para filtrar; a lista mostra a distância. Clique no nome (ou dê Enter na busca para ir no primeiro da lista) para voar até o jogador em velocidade supersônica.\nXRAY: deixa o mapa transparente (caixa: 0 = normal, 0.95 = quase invisível).\nTPTOOL: dá um item no inventário; equipe e clique/toque onde quer ir (você voa rapidinho até lá, atravessando o que tiver no caminho).\nSHIFTLOCK: mostra o cadeado na tela (arraste para mover). Toque nele: azul = travado, branco = solto. Comando: sl / unsl.\nAIMBOT: bolinha verde no centro = alcance (digite o tamanho na caixa). A mira muda ao travar: na cabeça os tracinhos fecham (vermelho), no tronco eles abrem (laranja); a vida do alvo aparece pequena no canto da bolinha. ALVO troca cabeça/tronco, PAREDE = mirar através de paredes, TIME = ignorar seu time. Comando: aim [tamanho] / unaim.\nTECLADO: mostra o botão >_ no canto da tela; toque nele e digite comandos (ex.: fly 80, unfly, np, xy, rj). Digite cmds para ver todos."
 dica.TextColor3 = Color3.fromRGB(170, 170, 180)
 dica.Font = Enum.Font.Gotham
 dica.TextSize = 12
@@ -511,22 +534,76 @@ local function criarESP(p)
 	bb.Name = "ESP_Nome"
 	bb.Adornee = head
 	bb.AlwaysOnTop = true
-	bb.Size = UDim2.new(0, 200, 0, 40)
-	bb.StudsOffset = Vector3.new(0, 2.5, 0)
+	bb.Size = UDim2.new(0, 200, 0, 58)
+	bb.StudsOffset = Vector3.new(0, 2.7, 0)
 	bb.Parent = gui
 
-	local label = Instance.new("TextLabel")
-	label.Name = "Texto"
-	label.Size = UDim2.new(1, 0, 1, 0)
-	label.BackgroundTransparency = 1
-	label.TextColor3 = COR_ESP
-	label.TextStrokeTransparency = 0
-	label.Font = Enum.Font.GothamBold
-	label.TextSize = 14
-	label.Text = p.DisplayName
-	label.Parent = bb
+	-- Linha de cima: bolinha vermelha piscando + "REC" (câmera de segurança)
+	local rec = Instance.new("Frame")
+	rec.Name = "RecBolinha"
+	rec.AnchorPoint = Vector2.new(0.5, 0.5)
+	rec.Position = UDim2.new(0.5, -18, 0, 7)
+	rec.Size = UDim2.fromOffset(7, 7)
+	rec.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+	rec.BorderSizePixel = 0
+	rec.Parent = bb
+	Instance.new("UICorner", rec).CornerRadius = UDim.new(1, 0)
 
-	espObjetos[p] = { gui = bb, label = label }
+	local recTexto = Instance.new("TextLabel")
+	recTexto.Name = "RecTexto"
+	recTexto.AnchorPoint = Vector2.new(0, 0.5)
+	recTexto.Position = UDim2.new(0.5, -10, 0, 7)
+	recTexto.Size = UDim2.fromOffset(40, 14)
+	recTexto.BackgroundTransparency = 1
+	recTexto.Text = "REC"
+	recTexto.TextColor3 = Color3.fromRGB(255, 70, 70)
+	recTexto.Font = Enum.Font.Code
+	recTexto.TextSize = 12
+	recTexto.TextXAlignment = Enum.TextXAlignment.Left
+	recTexto.TextTransparency = 0.15
+	recTexto.Parent = bb
+
+	-- Nome + distância (fonte de câmera antiga) e dois "fantasmas" para o glitch (vermelho e ciano)
+	local function criarTexto(nome, cor, transp)
+		local l = Instance.new("TextLabel")
+		l.Name = nome
+		l.Position = UDim2.fromOffset(0, 16)
+		l.Size = UDim2.new(1, 0, 0, 40)
+		l.BackgroundTransparency = 1
+		l.TextColor3 = cor
+		l.TextStrokeTransparency = transp
+		l.Font = Enum.Font.Code
+		l.TextSize = 14
+		l.Text = p.DisplayName
+		l.Parent = bb
+		return l
+	end
+	local fantasmaV = criarTexto("GlitchVermelho", Color3.fromRGB(255, 40, 40), 1)
+	local fantasmaC = criarTexto("GlitchCiano", Color3.fromRGB(40, 255, 255), 1)
+	fantasmaV.TextTransparency = 1
+	fantasmaC.TextTransparency = 1
+	local label = criarTexto("Texto", COR_ESP, 0)
+
+	-- Linha de varredura fininha descendo pelo texto
+	local varredura = Instance.new("Frame")
+	varredura.Name = "Varredura"
+	varredura.Size = UDim2.new(0.8, 0, 0, 1)
+	varredura.AnchorPoint = Vector2.new(0.5, 0)
+	varredura.Position = UDim2.new(0.5, 0, 0, 16)
+	varredura.BackgroundColor3 = Color3.new(1, 1, 1)
+	varredura.BackgroundTransparency = 0.88
+	varredura.BorderSizePixel = 0
+	varredura.Parent = bb
+
+	local agora = os.clock()
+	espObjetos[p] = {
+		gui = bb, label = label,
+		fantasmas = { fantasmaV, fantasmaC },
+		rec = rec, recTexto = recTexto, varredura = varredura,
+		inicio = agora,                           -- glitch de "ligar a câmera" logo ao ativar
+		glitchAte = agora + 0.55,
+		proximo = agora + 3 + math.random() * 4,  -- próximos glitchzinhos curtos, de vez em quando
+	}
 end
 
 local function criarChams(p)
@@ -573,7 +650,36 @@ local function atualizarESP()
 		if raiz then
 			local dist = (raiz.Position - minhaRaiz.Position).Magnitude
 			obj.gui.Enabled = dist <= DISTANCIA_MAXIMA
-			obj.label.Text = string.format("%s\n[%d studs]", p.DisplayName, math.floor(dist))
+			local texto = string.format("%s\n[%d studs]", p.DisplayName, math.floor(dist))
+			obj.label.Text = texto
+			for _, g in ipairs(obj.fantasmas) do g.Text = texto end
+
+			-- efeito de câmera de segurança (suave, para não atrapalhar a leitura)
+			local agora = os.clock()
+			if agora > obj.proximo then
+				obj.glitchAte = agora + 0.12
+				obj.proximo = agora + 3 + math.random() * 4
+			end
+			local forte = agora - obj.inicio < 0.55 -- glitch maior só na hora de ligar
+			if agora < obj.glitchAte then
+				local f = forte and 5 or 2
+				obj.label.Position = UDim2.fromOffset(math.random(-f, f), 16 + math.random(-1, 1))
+				obj.label.TextTransparency = (math.random() < (forte and 0.35 or 0.2)) and 0.6 or 0
+				obj.fantasmas[1].Position = UDim2.fromOffset(math.random(-f, f) - 2, 16)
+				obj.fantasmas[2].Position = UDim2.fromOffset(math.random(-f, f) + 2, 16)
+				obj.fantasmas[1].TextTransparency = 0.55
+				obj.fantasmas[2].TextTransparency = 0.55
+			else
+				obj.label.Position = UDim2.fromOffset(0, 16)
+				obj.label.TextTransparency = 0
+				obj.fantasmas[1].TextTransparency = 1
+				obj.fantasmas[2].TextTransparency = 1
+			end
+			-- bolinha REC piscando e linha de varredura descendo
+			local acesa = math.floor(agora * 1.2) % 2 == 0
+			obj.rec.BackgroundTransparency = acesa and 0 or 0.85
+			obj.recTexto.TextTransparency = acesa and 0.15 or 0.7
+			obj.varredura.Position = UDim2.new(0.5, 0, 0, 16 + ((agora * 0.5) % 1) * 36)
 		else
 			obj.gui.Enabled = false
 		end
@@ -605,6 +711,51 @@ local function definirESP(v)
 	estado.esp = v
 	pintarBotao(botaoESP, "ESP", v)
 	atualizarTodos()
+end
+
+-- CHAMS DINÂMICO: a cor muda com a distância (vermelho = perto, verde = longe) e o brilho "respira" de leve
+do
+	local DIST_PERTO = 25  -- studs: até aqui fica totalmente vermelho
+	local DIST_LONGE = 300 -- studs: daqui em diante fica totalmente verde
+	local AMPLITUDE_PULSO = 0.12 -- quanto o preenchimento varia (0 = sem pulso)
+	local PARADAS = { -- cores do perto para o longe
+		Color3.fromRGB(255, 60, 60),   -- vermelho
+		Color3.fromRGB(255, 160, 40),  -- laranja
+		Color3.fromRGB(255, 230, 60),  -- amarelo
+		Color3.fromRGB(70, 225, 110),  -- verde
+	}
+
+	local function corPorDistancia(d)
+		local t = math.clamp((d - DIST_PERTO) / (DIST_LONGE - DIST_PERTO), 0, 1) * (#PARADAS - 1)
+		local i = math.min(math.floor(t) + 1, #PARADAS - 1)
+		return PARADAS[i]:Lerp(PARADAS[i + 1], t - (i - 1))
+	end
+
+	RunService.RenderStepped:Connect(function()
+		if not estado.chams then return end
+		local meuChar = player.Character
+		local minhaRaiz = meuChar and meuChar:FindFirstChild("HumanoidRootPart")
+		if not minhaRaiz then return end
+
+		local agora = os.clock()
+		for p, h in pairs(chamsObjetos) do
+			local char = p.Character
+			local raiz = char and char:FindFirstChild("HumanoidRootPart")
+			if raiz and h.Parent then
+				local dist = (raiz.Position - minhaRaiz.Position).Magnitude
+				local cor = corPorDistancia(dist)
+				h.FillColor = cor
+				h.OutlineColor = cor
+
+				-- pulso suave: mais rápido de perto, mais lento de longe; cada jogador com fase própria
+				local fase = (p.UserId % 628) / 100
+				local velocidade = 1.6 + 1.6 * (1 - math.clamp(dist / DIST_LONGE, 0, 1))
+				local onda = math.sin(agora * velocidade + fase)
+				h.FillTransparency = math.clamp(TRANSPARENCIA_PREENCHIMENTO + onda * AMPLITUDE_PULSO, 0, 1)
+				h.OutlineTransparency = 0.08 + (onda * 0.5 + 0.5) * 0.17
+			end
+		end
+	end)
 end
 
 local function definirChams(v)
@@ -869,6 +1020,143 @@ do
 	contorno.Thickness = 2
 	contorno.Parent = circulo
 
+	----------------------------------------------------------
+	-- Mira de arma no centro da bolinha. Muda conforme o estado:
+	--  * sem alvo: tracinhos brancos abertos
+	--  * alvo na CABEÇA: os tracinhos fecham para o centro (vermelho)
+	--  * alvo no TRONCO: o contrário, os tracinhos abrem ainda mais (laranja)
+	-- Quando trava num alvo novo dá um pulsinho. A vida do alvo aparece pequena no canto superior direito da bolinha.
+	----------------------------------------------------------
+	local COR_CIRCULO = Color3.fromRGB(60, 255, 100)
+	local MIRA = {
+		gapParado = 9,   -- distância (px) do centro aos tracinhos sem alvo
+		gapCabeca = 3,   -- na cabeça: fecha
+		gapTronco = 17,  -- no tronco: abre
+		corParado = Color3.new(1, 1, 1),
+		corCabeca = Color3.fromRGB(255, 70, 70),
+		corTronco = Color3.fromRGB(255, 170, 50),
+		comprimento = 8, -- tamanho de cada tracinho
+		grossura = 2,
+	}
+
+	local mira = Instance.new("Frame")
+	mira.Name = "Mira"
+	mira.AnchorPoint = Vector2.new(0, 0)
+	mira.Position = UDim2.fromScale(0.5, 0.5)
+	mira.Size = UDim2.fromOffset(0, 0)
+	mira.BackgroundTransparency = 1
+	mira.Active = false
+	mira.Parent = circulo
+
+	local function criarTraco(ancora, horizontal)
+		local f = Instance.new("Frame")
+		f.AnchorPoint = ancora
+		f.Size = horizontal and UDim2.fromOffset(MIRA.comprimento, MIRA.grossura)
+			or UDim2.fromOffset(MIRA.grossura, MIRA.comprimento)
+		f.BackgroundColor3 = MIRA.corParado
+		f.BorderSizePixel = 0
+		f.Active = false
+		f.Parent = mira
+		local sombra = Instance.new("UIStroke")
+		sombra.Color = Color3.new(0, 0, 0)
+		sombra.Thickness = 1
+		sombra.Transparency = 0.5
+		sombra.Parent = f
+		return f
+	end
+	local tracoCima = criarTraco(Vector2.new(0.5, 1), false)
+	local tracoBaixo = criarTraco(Vector2.new(0.5, 0), false)
+	local tracoEsq = criarTraco(Vector2.new(1, 0.5), true)
+	local tracoDir = criarTraco(Vector2.new(0, 0.5), true)
+
+	local ponto = Instance.new("Frame")
+	ponto.AnchorPoint = Vector2.new(0.5, 0.5)
+	ponto.Size = UDim2.fromOffset(3, 3)
+	ponto.BackgroundColor3 = MIRA.corParado
+	ponto.BorderSizePixel = 0
+	ponto.Active = false
+	ponto.Parent = mira
+	Instance.new("UICorner", ponto).CornerRadius = UDim.new(1, 0)
+
+	-- Vida do alvo: bem pequena, fora da bolinha, no canto superior direito
+	local textoVida = Instance.new("TextLabel")
+	textoVida.AnchorPoint = Vector2.new(0, 1)
+	textoVida.Position = UDim2.fromScale(0.5 + 0.3536, 0.5 - 0.3536) -- 45° em cima à direita, na borda do círculo
+	textoVida.Size = UDim2.fromOffset(34, 12)
+	textoVida.BackgroundTransparency = 1
+	textoVida.Font = Enum.Font.GothamBold
+	textoVida.TextSize = 11
+	textoVida.TextXAlignment = Enum.TextXAlignment.Left
+	textoVida.TextColor3 = Color3.new(1, 1, 1)
+	textoVida.TextStrokeTransparency = 0.6
+	textoVida.Visible = false
+	textoVida.Active = false
+	textoVida.Parent = circulo
+
+	local gapAtual, corAtual = MIRA.gapParado, MIRA.corParado
+	local travadoMix = 0 -- 0 = sem alvo, 1 = travado
+	local pulso = 0
+	local alvoAnterior
+	local ultimoMira
+
+	local function atualizarMira(alvo)
+		local agora = os.clock()
+		local dt = math.min(agora - (ultimoMira or agora), 0.1)
+		ultimoMira = agora
+
+		local gapAlvo, corAlvo = MIRA.gapParado, MIRA.corParado
+		if alvo then
+			if aim.parte == "Head" then
+				gapAlvo, corAlvo = MIRA.gapCabeca, MIRA.corCabeca
+			else
+				gapAlvo, corAlvo = MIRA.gapTronco, MIRA.corTronco
+			end
+		end
+
+		if alvo ~= alvoAnterior then
+			if alvo then pulso = 1 end -- travou num alvo novo
+			alvoAnterior = alvo
+		end
+		pulso = math.max(0, pulso - dt * 5)
+
+		local k = 1 - math.exp(-dt * 14)
+		gapAtual = gapAtual + (gapAlvo - gapAtual) * k
+		corAtual = corAtual:Lerp(corAlvo, k)
+		travadoMix = travadoMix + ((alvo and 1 or 0) - travadoMix) * k
+
+		local g = gapAtual + pulso * 4
+		tracoCima.Position = UDim2.fromOffset(0, -g)
+		tracoBaixo.Position = UDim2.fromOffset(0, g)
+		tracoEsq.Position = UDim2.fromOffset(-g, 0)
+		tracoDir.Position = UDim2.fromOffset(g, 0)
+		for _, f in ipairs({ tracoCima, tracoBaixo, tracoEsq, tracoDir, ponto }) do
+			f.BackgroundColor3 = corAtual
+		end
+
+		-- a bolinha muda de verde para a cor do estado quando trava
+		local corCirculo = COR_CIRCULO:Lerp(corAtual, travadoMix)
+		circulo.BackgroundColor3 = corCirculo
+		contorno.Color = corCirculo
+
+		-- vida do alvo
+		local hum = alvo and alvo.Character and alvo.Character:FindFirstChildOfClass("Humanoid")
+		if hum then
+			local fracao = math.clamp(hum.Health / math.max(hum.MaxHealth, 1), 0, 1)
+			textoVida.Text = tostring(math.ceil(hum.Health))
+			textoVida.TextColor3 = Color3.fromRGB(255, 80, 80):Lerp(Color3.fromRGB(90, 255, 120), fracao)
+			textoVida.Visible = true
+		else
+			textoVida.Visible = false
+		end
+	end
+
+	local function reiniciarMira()
+		gapAtual, corAtual = MIRA.gapParado, MIRA.corParado
+		travadoMix, pulso, alvoAnterior, ultimoMira = 0, 0, nil, nil
+		atualizarMira(nil)
+	end
+	reiniciarMira()
+
 	local function aplicarTamanho(n)
 		aim.tamanho = math.clamp(n, TAMANHO_MIN, TAMANHO_MAX)
 		caixaAim.Text = tostring(aim.tamanho)
@@ -943,12 +1231,14 @@ do
 		if parte then
 			cam.CFrame = CFrame.lookAt(cam.CFrame.Position, parte.Position)
 		end
+		atualizarMira(parte and alvoAtual or nil)
 	end)
 
 	definirAimbot = function(v, tamanho)
 		if tamanho then aplicarTamanho(tamanho) end
 		estado.aim = v
 		alvoAtual = nil
+		reiniciarMira()
 		circulo.Visible = v
 		pintarBotao(botaoAim, "AIMBOT", v)
 	end
@@ -971,15 +1261,16 @@ do
 end
 
 ------------------------------------------------------------
--- EFEITO DE VELOCIDADE (riscos de vento + tremida + flash), estilo "Flash"
+-- EFEITO DE VELOCIDADE + SUPER VOO (barra de carga, boost, blur, raios vermelhos)
 ------------------------------------------------------------
-local efeitoIntens = 0 -- 0 = nada, 1 = velocidade máxima
-local efeitoFlashFeito = false
-local efeitoFovBase
-local efeitoLinhas = {}
-local efeitoFlash
-
 do
+	local efeitoIntens = 0 -- 0 = nada, 1 = velocidade máxima
+	local superMix = 0     -- 0 = normal, 1 = super voo ativo (suavizado)
+	local carga = 0        -- 0 a 1: barrinha de carga do super voo
+	local flashFeito = false
+	local fovBase
+	local VERMELHO = Color3.fromRGB(255, 40, 40)
+
 	local efeitoGui = Instance.new("ScreenGui")
 	efeitoGui.Name = "EfeitoVelocidade"
 	efeitoGui.ResetOnSpawn = false
@@ -987,34 +1278,81 @@ do
 	efeitoGui.DisplayOrder = -1 -- fica atrás do menu
 	efeitoGui.Parent = playerGui
 
-	efeitoFlash = Instance.new("Frame")
-	efeitoFlash.Size = UDim2.fromScale(1, 1)
-	efeitoFlash.BackgroundColor3 = Color3.new(1, 1, 1)
-	efeitoFlash.BackgroundTransparency = 1
-	efeitoFlash.BorderSizePixel = 0
-	efeitoFlash.Active = false
-	efeitoFlash.Parent = efeitoGui
-
-	local function reiniciarLinha(l, inicio)
-		l.ang = math.random() * math.pi * 2
-		l.raio = inicio and (0.2 + math.random() * 0.9) or (0.2 + math.random() * 0.15)
-		l.vel = 1.6 + math.random() * 1.4
-		l.comp = 0.10 + math.random() * 0.15
-		l.grossura = math.random(1, 3)
-	end
-
-	for i = 1, EFEITO_QTD_RISCOS do
+	local function quadro(cor)
 		local f = Instance.new("Frame")
-		f.AnchorPoint = Vector2.new(0.5, 0.5)
-		f.BackgroundColor3 = Color3.new(1, 1, 1)
+		f.Size = UDim2.fromScale(1, 1)
+		f.BackgroundColor3 = cor
 		f.BackgroundTransparency = 1
 		f.BorderSizePixel = 0
 		f.Active = false
 		f.Parent = efeitoGui
-		local l = { frame = f }
-		reiniciarLinha(l, true)
-		efeitoLinhas[i] = l
+		return f
 	end
+	local tinta = quadro(VERMELHO)          -- leve tom vermelho no super voo
+	local efeitoFlash = quadro(Color3.new(1, 1, 1))
+
+	-- Blur (embaçado) do super voo
+	local blur = Instance.new("BlurEffect")
+	blur.Name = "BlurSuperVoo"
+	blur.Size = 0
+	blur.Enabled = false
+	blur.Parent = game:GetService("Lighting")
+
+	-- Barrinha de carga do super voo
+	local barra = Instance.new("Frame")
+	barra.Name = "BarraSuper"
+	barra.AnchorPoint = Vector2.new(0.5, 0.5)
+	barra.Position = UDim2.fromScale(0.5, 0.7)
+	barra.Size = UDim2.fromOffset(130, 8)
+	barra.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+	barra.BackgroundTransparency = 0.4
+	barra.BorderSizePixel = 0
+	barra.Visible = false
+	barra.Parent = efeitoGui
+	Instance.new("UICorner", barra).CornerRadius = UDim.new(1, 0)
+	local barraContorno = Instance.new("UIStroke")
+	barraContorno.Color = Color3.new(1, 1, 1)
+	barraContorno.Thickness = 1
+	barraContorno.Transparency = 0.4
+	barraContorno.Parent = barra
+	local enche = Instance.new("Frame")
+	enche.Size = UDim2.fromScale(0, 1)
+	enche.BackgroundColor3 = Color3.new(1, 1, 1)
+	enche.BorderSizePixel = 0
+	enche.Parent = barra
+	Instance.new("UICorner", enche).CornerRadius = UDim.new(1, 0)
+
+	-- Riscos: brancos (os de índice acima da quantidade base só aparecem no super voo) e vermelhos (só no super voo)
+	local riscos = {}
+	local function reiniciarLinha(l, inicio)
+		l.ang = math.random() * math.pi * 2
+		l.raio = inicio and (0.2 + math.random() * 0.9) or (0.2 + math.random() * 0.15)
+		if l.vermelha then
+			l.vel = 2.6 + math.random() * 2
+			l.comp = 0.2 + math.random() * 0.3
+			l.grossura = math.random(2, 4)
+		else
+			l.vel = 1.6 + math.random() * 1.4
+			l.comp = 0.10 + math.random() * 0.15
+			l.grossura = math.random(1, 3)
+		end
+	end
+	local function criarRisco(vermelha, extra)
+		local f = Instance.new("Frame")
+		f.AnchorPoint = Vector2.new(0.5, 0.5)
+		f.BackgroundColor3 = vermelha and VERMELHO or Color3.new(1, 1, 1)
+		f.BackgroundTransparency = 1
+		f.BorderSizePixel = 0
+		f.Active = false
+		f.Visible = false
+		f.Parent = efeitoGui
+		local l = { frame = f, vermelha = vermelha, extra = extra }
+		reiniciarLinha(l, true)
+		riscos[#riscos + 1] = l
+	end
+	for _ = 1, EFEITO_QTD_RISCOS do criarRisco(false, false) end -- brancos normais
+	for _ = 1, EFEITO_QTD_RISCOS do criarRisco(false, true) end  -- brancos extras (super)
+	for _ = 1, 14 do criarRisco(true, true) end                  -- vermelhos (super)
 
 	local ultimoEfeito
 	RunService.RenderStepped:Connect(function()
@@ -1031,30 +1369,76 @@ do
 				alvo = math.clamp((vel / maxima - 0.7) / 0.3, 0, 1)
 			end
 		end
+		-- o dash do TPTOOL também liga o efeito de velocidade
+		if EFEITO_VELOCIDADE and (estado.dashEfeito or 0) > alvo then
+			alvo = estado.dashEfeito
+		end
 		efeitoIntens = efeitoIntens + (alvo - efeitoIntens) * (1 - math.exp(-dt * 4))
 		if efeitoIntens < 0.005 then efeitoIntens = 0 end
 
+		-- carga do super voo: enche enquanto fica na velocidade máxima, esvazia se desacelerar
+		if SUPER.ativo then
+			if alvo < 0.5 then
+				SUPER.ativo = false
+				carga = 0
+			end
+		else
+			if efeitoIntens >= 0.95 and estado.fly then
+				carga = math.min(1, carga + dt / SUPER.tempoCarga)
+			else
+				carga = math.max(0, carga - dt * 1.5)
+			end
+			if carga >= 1 then
+				SUPER.ativo = true
+				-- clarão vermelho/branco na hora que o super voo liga
+				efeitoFlash.BackgroundColor3 = Color3.fromRGB(255, 200, 200)
+				efeitoFlash.BackgroundTransparency = 0.25
+				TweenService:Create(efeitoFlash, TweenInfo.new(0.6), { BackgroundTransparency = 1 }):Play()
+			end
+		end
+		superMix = superMix + ((SUPER.ativo and 1 or 0) - superMix) * (1 - math.exp(-dt * 5))
+		if superMix < 0.01 then superMix = 0 end
+
+		-- barrinha e texto
+		barra.Visible = carga > 0.02 and not SUPER.ativo
+		enche.Size = UDim2.fromScale(carga, 1)
+		enche.BackgroundColor3 = Color3.new(1, 1, 1):Lerp(VERMELHO, carga)
+
 		-- flash branco rápido quando chega na velocidade máxima
-		if efeitoIntens > 0.9 and not efeitoFlashFeito then
-			efeitoFlashFeito = true
+		if efeitoIntens > 0.9 and not flashFeito then
+			flashFeito = true
+			efeitoFlash.BackgroundColor3 = Color3.new(1, 1, 1)
 			efeitoFlash.BackgroundTransparency = 0.55
 			TweenService:Create(efeitoFlash, TweenInfo.new(0.35), { BackgroundTransparency = 1 }):Play()
 		elseif efeitoIntens < 0.3 then
-			efeitoFlashFeito = false
+			flashFeito = false
 		end
 
-		-- riscos de vento saindo do centro para as bordas
+		-- blur e tom vermelho do super voo
+		blur.Enabled = superMix > 0
+		blur.Size = 16 * superMix
+		tinta.BackgroundTransparency = 1 - 0.15 * superMix
+
+		-- riscos saindo do centro para as bordas
 		local tela = efeitoGui.AbsoluteSize
 		if tela.X <= 0 then tela = workspace.CurrentCamera.ViewportSize end
 		local centro = tela / 2
 		local metade = tela.Magnitude / 2
-		for _, l in ipairs(efeitoLinhas) do
+		for _, l in ipairs(riscos) do
 			local f = l.frame
-			if efeitoIntens <= 0 then
+			local mostrar
+			if l.vermelha then
+				mostrar = superMix > 0
+			elseif l.extra then
+				mostrar = efeitoIntens > 0 and superMix > 0.2
+			else
+				mostrar = efeitoIntens > 0
+			end
+			if not mostrar then
 				f.Visible = false
 			else
 				f.Visible = true
-				l.raio = l.raio + l.vel * dt * (0.8 + efeitoIntens)
+				l.raio = l.raio + l.vel * dt * (0.8 + efeitoIntens) * (1 + superMix * 1.5)
 				if l.raio > 1.15 then
 					reiniciarLinha(l, false)
 				end
@@ -1063,9 +1447,13 @@ do
 				local entra = math.clamp((l.raio - 0.2) / 0.2, 0, 1)
 				local sai = math.clamp((1.15 - l.raio) / 0.3, 0, 1)
 				f.Position = UDim2.fromOffset(pos.X, pos.Y)
-				f.Size = UDim2.fromOffset(l.comp * metade * (0.5 + l.raio), l.grossura)
+				f.Size = UDim2.fromOffset(l.comp * metade * (0.5 + l.raio) * (1 + superMix * 0.6), l.grossura)
 				f.Rotation = math.deg(l.ang)
-				f.BackgroundTransparency = 1 - efeitoIntens * 0.7 * entra * sai
+				if l.vermelha then
+					f.BackgroundTransparency = 1 - superMix * 0.9 * entra * sai
+				else
+					f.BackgroundTransparency = 1 - math.min(1, efeitoIntens * 0.7 + superMix * 0.3) * entra * sai
+				end
 			end
 		end
 	end)
@@ -1075,18 +1463,18 @@ do
 		local cam = workspace.CurrentCamera
 		if not cam then return end
 		if efeitoIntens > 0.01 then
-			if not efeitoFovBase then efeitoFovBase = cam.FieldOfView end
-			cam.FieldOfView = efeitoFovBase + EFEITO_FOV_EXTRA * efeitoIntens
+			if not fovBase then fovBase = cam.FieldOfView end
+			cam.FieldOfView = fovBase + EFEITO_FOV_EXTRA * efeitoIntens + SUPER.fov * superMix + (estado.dashFov or 0)
 
-			local t = os.clock() * 35
-			local amp = EFEITO_TREMIDA * efeitoIntens
+			local t = os.clock() * (35 + 25 * superMix)
+			local amp = EFEITO_TREMIDA * efeitoIntens + SUPER.tremida * superMix + (estado.dashTremida or 0)
 			local nx, ny, nr = math.noise(t, 0, 0), math.noise(0, t, 0), math.noise(0, 0, t)
 			cam.CFrame = cam.CFrame
 				* CFrame.new(nx * 0.25 * amp, ny * 0.25 * amp, 0)
 				* CFrame.Angles(ny * 0.012 * amp, nx * 0.012 * amp, nr * 0.02 * amp)
-		elseif efeitoFovBase then
-			cam.FieldOfView = efeitoFovBase
-			efeitoFovBase = nil
+		elseif fovBase then
+			cam.FieldOfView = fovBase
+			fovBase = nil
 		end
 	end)
 end
@@ -1121,8 +1509,8 @@ local function atualizarFly()
 	local dir, flat = direcaoDeVoo(hum)
 
 	-- Velocidade com aceleração suave (não arranca nem para de uma vez)
-	local alvoVel = dir * velocidadeFly * MULTIPLICADOR_FLY
-	flyBV.Velocity = flyBV.Velocity:Lerp(alvoVel, 1 - math.exp(-dt * 8))
+	local alvoVel = dir * velocidadeFly * MULTIPLICADOR_FLY * (SUPER.ativo and SUPER.mult or 1)
+	flyBV.Velocity = flyBV.Velocity:Lerp(alvoVel, 1 - math.exp(-dt * (SUPER.ativo and 12 or 8)))
 
 	-- O personagem vira para onde a câmera aponta; em movimento deita como herói voando
 	local movendo = dir.Magnitude > 0.05
@@ -1287,6 +1675,183 @@ end
 botaoSwim.MouseButton1Click:Connect(function() definirSwim(not estado.swim) end)
 
 ------------------------------------------------------------
+-- EFEITO DE ÁGUA DO SWIM (tela azulada, bolhas subindo, ondinhas de luz, balanço suave)
+------------------------------------------------------------
+do
+	local agua = 0   -- 0 = fora d'água, 1 = dentro d'água (suavizado)
+	local entrada = 0 -- "splash" ao entrar, decai sozinho
+	local antes = false
+
+	local aguaGui = Instance.new("ScreenGui")
+	aguaGui.Name = "EfeitoAgua"
+	aguaGui.ResetOnSpawn = false
+	aguaGui.IgnoreGuiInset = true
+	aguaGui.DisplayOrder = -2
+	aguaGui.Parent = playerGui
+
+	-- Tom azul: mais claro em cima, mais fundo embaixo
+	local tinta = Instance.new("Frame")
+	tinta.Size = UDim2.fromScale(1, 1)
+	tinta.BackgroundColor3 = Color3.new(1, 1, 1)
+	tinta.BackgroundTransparency = 1
+	tinta.BorderSizePixel = 0
+	tinta.Active = false
+	tinta.Parent = aguaGui
+	local grad = Instance.new("UIGradient")
+	grad.Rotation = 90
+	grad.Color = ColorSequence.new(Color3.fromRGB(110, 200, 255), Color3.fromRGB(10, 70, 140))
+	grad.Parent = tinta
+
+	-- Clarão ao entrar na água
+	local splash = Instance.new("Frame")
+	splash.Size = UDim2.fromScale(1, 1)
+	splash.BackgroundColor3 = Color3.fromRGB(200, 235, 255)
+	splash.BackgroundTransparency = 1
+	splash.BorderSizePixel = 0
+	splash.Active = false
+	splash.Parent = aguaGui
+
+	local blur = Instance.new("BlurEffect")
+	blur.Name = "BlurAgua"
+	blur.Size = 0
+	blur.Enabled = false
+	blur.Parent = game:GetService("Lighting")
+
+	-- Ondinhas de luz (faixas suaves que balançam e deslizam na parte de cima da tela)
+	local ondas = {}
+	for i = 1, 8 do
+		local f = Instance.new("Frame")
+		f.AnchorPoint = Vector2.new(0.5, 0.5)
+		f.BackgroundColor3 = Color3.new(1, 1, 1)
+		f.BackgroundTransparency = 1
+		f.BorderSizePixel = 0
+		f.Active = false
+		f.Visible = false
+		f.Parent = aguaGui
+		local g = Instance.new("UIGradient") -- some nas pontas
+		g.Transparency = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 1),
+			NumberSequenceKeypoint.new(0.5, 0),
+			NumberSequenceKeypoint.new(1, 1),
+		})
+		g.Parent = f
+		ondas[i] = {
+			frame = f,
+			y = 0.05 + (i - 1) * 0.055 + math.random() * 0.02, -- altura (fração da tela)
+			x = math.random(),                                  -- posição horizontal
+			larg = 0.35 + math.random() * 0.35,
+			vel = (0.015 + math.random() * 0.03) * (math.random() < 0.5 and -1 or 1),
+			fase = math.random() * math.pi * 2,
+			grossura = math.random(2, 4),
+		}
+	end
+
+	-- Bolhas subindo
+	local bolhas = {}
+	local function reiniciarBolha(b, inicio)
+		b.x = math.random()
+		b.y = inicio and math.random() or (1.05 + math.random() * 0.1)
+		b.tam = math.random(6, 22)
+		b.vel = 0.10 + math.random() * 0.18 -- telas por segundo
+		b.balanco = 0.01 + math.random() * 0.025
+		b.fase = math.random() * math.pi * 2
+		b.freq = 1 + math.random() * 1.5
+	end
+	for i = 1, 24 do
+		local f = Instance.new("Frame")
+		f.AnchorPoint = Vector2.new(0.5, 0.5)
+		f.BackgroundColor3 = Color3.new(1, 1, 1)
+		f.BackgroundTransparency = 1
+		f.BorderSizePixel = 0
+		f.Active = false
+		f.Visible = false
+		f.Parent = aguaGui
+		Instance.new("UICorner", f).CornerRadius = UDim.new(1, 0)
+		local c = Instance.new("UIStroke")
+		c.Color = Color3.new(1, 1, 1)
+		c.Thickness = 1.2
+		c.Transparency = 1
+		c.Parent = f
+		local b = { frame = f, contorno = c }
+		reiniciarBolha(b, true)
+		bolhas[i] = b
+	end
+
+	local ultimo
+	RunService.RenderStepped:Connect(function()
+		local agora = os.clock()
+		local dt = math.min(agora - (ultimo or agora), 0.1)
+		ultimo = agora
+
+		local ligado = estado.swim and not estado.fly and swimBV ~= nil
+		if ligado and not antes then
+			-- acabou de entrar na água: splash + explosão de bolhas
+			entrada = 1
+			splash.BackgroundTransparency = 0.45
+			TweenService:Create(splash, TweenInfo.new(0.7), { BackgroundTransparency = 1 }):Play()
+			for _, b in ipairs(bolhas) do
+				b.y = 0.9 + math.random() * 0.25
+			end
+		end
+		antes = ligado
+
+		agua = agua + ((ligado and 1 or 0) - agua) * (1 - math.exp(-dt * 3))
+		if agua < 0.01 then agua = 0 end
+		entrada = entrada * math.exp(-dt * 1.6)
+
+		tinta.BackgroundTransparency = 1 - 0.3 * agua
+		blur.Enabled = agua > 0
+		blur.Size = (3 * agua) + 8 * entrada
+
+		local tela = aguaGui.AbsoluteSize
+		if tela.X <= 0 then tela = workspace.CurrentCamera.ViewportSize end
+		local t = agora
+
+		for _, o in ipairs(ondas) do
+			local f = o.frame
+			if agua <= 0 then
+				f.Visible = false
+			else
+				f.Visible = true
+				o.x = (o.x + o.vel * dt) % 1.4
+				local y = o.y + math.sin(t * 0.9 + o.fase) * 0.012
+				f.Position = UDim2.fromOffset((o.x - 0.2) * tela.X, y * tela.Y)
+				f.Size = UDim2.fromOffset(o.larg * tela.X, o.grossura)
+				f.BackgroundTransparency = 1 - agua * (0.18 + 0.1 * math.sin(t * 1.4 + o.fase * 2))
+			end
+		end
+
+		for _, b in ipairs(bolhas) do
+			local f = b.frame
+			if agua <= 0 then
+				f.Visible = false
+				b.contorno.Transparency = 1
+			else
+				f.Visible = true
+				b.y = b.y - b.vel * dt * (1 + entrada * 2.5)
+				if b.y < -0.08 then reiniciarBolha(b, false) end
+				local x = b.x + math.sin(t * b.freq + b.fase) * b.balanco
+				f.Position = UDim2.fromOffset(x * tela.X, b.y * tela.Y)
+				f.Size = UDim2.fromOffset(b.tam, b.tam)
+				f.BackgroundTransparency = 1 - agua * 0.12
+				b.contorno.Transparency = 1 - agua * 0.55
+			end
+		end
+	end)
+
+	-- Balanço bem leve da câmera, como flutuando (depois do script da câmera do Roblox)
+	RunService:BindToRenderStep("EfeitoAguaSwim", Enum.RenderPriority.Camera.Value + 1, function()
+		if agua <= 0.01 then return end
+		local cam = workspace.CurrentCamera
+		if not cam then return end
+		local t = os.clock()
+		cam.CFrame = cam.CFrame
+			* CFrame.new(0, math.sin(t * 1.2) * 0.08 * agua, 0)
+			* CFrame.Angles(math.sin(t * 0.8) * 0.004 * agua, 0, math.sin(t * 1.0) * 0.012 * agua)
+	end)
+end
+
+------------------------------------------------------------
 -- NOCLIP (atravessar paredes)
 ------------------------------------------------------------
 local colisaoOriginal = {} -- [BasePart] = CanCollide original
@@ -1334,8 +1899,149 @@ player.CharacterAdded:Connect(function()
 end)
 
 ------------------------------------------------------------
+-- EFEITOS DO NOCLIP: paredes ficam transparentes perto de você, aura de poder, personagem translúcido
+-- (tudo só no seu cliente: ninguém mais vê, e o mapa de verdade não muda)
+------------------------------------------------------------
+do
+	local RAIO_PAREDE = 8          -- studs: paredes dentro desse raio ficam transparentes
+	local TRANSP_PAREDE = 0.75     -- 0 = normal, 1 = invisível
+	local TRANSP_PERSONAGEM = 0.35 -- personagem meio transparente com o noclip ligado (0 = normal)
+	local COR_AURA = Color3.fromRGB(90, 200, 255)
+
+	local afetadas = {}  -- [BasePart] = nível 0..1 (quanto já ficou transparente)
+	local perto = {}     -- [BasePart] = true se está dentro do raio agora
+	local nivelPersonagem = 0
+	local nivelAura = 0
+	local tocandoAntes = false
+	local ultimaBusca = 0
+
+	-- Aura de poder (esfera de campo de força que aparece quando você está dentro de uma parede)
+	local aura = Instance.new("Part")
+	aura.Name = "AuraNoclip"
+	aura.Shape = Enum.PartType.Ball
+	aura.Material = Enum.Material.ForceField
+	aura.Color = COR_AURA
+	aura.Size = Vector3.new(5, 5, 5)
+	aura.Anchored = true
+	aura.CanCollide = false
+	aura.CanQuery = false
+	aura.CanTouch = false
+	aura.CastShadow = false
+	aura.Transparency = 1
+	aura.Parent = workspace.CurrentCamera
+
+	local params = OverlapParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+
+	-- Pulso (anel de energia) quando você entra em uma parede
+	local function pulso(posicao)
+		local p = Instance.new("Part")
+		p.Shape = Enum.PartType.Ball
+		p.Material = Enum.Material.Neon
+		p.Color = COR_AURA
+		p.Size = Vector3.new(3, 3, 3)
+		p.Position = posicao
+		p.Anchored = true
+		p.CanCollide = false
+		p.CanQuery = false
+		p.CanTouch = false
+		p.CastShadow = false
+		p.Transparency = 0.55
+		p.Parent = workspace.CurrentCamera
+		local t = TweenService:Create(p, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			Size = Vector3.new(15, 15, 15),
+			Transparency = 1,
+		})
+		t:Play()
+		t.Completed:Connect(function() p:Destroy() end)
+	end
+
+	local function ehDeJogador(parte)
+		local m = parte:FindFirstAncestorOfClass("Model")
+		return m ~= nil and m:FindFirstChildOfClass("Humanoid") ~= nil
+	end
+
+	RunService.RenderStepped:Connect(function(dt)
+		local char = player.Character
+		local raiz = char and char:FindFirstChild("HumanoidRootPart")
+		local ligado = estado.noclip and raiz ~= nil
+		local agora = os.clock()
+
+		-- 1) Personagem meio transparente
+		nivelPersonagem = nivelPersonagem + ((ligado and 1 or 0) - nivelPersonagem) * (1 - math.exp(-dt * 6))
+		if char and (nivelPersonagem > 0.005 or ligado) then
+			for _, d in ipairs(char:GetDescendants()) do
+				if d:IsA("BasePart") then
+					d.LocalTransparencyModifier = nivelPersonagem * TRANSP_PERSONAGEM
+				end
+			end
+		end
+
+		-- 2) Busca (a cada 0.08s) das paredes perto e se você está dentro de alguma
+		local tocando = false
+		if ligado and agora - ultimaBusca > 0.08 then
+			ultimaBusca = agora
+			params.FilterDescendantsInstances = { char, aura }
+			perto = {}
+			for _, parte in ipairs(workspace:GetPartBoundsInRadius(raiz.Position, RAIO_PAREDE, params)) do
+				if parte.CanCollide and parte.Transparency < 1 and not ehDeJogador(parte) then
+					perto[parte] = true
+					if afetadas[parte] == nil then afetadas[parte] = 0 end
+				end
+			end
+			for _, parte in ipairs(workspace:GetPartBoundsInBox(raiz.CFrame, Vector3.new(2.5, 4.5, 2.5), params)) do
+				if parte.CanCollide and not ehDeJogador(parte) then
+					tocando = true
+					break
+				end
+			end
+			if tocando and not tocandoAntes then
+				pulso(raiz.Position)
+			end
+			tocandoAntes = tocando
+			aura:SetAttribute("tocando", tocando)
+		elseif not ligado then
+			perto = {}
+			tocandoAntes = false
+			aura:SetAttribute("tocando", false)
+		end
+
+		-- 3) Paredes ficando transparentes / voltando ao normal aos poucos
+		local passo = 1 - math.exp(-dt * 7)
+		for parte, nivel in pairs(afetadas) do
+			if not parte.Parent then
+				afetadas[parte] = nil
+			else
+				nivel = nivel + ((perto[parte] and 1 or 0) - nivel) * passo
+				if nivel < 0.01 and not perto[parte] then
+					parte.LocalTransparencyModifier = 0
+					afetadas[parte] = nil
+				else
+					afetadas[parte] = nivel
+					parte.LocalTransparencyModifier = nivel * TRANSP_PAREDE
+				end
+			end
+		end
+
+		-- 4) Aura de poder acompanhando o personagem enquanto está dentro de parede
+		local alvoAura = (ligado and aura:GetAttribute("tocando")) and 1 or 0
+		nivelAura = nivelAura + (alvoAura - nivelAura) * (1 - math.exp(-dt * 8))
+		if nivelAura > 0.01 and raiz then
+			local pulsar = 1 + math.sin(agora * 7) * 0.06
+			aura.Size = Vector3.new(5, 5, 5) * pulsar
+			aura.CFrame = raiz.CFrame * CFrame.Angles(0, agora * 0.8, 0)
+			aura.Transparency = 1 - 0.5 * nivelAura
+		else
+			aura.Transparency = 1
+		end
+	end)
+end
+
+------------------------------------------------------------
 -- SPAWNS (salvar posições, renomear e teleportar)
 ------------------------------------------------------------
+local iniciarDash -- definido mais abaixo (no bloco do TPTOOL); SPAWNS e TP usam
+local DASH_VELOCIDADE_TP = 700 -- studs por segundo no teleporte do TP e dos SPAWNS (aumente para ir mais rápido)
 -- Abre um painel lateral colado ao menu (à direita; se não couber, à esquerda)
 local function posicionarAoLado(f)
 	local tela = tamanhoTela()
@@ -1402,23 +2108,81 @@ layoutSpawn.Padding = UDim.new(0, 6)
 layoutSpawn.SortOrder = Enum.SortOrder.LayoutOrder
 layoutSpawn.Parent = listaSpawn
 
-local spawnsSalvos = {} -- [Frame da linha] = { nome = TextBox, cf = CFrame }
+local spawnsSalvos = {} -- [Frame da linha] = { nome = TextBox, cf = CFrame, dist = TextLabel, marca = Part }
 local contadorSpawn = 0
+local carregandoSpawns = true -- true enquanto lê o arquivo (não regrava no meio)
 
-local function criarLinhaSpawn(cframeSalvo)
+-- Salvamento em arquivo (só funciona se o seu executor tiver writefile/readfile; senão ignora)
+local HttpService = game:GetService("HttpService")
+local ARQUIVO_SPAWNS = "spawns_" .. tostring(game.PlaceId) .. ".json"
+local function temArquivos()
+	return typeof(writefile) == "function" and typeof(readfile) == "function" and typeof(isfile) == "function"
+end
+
+local function salvarSpawns()
+	if carregandoSpawns or not temArquivos() then return end
+	local lista = {}
+	for linha, d in pairs(spawnsSalvos) do
+		lista[#lista + 1] = { ordem = linha.LayoutOrder, n = d.nome.Text, c = { d.cf:GetComponents() } }
+	end
+	table.sort(lista, function(a, b) return a.ordem < b.ordem end)
+	pcall(function()
+		writefile(ARQUIVO_SPAWNS, HttpService:JSONEncode(lista))
+	end)
+end
+
+-- Nome pequeno e discreto flutuando em cima do spawn (só no seu cliente)
+local function criarMarcaSpawn(cframeSalvo, texto)
+	local cam = workspace.CurrentCamera
+	local parte = Instance.new("Part")
+	parte.Name = "SpawnMarca"
+	parte.Anchored = true
+	parte.CanCollide = false
+	parte.CanQuery = false
+	parte.CanTouch = false
+	parte.CastShadow = false
+	parte.Transparency = 1
+	parte.Size = Vector3.new(0.2, 0.2, 0.2)
+	parte.CFrame = CFrame.new(cframeSalvo.Position + Vector3.new(0, 1, 0))
+	parte.Parent = cam
+
+	local bb = Instance.new("BillboardGui")
+	bb.Size = UDim2.fromOffset(140, 18)
+	bb.StudsOffset = Vector3.new(0, 2, 0)
+	bb.AlwaysOnTop = true
+	bb.MaxDistance = 120 -- só aparece quando você está perto
+	bb.LightInfluence = 0
+	bb.Adornee = parte
+	bb.Parent = parte
+
+	local t = Instance.new("TextLabel")
+	t.Size = UDim2.fromScale(1, 1)
+	t.BackgroundTransparency = 1
+	t.Text = texto
+	t.TextColor3 = Color3.new(1, 1, 1)
+	t.TextTransparency = 0.35
+	t.TextStrokeTransparency = 0.75
+	t.Font = Enum.Font.Gotham
+	t.TextSize = 12
+	t.TextTruncate = Enum.TextTruncate.AtEnd
+	t.Parent = bb
+	return parte, t
+end
+
+local function criarLinhaSpawn(cframeSalvo, nomeSalvo)
 	contadorSpawn += 1
 
 	local linha = Instance.new("Frame")
-	linha.Size = UDim2.new(1, -6, 0, 40)
+	linha.Size = UDim2.new(1, -6, 0, 52)
 	linha.BackgroundTransparency = 1
 	linha.LayoutOrder = contadorSpawn
 	linha.Parent = listaSpawn
 
 	-- Nome editável (clique e digite)
 	local nome = Instance.new("TextBox")
-	nome.Size = UDim2.new(0.55, 0, 1, 0)
+	nome.Size = UDim2.new(0.55, 0, 0, 34)
 	nome.BackgroundColor3 = Color3.fromRGB(45, 45, 52)
-	nome.Text = "Spawn " .. contadorSpawn
+	nome.Text = nomeSalvo or ("Spawn " .. contadorSpawn)
 	nome.PlaceholderText = "nome"
 	nome.TextColor3 = Color3.new(1, 1, 1)
 	nome.PlaceholderColor3 = Color3.fromRGB(140, 140, 140)
@@ -1429,16 +2193,34 @@ local function criarLinhaSpawn(cframeSalvo)
 	nome.Parent = linha
 	Instance.new("UICorner", nome).CornerRadius = UDim.new(0, 8)
 
+	-- Distância até o spawn (embaixo do nome)
+	local dist = Instance.new("TextLabel")
+	dist.Position = UDim2.new(0, 4, 0, 36)
+	dist.Size = UDim2.new(0.55, -4, 0, 14)
+	dist.BackgroundTransparency = 1
+	dist.Text = "—"
+	dist.TextColor3 = Color3.fromRGB(160, 160, 170)
+	dist.Font = Enum.Font.Gotham
+	dist.TextSize = 12
+	dist.TextXAlignment = Enum.TextXAlignment.Left
+	dist.Parent = linha
+
+	local marca, marcaTexto = criarMarcaSpawn(cframeSalvo, nome.Text)
+
+	nome:GetPropertyChangedSignal("Text"):Connect(function()
+		marcaTexto.Text = nome.Text
+	end)
 	nome.FocusLost:Connect(function()
 		if nome.Text:gsub("%s", "") == "" then
 			nome.Text = "Spawn"
 		end
+		salvarSpawns()
 	end)
 
-	-- Ir até o spawn
+	-- Ir até o spawn (voa na velocidade do som, igual ao TP)
 	local ir = Instance.new("TextButton")
 	ir.Position = UDim2.new(0.58, 0, 0, 0)
-	ir.Size = UDim2.new(0.24, 0, 1, 0)
+	ir.Size = UDim2.new(0.24, 0, 0, 34)
 	ir.BackgroundColor3 = COR_ON
 	ir.Text = "IR"
 	ir.TextColor3 = Color3.new(1, 1, 1)
@@ -1448,17 +2230,15 @@ local function criarLinhaSpawn(cframeSalvo)
 	Instance.new("UICorner", ir).CornerRadius = UDim.new(0, 8)
 
 	ir.MouseButton1Click:Connect(function()
-		local raiz = pegarPersonagem()
-		if raiz then
-			raiz.AssemblyLinearVelocity = Vector3.zero
-			raiz.CFrame = cframeSalvo + Vector3.new(0, 3, 0)
+		if pegarPersonagem() then
+			iniciarDash(cframeSalvo.Position + Vector3.new(0, 3, 0), { velocidade = DASH_VELOCIDADE_TP, forte = true })
 		end
 	end)
 
 	-- Apagar o spawn
 	local apagar = Instance.new("TextButton")
 	apagar.Position = UDim2.new(0.85, 0, 0, 0)
-	apagar.Size = UDim2.new(0.15, 0, 1, 0)
+	apagar.Size = UDim2.new(0.15, 0, 0, 34)
 	apagar.BackgroundColor3 = COR_OFF
 	apagar.Text = "X"
 	apagar.TextColor3 = Color3.new(1, 1, 1)
@@ -1467,11 +2247,13 @@ local function criarLinhaSpawn(cframeSalvo)
 	apagar.Parent = linha
 	Instance.new("UICorner", apagar).CornerRadius = UDim.new(0, 8)
 
-	spawnsSalvos[linha] = { nome = nome, cf = cframeSalvo }
+	spawnsSalvos[linha] = { nome = nome, cf = cframeSalvo, dist = dist, marca = marca }
 
 	apagar.MouseButton1Click:Connect(function()
 		spawnsSalvos[linha] = nil
+		marca:Destroy()
 		linha:Destroy()
+		salvarSpawns()
 	end)
 
 	return nome
@@ -1481,12 +2263,56 @@ botaoCriarSpawn.MouseButton1Click:Connect(function()
 	local raiz = pegarPersonagem()
 	if raiz then
 		criarLinhaSpawn(raiz.CFrame)
+		salvarSpawns()
 	end
 end)
 
+-- distâncias atualizadas duas vezes por segundo, só com o painel aberto
+local function atualizarDistanciasSpawn()
+	local raiz = pegarPersonagem()
+	for _, d in pairs(spawnsSalvos) do
+		if raiz then
+			d.dist.Text = math.floor((d.cf.Position - raiz.Position).Magnitude + 0.5) .. " studs"
+		else
+			d.dist.Text = "—"
+		end
+	end
+end
+task.spawn(function()
+	while true do
+		task.wait(0.5)
+		if painelSpawn.Visible then atualizarDistanciasSpawn() end
+	end
+end)
+
+-- carrega os spawns salvos deste jogo
+do
+	if temArquivos() then
+		local ok, dados = pcall(function()
+			if isfile(ARQUIVO_SPAWNS) then
+				return HttpService:JSONDecode(readfile(ARQUIVO_SPAWNS))
+			end
+		end)
+		if ok and type(dados) == "table" then
+			for _, item in ipairs(dados) do
+				if type(item) == "table" and type(item.c) == "table" and #item.c == 12 then
+					local okCF, cf = pcall(function() return CFrame.new(table.unpack(item.c)) end)
+					if okCF then
+						criarLinhaSpawn(cf, type(item.n) == "string" and item.n or nil)
+					end
+				end
+			end
+		end
+	end
+	carregandoSpawns = false
+end
+
 botaoSpawns.MouseButton1Click:Connect(function()
 	painelSpawn.Visible = not painelSpawn.Visible
-	if painelSpawn.Visible then posicionarAoLado(painelSpawn) end
+	if painelSpawn.Visible then
+		posicionarAoLado(painelSpawn)
+		atualizarDistanciasSpawn()
+	end
 end)
 
 ------------------------------------------------------------
@@ -1528,13 +2354,91 @@ layoutTP.Padding = UDim.new(0, 6)
 layoutTP.SortOrder = Enum.SortOrder.Name
 layoutTP.Parent = listaTP
 
+-- Caixa de busca (filtra a lista enquanto você digita)
+local buscaTP = Instance.new("TextBox")
+buscaTP.Name = "BuscaTP"
+buscaTP.Position = UDim2.new(0.05, 0, 0, 46)
+buscaTP.Size = UDim2.new(0.9, 0, 0, 30)
+buscaTP.BackgroundColor3 = Color3.fromRGB(45, 45, 52)
+buscaTP.PlaceholderText = "Buscar jogador..."
+buscaTP.PlaceholderColor3 = Color3.fromRGB(150, 150, 160)
+buscaTP.Text = ""
+buscaTP.TextColor3 = Color3.new(1, 1, 1)
+buscaTP.Font = Enum.Font.GothamBold
+buscaTP.TextSize = 14
+buscaTP.ClearTextOnFocus = false
+buscaTP.TextXAlignment = Enum.TextXAlignment.Left
+buscaTP.Parent = painelTP
+Instance.new("UICorner", buscaTP).CornerRadius = UDim.new(0, 8)
+do
+	local pad = Instance.new("UIPadding")
+	pad.PaddingLeft = UDim.new(0, 10)
+	pad.PaddingRight = UDim.new(0, 10)
+	pad.Parent = buscaTP
+end
+listaTP.Position = UDim2.new(0.05, 0, 0, 84)
+listaTP.Size = UDim2.new(0.9, 0, 1, -94)
+
 local botoesTP = {} -- [Player] = TextButton
+local avisosTP = {} -- [Player] = instante até quando o aviso "indisponível" fica na tela
+
+local function escaparRich(t)
+	return (t:gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;"):gsub('"', "&quot;"):gsub("'", "&apos;"))
+end
+
+local function textoBotaoTP(p, dist)
+	local d = dist and (math.floor(dist + 0.5) .. " studs") or "—"
+	return string.format('<b>%s</b>\n<font size="12" color="rgb(160,160,170)">@%s  ·  %s</font>',
+		escaparRich(p.DisplayName), escaparRich(p.Name), d)
+end
+
+local function distanciaAte(p)
+	local minhaRaiz = pegarPersonagem()
+	local char = p.Character
+	local alvo = char and char:FindFirstChild("HumanoidRootPart")
+	if minhaRaiz and alvo then
+		return (alvo.Position - minhaRaiz.Position).Magnitude
+	end
+	return nil
+end
+
+local function atualizarDistanciasTP()
+	local agora = os.clock()
+	for p, b in pairs(botoesTP) do
+		if (avisosTP[p] or 0) <= agora then
+			b.Text = textoBotaoTP(p, distanciaAte(p))
+		end
+	end
+end
+
+local function filtrarTP()
+	local q = buscaTP.Text:lower()
+	for p, b in pairs(botoesTP) do
+		local achou = q == "" or p.DisplayName:lower():find(q, 1, true) ~= nil or p.Name:lower():find(q, 1, true) ~= nil
+		b.Visible = achou
+	end
+end
+buscaTP:GetPropertyChangedSignal("Text"):Connect(filtrarTP)
 
 local function removerBotaoTP(p)
 	local b = botoesTP[p]
 	if b then
 		b:Destroy()
 		botoesTP[p] = nil
+		avisosTP[p] = nil
+	end
+end
+
+local function teleportarTP(p, b)
+	local minhaRaiz = pegarPersonagem()
+	local char = p.Character
+	local alvo = char and char:FindFirstChild("HumanoidRootPart")
+	if minhaRaiz and alvo then
+		-- voa até o jogador na "velocidade do som" (riscos, tremida, FOV e estrondo na chegada)
+		iniciarDash(alvo.Position + Vector3.new(0, 3, 0), { velocidade = DASH_VELOCIDADE_TP, forte = true })
+	else
+		avisosTP[p] = os.clock() + 1.5
+		b.Text = "Jogador indisponível"
 	end
 end
 
@@ -1543,33 +2447,44 @@ local function criarBotaoTP(p)
 
 	local b = Instance.new("TextButton")
 	b.Name = p.DisplayName:lower() .. p.UserId
-	b.Size = UDim2.new(1, -6, 0, 40)
+	b.Size = UDim2.new(1, -6, 0, 46)
 	b.BackgroundColor3 = Color3.fromRGB(45, 45, 52)
-	b.Text = string.format("%s (@%s)", p.DisplayName, p.Name)
+	b.RichText = true
+	b.Text = textoBotaoTP(p, distanciaAte(p))
 	b.TextColor3 = Color3.new(1, 1, 1)
 	b.Font = Enum.Font.GothamBold
 	b.TextSize = 14
+	b.TextXAlignment = Enum.TextXAlignment.Left
 	b.TextTruncate = Enum.TextTruncate.AtEnd
 	b.Parent = listaTP
 	Instance.new("UICorner", b).CornerRadius = UDim.new(0, 8)
+	do
+		local pad = Instance.new("UIPadding")
+		pad.PaddingLeft = UDim.new(0, 10)
+		pad.PaddingRight = UDim.new(0, 10)
+		pad.Parent = b
+	end
 
 	b.MouseButton1Click:Connect(function()
-		local minhaRaiz = pegarPersonagem()
-		local char = p.Character
-		local alvo = char and char:FindFirstChild("HumanoidRootPart")
-		if minhaRaiz and alvo then
-			minhaRaiz.AssemblyLinearVelocity = Vector3.zero
-			minhaRaiz.CFrame = alvo.CFrame + Vector3.new(0, 3, 0)
-		else
-			local textoAntigo = b.Text
-			b.Text = "Jogador indisponível"
-			task.wait(1.5)
-			if b.Parent then b.Text = textoAntigo end
-		end
+		teleportarTP(p, b)
 	end)
 
 	botoesTP[p] = b
 end
+
+-- Enter na busca: vai para o primeiro jogador que aparece na lista filtrada
+buscaTP.FocusLost:Connect(function(enter)
+	if not enter or buscaTP.Text == "" then return end
+	local melhorP, melhorB
+	for p, b in pairs(botoesTP) do
+		if b.Visible and (not melhorB or b.Name < melhorB.Name) then
+			melhorP, melhorB = p, b
+		end
+	end
+	if melhorP then
+		teleportarTP(melhorP, melhorB)
+	end
+end)
 
 for _, p in ipairs(Players:GetPlayers()) do
 	criarBotaoTP(p)
@@ -1577,18 +2492,31 @@ end
 Players.PlayerAdded:Connect(criarBotaoTP)
 Players.PlayerRemoving:Connect(removerBotaoTP)
 
+-- distâncias atualizadas duas vezes por segundo, só com o painel aberto
+task.spawn(function()
+	while true do
+		task.wait(0.5)
+		if painelTP.Visible then atualizarDistanciasTP() end
+	end
+end)
+
 botaoTP.MouseButton1Click:Connect(function()
 	painelTP.Visible = not painelTP.Visible
-	if painelTP.Visible then posicionarAoLado(painelTP) end
+	if painelTP.Visible then
+		posicionarAoLado(painelTP)
+		atualizarDistanciasTP()
+	end
 end)
 
 ------------------------------------------------------------
--- XRAY (mapa semitransparente, só no seu cliente)
+-- XRAY (mapa semitransparente, só no seu cliente) com onda de revelação e SONAR
 ------------------------------------------------------------
+-- Ao ligar: uma onda parte de você e o mapa vai ficando transparente conforme ela passa (com fade suave).
+-- Ligado: a cada poucos segundos um sonar (anel de energia) sai de você e "acende" por um instante
+-- as paredes por onde passa. Ao desligar: o mapa volta ao normal aos poucos.
 local transparenciaXray = 0.6
-local xrayPartes = {}   -- [BasePart] = true
-local xrayConexao = nil
-local xrayVersao = 0    -- cancela varreduras antigas ao desligar
+local definirXray
+local aplicarCaixaXray
 
 local function ehParteDePersonagem(parte)
 	local modelo = parte:FindFirstAncestorOfClass("Model")
@@ -1601,77 +2529,509 @@ local function ehParteDePersonagem(parte)
 	return false
 end
 
-local function aplicarXray(obj)
-	if obj:IsA("BasePart") and not xrayPartes[obj] and obj.Transparency < 1 and not ehParteDePersonagem(obj) then
-		xrayPartes[obj] = true
-		obj.LocalTransparencyModifier = transparenciaXray
+do
+	local RAIO_ONDA = 500        -- studs: até onde a onda de revelação vai
+	local DURACAO_ONDA = 2.2     -- segundos que a onda leva para chegar lá
+	local SONAR_INTERVALO = 4    -- segundos entre um sonar e outro
+	local SONAR_ALCANCE = 120    -- studs que cada sonar alcança
+	local SONAR_DURACAO = 1.8    -- segundos que o sonar leva para chegar no alcance
+	local COR_SONAR = Color3.fromRGB(90, 220, 255)
+	local TAMANHO_BALDE = 10     -- studs por faixa de distância (organiza as partes pela onda)
+
+	local partes = {}     -- [BasePart] = nível 0..1 (quanto já ficou transparente)
+	local ativas = {}     -- [BasePart] = true enquanto faz o fade de entrada
+	local baldes = {}     -- [faixa] = { partes esperando a onda chegar }
+	local ecos = {}       -- [BasePart] = instante em que o sonar passou
+	local aneis = {}      -- anéis/ondas visíveis no momento
+	local conexao
+	local versao = 0
+	local fadeGlobal = 1  -- 1 = normal, cai a 0 ao desligar
+	local saindo = false
+	local ondaAtiva = false
+	local raioOnda = 0
+	local baldeAtual = 0
+	local origemOnda = Vector3.zero
+	local proximoSonar = 0
+	local ultimoEco = 0
+	local ultimo
+
+	local ecoParams = OverlapParams.new()
+
+	-- Anel de energia no chão + casca de campo de força (só visual, no seu cliente)
+	local function criarAnel(origem, tipo, alcance)
+		local pasta = workspace.CurrentCamera
+		local bloco = Instance.new("Part")
+		bloco.Name = "XrayAnel"
+		bloco.Anchored = true
+		bloco.CanCollide = false
+		bloco.CanQuery = false
+		bloco.CanTouch = false
+		bloco.CastShadow = false
+		bloco.Transparency = 1
+		bloco.Size = Vector3.new(1, 0.1, 1)
+		bloco.CFrame = CFrame.new(origem - Vector3.new(0, 2.6, 0))
+		bloco.Parent = pasta
+
+		local sg = Instance.new("SurfaceGui")
+		sg.Face = Enum.NormalId.Top
+		sg.SizingMode = Enum.SurfaceGuiSizingMode.FixedSize
+		sg.CanvasSize = Vector2.new(512, 512)
+		sg.AlwaysOnTop = true
+		sg.LightInfluence = 0
+		sg.Adornee = bloco
+		sg.Parent = bloco
+		local quadro = Instance.new("Frame")
+		quadro.Size = UDim2.fromScale(1, 1)
+		quadro.BackgroundTransparency = 1
+		quadro.Parent = sg
+		Instance.new("UICorner", quadro).CornerRadius = UDim.new(0.5, 0)
+		local contorno = Instance.new("UIStroke")
+		contorno.Color = COR_SONAR
+		contorno.Thickness = tipo == "onda" and 7 or 4
+		contorno.Transparency = 1
+		contorno.Parent = quadro
+
+		local esfera = Instance.new("Part")
+		esfera.Name = "XrayCasca"
+		esfera.Shape = Enum.PartType.Ball
+		esfera.Material = Enum.Material.ForceField
+		esfera.Color = COR_SONAR
+		esfera.Anchored = true
+		esfera.CanCollide = false
+		esfera.CanQuery = false
+		esfera.CanTouch = false
+		esfera.CastShadow = false
+		esfera.Transparency = 1
+		esfera.Size = Vector3.new(1, 1, 1)
+		esfera.CFrame = CFrame.new(origem)
+		esfera.Parent = pasta
+
+		local anel = {
+			tipo = tipo, bloco = bloco, esfera = esfera, contorno = contorno,
+			origem = origem, raio = 0, alcance = alcance,
+			vel = alcance / (tipo == "onda" and DURACAO_ONDA or SONAR_DURACAO),
+		}
+		aneis[#aneis + 1] = anel
+		return anel
 	end
-end
 
-local function ligarXray()
-	xrayVersao += 1
-	local minhaVersao = xrayVersao
+	local function atualizarAnel(a)
+		local prog = math.clamp(a.raio / a.alcance, 0, 1)
+		local d = math.clamp(a.raio * 2, 1, 2000)
+		a.bloco.Size = Vector3.new(d, 0.1, d)
+		a.bloco.CFrame = CFrame.new(a.origem - Vector3.new(0, 2.6, 0))
+		a.esfera.Size = Vector3.new(d, d, d)
+		local forca = a.tipo == "onda" and 0.9 or 0.65
+		a.contorno.Transparency = 1 - forca * (1 - prog ^ 1.6)
+		a.esfera.Transparency = 1 - (a.tipo == "onda" and 0.12 or 0.07) * (1 - prog)
+	end
 
-	xrayConexao = workspace.DescendantAdded:Connect(aplicarXray)
+	local function destruirAnel(a)
+		a.bloco:Destroy()
+		a.esfera:Destroy()
+	end
 
-	task.spawn(function()
-		local n = 0
-		for _, obj in ipairs(workspace:GetDescendants()) do
-			if minhaVersao ~= xrayVersao or not estado.xray then return end
-			aplicarXray(obj)
-			n += 1
-			if n % 300 == 0 then
-				task.wait() -- evita travar em mapas grandes
+	local function limparAneis()
+		for _, a in ipairs(aneis) do destruirAnel(a) end
+		aneis = {}
+	end
+
+	-- Aplica o nível de transparência de uma parte (com o fator do eco do sonar, se houver)
+	local function aplicarNivel(parte, agora)
+		local n = partes[parte]
+		if not n or n <= 0 then return end
+		local fator = 1
+		local t = ecos[parte]
+		if t then
+			local f = 1 - (agora - t) / 0.6
+			if f > 0 then fator = 1 - 0.65 * f end
+		end
+		parte.LocalTransparencyModifier = n * transparenciaXray * fadeGlobal * fator
+	end
+
+	local function ativar(parte)
+		if partes[parte] ~= nil then ativas[parte] = true end
+	end
+
+	-- Registra uma parte do mapa e decide quando ela entra na onda
+	local function registrar(obj)
+		if not obj:IsA("BasePart") or obj:IsA("Terrain") or partes[obj] ~= nil then return end
+		if obj.Transparency >= 1 or ehParteDePersonagem(obj) then return end
+		local cam = workspace.CurrentCamera
+		if cam and obj:IsDescendantOf(cam) then return end -- não afeta os próprios efeitos
+		partes[obj] = 0
+		if not ondaAtiva then
+			ativar(obj)
+			return
+		end
+		local dist = (obj.Position - origemOnda).Magnitude
+		if dist <= raioOnda then
+			ativar(obj)
+		else
+			local b = math.floor(dist / TAMANHO_BALDE)
+			local lista = baldes[b]
+			if not lista then lista = {} baldes[b] = lista end
+			lista[#lista + 1] = obj
+		end
+	end
+
+	local function finalizarSaida()
+		for parte in pairs(partes) do
+			if parte.Parent then parte.LocalTransparencyModifier = 0 end
+		end
+		partes, ativas, baldes, ecos = {}, {}, {}, {}
+		limparAneis()
+		saindo = false
+		fadeGlobal = 1
+	end
+
+	local function ligar()
+		if saindo then finalizarSaida() end
+		versao += 1
+		local minhaVersao = versao
+		fadeGlobal = 1
+
+		local raiz = pegarPersonagem()
+		origemOnda = raiz and raiz.Position or workspace.CurrentCamera.CFrame.Position
+		ondaAtiva = true
+		raioOnda = 0
+		baldeAtual = 0
+		baldes = {}
+		criarAnel(origemOnda, "onda", RAIO_ONDA)
+		proximoSonar = os.clock() + DURACAO_ONDA + 1.2
+
+		conexao = workspace.DescendantAdded:Connect(registrar)
+		task.spawn(function()
+			local n = 0
+			for _, obj in ipairs(workspace:GetDescendants()) do
+				if minhaVersao ~= versao or not estado.xray then return end
+				registrar(obj)
+				n += 1
+				if n % 300 == 0 then
+					task.wait() -- evita travar em mapas grandes
+				end
+			end
+		end)
+	end
+
+	local function desligar()
+		versao += 1
+		if conexao then
+			conexao:Disconnect()
+			conexao = nil
+		end
+		ondaAtiva = false
+		baldes = {}
+		for _, a in ipairs(aneis) do destruirAnel(a) end
+		aneis = {}
+		saindo = true -- o fade de saída roda no loop abaixo
+	end
+
+	definirXray = function(v)
+		if v == estado.xray then return end
+		estado.xray = v
+		pintarBotao(botaoXray, "XRAY", v)
+		if v then ligar() else desligar() end
+	end
+
+	aplicarCaixaXray = function()
+		local n = tonumber(caixaXray.Text)
+		if n then
+			transparenciaXray = math.clamp(n, 0, 0.95)
+		end
+		caixaXray.Text = tostring(transparenciaXray)
+		if estado.xray or saindo then
+			local agora = os.clock()
+			for parte in pairs(partes) do
+				if parte.Parent then aplicarNivel(parte, agora) end
+			end
+		end
+	end
+
+	RunService.RenderStepped:Connect(function()
+		local agora = os.clock()
+		local dt = math.min(agora - (ultimo or agora), 0.1)
+		ultimo = agora
+		if not (estado.xray or saindo) then return end
+
+		-- saída suave: o mapa volta ao normal em ~0.4s
+		if saindo then
+			fadeGlobal = fadeGlobal - dt * 2.5
+			if fadeGlobal <= 0 then
+				finalizarSaida()
+			else
+				for parte in pairs(partes) do
+					if parte.Parent then aplicarNivel(parte, agora) end
+				end
+			end
+			return
+		end
+
+		local raiz = pegarPersonagem()
+
+		-- onda de revelação: libera as partes por faixa de distância
+		if ondaAtiva then
+			raioOnda = math.min(RAIO_ONDA, raioOnda + (RAIO_ONDA / DURACAO_ONDA) * dt)
+			local limite = math.floor(raioOnda / TAMANHO_BALDE)
+			for b = baldeAtual, limite do
+				local lista = baldes[b]
+				if lista then
+					for _, parte in ipairs(lista) do ativar(parte) end
+					baldes[b] = nil
+				end
+			end
+			baldeAtual = limite + 1
+			if raioOnda >= RAIO_ONDA then
+				for _, lista in pairs(baldes) do -- o que sobrou (muito longe) entra junto no fim
+					for _, parte in ipairs(lista) do ativar(parte) end
+				end
+				baldes = {}
+				ondaAtiva = false
+			end
+		end
+
+		-- partes entrando (fade de ~0.3s)
+		for parte in pairs(ativas) do
+			if not parte.Parent then
+				ativas[parte] = nil
+				partes[parte] = nil
+			else
+				local n = math.min(1, partes[parte] + dt * 3.5)
+				partes[parte] = n
+				if n >= 1 then ativas[parte] = nil end
+				aplicarNivel(parte, agora)
+			end
+		end
+
+		-- sonar periódico saindo de você
+		if not ondaAtiva and raiz and agora >= proximoSonar then
+			proximoSonar = agora + SONAR_INTERVALO
+			criarAnel(raiz.Position, "sonar", SONAR_ALCANCE)
+		end
+
+		-- anéis crescendo; o sonar "acende" as paredes por onde passa
+		for i = #aneis, 1, -1 do
+			local a = aneis[i]
+			if a.tipo == "onda" then
+				a.raio = raioOnda
+				if not ondaAtiva then
+					destruirAnel(a)
+					table.remove(aneis, i)
+				else
+					atualizarAnel(a)
+				end
+			else
+				a.raio = a.raio + a.vel * dt
+				if a.raio >= a.alcance then
+					destruirAnel(a)
+					table.remove(aneis, i)
+				else
+					atualizarAnel(a)
+					if agora - ultimoEco > 0.05 then
+						ultimoEco = agora
+						for _, parte in ipairs(workspace:GetPartBoundsInRadius(a.origem, a.raio + 4, ecoParams)) do
+							local n = partes[parte]
+							if n and n > 0 then
+								local d = (parte.Position - a.origem).Magnitude
+								if d >= a.raio - 5 and d <= a.raio + 4 then
+									ecos[parte] = agora
+								end
+							end
+						end
+					end
+				end
+			end
+		end
+
+		-- eco do sonar: a parte fica um pouco mais visível e volta suave
+		for parte, t in pairs(ecos) do
+			if not parte.Parent then
+				ecos[parte] = nil
+			else
+				if agora - t >= 0.6 then ecos[parte] = nil end
+				aplicarNivel(parte, agora)
 			end
 		end
 	end)
 end
 
-local function desligarXray()
-	xrayVersao += 1
-	if xrayConexao then
-		xrayConexao:Disconnect()
-		xrayConexao = nil
-	end
-	for parte in pairs(xrayPartes) do
-		if parte.Parent then
-			parte.LocalTransparencyModifier = 0
-		end
-	end
-	xrayPartes = {}
-end
-
-local function definirXray(v)
-	if v == estado.xray then return end
-	estado.xray = v
-	pintarBotao(botaoXray, "XRAY", v)
-	if v then
-		ligarXray()
-	else
-		desligarXray()
-	end
-end
 botaoXray.MouseButton1Click:Connect(function() definirXray(not estado.xray) end)
-
-local function aplicarCaixaXray()
-	local n = tonumber(caixaXray.Text)
-	if n then
-		transparenciaXray = math.clamp(n, 0, 0.95)
-	end
-	caixaXray.Text = tostring(transparenciaXray)
-	if estado.xray then
-		for parte in pairs(xrayPartes) do
-			if parte.Parent then
-				parte.LocalTransparencyModifier = transparenciaXray
-			end
-		end
-	end
-end
 caixaXray.FocusLost:Connect(aplicarCaixaXray)
 
 ------------------------------------------------------------
--- TPTOOL (item que teleporta para onde você clicar)
+-- TPTOOL (item que leva você até onde você clicar, em um dash rápido)
 ------------------------------------------------------------
+-- TELEPORTE SUAVE (dash): em vez de aparecer lá de uma vez, você voa rapidinho até o ponto
+-- (acelera, passa direto por paredes e freia na chegada), com os riscos de vento e a tremida do fly
+local DASH_VELOCIDADE = 220 -- studs por segundo (aumente para ir mais rápido)
+do
+	local conexao, terminarAtual
+
+	-- Efeito de "estrondo sonoro" na chegada do TP (só visual, no seu cliente)
+	local ESTRONDO_BLUR = 22 -- força do embaçado na chegada (0 = sem blur)
+	local fxGui = Instance.new("ScreenGui")
+	fxGui.Name = "EfeitoEstrondo"
+	fxGui.ResetOnSpawn = false
+	fxGui.IgnoreGuiInset = true
+	fxGui.DisplayOrder = 50
+	fxGui.Parent = playerGui
+
+	local fxFlash = Instance.new("Frame")
+	fxFlash.Size = UDim2.fromScale(1, 1)
+	fxFlash.BackgroundColor3 = Color3.new(1, 1, 1)
+	fxFlash.BackgroundTransparency = 1
+	fxFlash.BorderSizePixel = 0
+	fxFlash.Active = false
+	fxFlash.Parent = fxGui
+
+	local fxBlur = Instance.new("BlurEffect")
+	fxBlur.Name = "BlurEstrondo"
+	fxBlur.Size = 0
+	fxBlur.Enabled = false
+	fxBlur.Parent = game:GetService("Lighting")
+
+	local versaoFx = 0
+
+	local function anelEstrondo(atraso, espessura)
+		task.delay(atraso, function()
+			local tela = fxGui.AbsoluteSize
+			if tela.X <= 0 then tela = workspace.CurrentCamera.ViewportSize end
+			local anel = Instance.new("Frame")
+			anel.AnchorPoint = Vector2.new(0.5, 0.5)
+			anel.Position = UDim2.fromScale(0.5, 0.5)
+			anel.Size = UDim2.fromOffset(40, 40)
+			anel.BackgroundTransparency = 1
+			anel.BorderSizePixel = 0
+			anel.Active = false
+			anel.Parent = fxGui
+			Instance.new("UICorner", anel).CornerRadius = UDim.new(0.5, 0)
+			local contorno = Instance.new("UIStroke")
+			contorno.Color = Color3.fromRGB(235, 248, 255)
+			contorno.Thickness = espessura
+			contorno.Transparency = 0.1
+			contorno.Parent = anel
+			local info = TweenInfo.new(0.55, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+			local d = tela.Magnitude * 1.1
+			TweenService:Create(anel, info, { Size = UDim2.fromOffset(d, d) }):Play()
+			TweenService:Create(contorno, info, { Transparency = 1, Thickness = 1 }):Play()
+			task.delay(0.6, function() anel:Destroy() end)
+		end)
+	end
+
+	local function estrondo()
+		versaoFx += 1
+		local minha = versaoFx
+		-- clarão
+		fxFlash.BackgroundTransparency = 0.2
+		TweenService:Create(fxFlash, TweenInfo.new(0.35, Enum.EasingStyle.Quad), { BackgroundTransparency = 1 }):Play()
+		-- ondas de choque saindo do centro da tela
+		anelEstrondo(0, 8)
+		anelEstrondo(0.09, 4)
+		-- embaçado que some rápido
+		if ESTRONDO_BLUR > 0 then
+			fxBlur.Enabled = true
+			fxBlur.Size = ESTRONDO_BLUR
+			TweenService:Create(fxBlur, TweenInfo.new(0.5, Enum.EasingStyle.Quad), { Size = 0 }):Play()
+			task.delay(0.55, function()
+				if minha == versaoFx then fxBlur.Enabled = false end
+			end)
+		end
+		-- tranco da câmera: tremida e FOV extras que vão sumindo
+		task.spawn(function()
+			local t0 = os.clock()
+			while minha == versaoFx do
+				local k = 1 - (os.clock() - t0) / 0.6
+				if k <= 0 then break end
+				estado.dashTremida = 4 * k * k
+				estado.dashFov = 12 * k
+				task.wait()
+			end
+			if minha == versaoFx then
+				estado.dashTremida = 0
+				estado.dashFov = 0
+			end
+		end)
+	end
+
+	-- opcoes (opcional): { velocidade = studs/s, forte = true (efeito de velocidade do som + estrondo na chegada) }
+	iniciarDash = function(destino, opcoes)
+		opcoes = opcoes or {}
+		local velocidade = opcoes.velocidade or DASH_VELOCIDADE
+		local forte = opcoes.forte == true
+		if terminarAtual then terminarAtual() end
+		versaoFx += 1 -- cancela o tranco de câmera de um estrondo anterior
+		local raiz, hum = pegarPersonagem()
+		if not raiz then return end
+
+		local char = raiz.Parent
+		local origem = raiz.Position
+		local dist = (destino - origem).Magnitude
+		if dist < 1 then return end
+
+		local dur = math.clamp(dist / velocidade, forte and 0.35 or 0.2, forte and 1.2 or 1.5)
+		local inicio = os.clock()
+		local plano = Vector3.new(destino.X - origem.X, 0, destino.Z - origem.Z)
+		local rotacao = plano.Magnitude > 0.1 and CFrame.lookAt(Vector3.zero, plano.Unit) or raiz.CFrame.Rotation
+
+		-- atravessa o que estiver no caminho; guarda a colisão para devolver no fim
+		local colisoes = {}
+		for _, d in ipairs(char:GetDescendants()) do
+			if d:IsA("BasePart") and d.CanCollide then
+				colisoes[d] = true
+				d.CanCollide = false
+			end
+		end
+		local plataformaAntes = hum.PlatformStand
+		hum.PlatformStand = true
+
+		local function terminar(chegou)
+			if conexao then conexao:Disconnect() conexao = nil end
+			terminarAtual = nil
+			estado.dashEfeito = 0
+			if forte then
+				if chegou == true then
+					estrondo()
+				else
+					estado.dashTremida = 0
+					estado.dashFov = 0
+				end
+			end
+			for d in pairs(colisoes) do
+				if d.Parent then d.CanCollide = true end
+			end
+			if hum.Parent then hum.PlatformStand = plataformaAntes end
+		end
+		terminarAtual = terminar
+
+		conexao = RunService.RenderStepped:Connect(function()
+			if not raiz.Parent then
+				terminar()
+				return
+			end
+			local a = math.clamp((os.clock() - inicio) / dur, 0, 1)
+			-- acelera no começo e freia no fim
+			local e = a < 0.5 and 4 * a * a * a or 1 - ((-2 * a + 2) ^ 3) / 2
+			raiz.CFrame = CFrame.new(origem:Lerp(destino, e)) * rotacao
+			raiz.AssemblyLinearVelocity = Vector3.zero
+			local onda = math.sin(a * math.pi)
+			if forte then
+				-- chega ao máximo rápido e segura lá (parece que passou do som), com tremida e FOV extras
+				estado.dashEfeito = math.min(1, onda * 1.8)
+				estado.dashTremida = 1.6 * onda
+				estado.dashFov = 18 * onda
+			else
+				estado.dashEfeito = onda -- intensidade do efeito de velocidade
+			end
+			if a >= 1 then terminar(true) end
+		end)
+	end
+
+	-- morreu/respawnou no meio do dash: cancela
+	player.CharacterAdded:Connect(function()
+		if terminarAtual then terminarAtual() end
+	end)
+end
+
 local tpTool = nil
 
 local function removerTPTool()
@@ -1698,8 +3058,7 @@ local function criarTPTool()
 		mouse.TargetFilter = player.Character -- ignora o próprio personagem
 		local alvo = mouse.Hit
 		if alvo then
-			raiz.AssemblyLinearVelocity = Vector3.zero
-			raiz.CFrame = CFrame.new(alvo.Position + Vector3.new(0, 3, 0)) * raiz.CFrame.Rotation
+			iniciarDash(alvo.Position + Vector3.new(0, 3, 0))
 		end
 	end)
 
@@ -1732,10 +3091,46 @@ end)
 ------------------------------------------------------------
 local reentrando = false
 
+-- Deixa o script na fila para rodar sozinho assim que você entrar no servidor de novo.
+-- Retorna true, ou false + o motivo de não ter sido possível.
+local function prepararReexecucao()
+	local fila
+	if typeof(queue_on_teleport) == "function" then
+		fila = queue_on_teleport
+	elseif syn and typeof(syn.queue_on_teleport) == "function" then
+		fila = syn.queue_on_teleport
+	elseif fluxus and typeof(fluxus.queue_on_teleport) == "function" then
+		fila = fluxus.queue_on_teleport
+	end
+	if not fila then return false, "o executor não tem queue_on_teleport" end
+
+	local carregar
+	if URL_SCRIPT ~= "" then
+		carregar = string.format("loadstring(game:HttpGet(%q))()", URL_SCRIPT)
+	elseif ARQUIVO_SCRIPT ~= "" then
+		if not (typeof(isfile) == "function" and isfile(ARQUIVO_SCRIPT)) then
+			return false, "arquivo não encontrado: " .. ARQUIVO_SCRIPT
+		end
+		carregar = string.format("loadstring(readfile(%q))()", ARQUIVO_SCRIPT)
+	else
+		return false, "preencha ARQUIVO_SCRIPT ou URL_SCRIPT no começo do script"
+	end
+
+	local codigo = "if not game:IsLoaded() then game.Loaded:Wait() end task.wait(1) " .. carregar
+	local ok = pcall(fila, codigo)
+	if not ok then return false, "falha ao enfileirar" end
+	return true
+end
+
 local function fazerRejoin()
 	if reentrando then return end
 	reentrando = true
 	botaoRejoin.Text = "Reentrando..."
+
+	local okFila, motivo = prepararReexecucao()
+	if not okFila then
+		warn("Rejoin sem reexecução: " .. tostring(motivo))
+	end
 
 	local ok, erro = pcall(function()
 		if #Players:GetPlayers() <= 1 then
@@ -1754,6 +3149,7 @@ local function fazerRejoin()
 		botaoRejoin.Text = "REJOIN"
 		reentrando = false
 	end
+	return okFila, motivo
 end
 botaoRejoin.MouseButton1Click:Connect(fazerRejoin)
 
@@ -2217,6 +3613,7 @@ do
 		if not raiz then return false, "Personagem indisponível" end
 		local caixaNome = criarLinhaSpawn(raiz.CFrame)
 		if #args > 0 then caixaNome.Text = table.concat(args, " ") end
+		salvarSpawns()
 		return true, "Spawn salvo: " .. caixaNome.Text
 	end)
 
@@ -2247,14 +3644,17 @@ do
 
 		local raiz = pegarPersonagem()
 		if not raiz then return false, "Personagem indisponível" end
-		raiz.AssemblyLinearVelocity = Vector3.zero
-		raiz.CFrame = achado.cf + Vector3.new(0, 3, 0)
+		iniciarDash(achado.cf.Position + Vector3.new(0, 3, 0), { velocidade = DASH_VELOCIDADE_TP, forte = true })
 		return true, "Indo para " .. achado.nome.Text
 	end)
 
 	comando({ "rj", "rejoin" }, "rj - reentrar no servidor (rejoin)", function()
-		fazerRejoin()
-		return true, "Reentrando..."
+		local okFila, motivo = fazerRejoin()
+		if okFila == nil then return true, "Já está reentrando..." end
+		if okFila == false then
+			return true, "Reentrando... (sem reexecutar: " .. tostring(motivo) .. ")"
+		end
+		return true, "Reentrando... (o script volta sozinho)"
 	end)
 
 	comando({ "menu" }, "menu - abrir/fechar o menu", function()
