@@ -27,11 +27,11 @@ local EFEITO_VELOCIDADE = true -- true = riscos de vento + tremida + FOV maior q
 local EFEITO_VEL_MINIMA = 60 -- studs/s: abaixo disso o efeito nunca aparece (voo lento)
 local EFEITO_TREMIDA = 1 -- força da tremida da tela (0 = sem tremer)
 local EFEITO_FOV_EXTRA = 15 -- quanto o campo de visão abre na velocidade máxima (0 = não muda)
-local EFEITO_QTD_RISCOS = 18 -- quantidade de riscos brancos na tela
+local EFEITO_QTD_RISCOS = 14 -- quantidade de riscos brancos (eles aparecem só na borda da tela)
 -- SUPER VOO: ao ficar na velocidade máxima, uma barrinha carrega e ativa o boost
 local SUPER = {
 	ativo = false,
-	tempoCarga = 10, -- segundos na velocidade máxima até ativar o super voo
+	tempoCarga = 7, -- segundos na velocidade máxima até ativar o super voo
 	mult = 3,         -- quantas vezes mais rápido fica no super voo
 	tremida = 2.5,    -- tremida extra da tela
 	fov = 25,         -- campo de visão extra
@@ -427,11 +427,11 @@ local botaoTP = criarLinha(10, "TP", false)
 botaoTP.Text = "TP"
 local botaoSpawns = criarLinha(11, "SPAWNS", false)
 botaoSpawns.Text = "SPAWNS"
-local botaoRejoin = criarLinha(12, "REJOIN", false)
+local botaoView = criarLinha(12, "VIEW", false)
+botaoView.Text = "VIEW"
+local botaoRejoin = criarLinha(13, "REJOIN", false)
 botaoRejoin.Text = "REJOIN"
 
--- Grupo 4: teclado de comandos (o AIMBOT fica entre o grupo 3 e este, ordens 13 a 16)
-local botaoTeclado = criarLinha(17, "TECLADO", false)
 
 local dica = Instance.new("TextLabel")
 dica.Name = "Dicas"
@@ -442,7 +442,7 @@ dica.BackgroundTransparency = 1
 dica.TextWrapped = true
 dica.TextXAlignment = Enum.TextXAlignment.Left
 dica.TextYAlignment = Enum.TextYAlignment.Top
-dica.Text = "Mover: arraste o título do painel ou o botão MENU. Tamanho: arraste o ◢ do canto.\nFly: WASD/analógico para mover, mire a câmera para subir/descer.\nEspaço/E = subir, Shift/Q = descer.\nVFLY: use sentado em um veículo.\nNOCLIP: atravessa paredes (sem o Fly você cai pelo chão).\nSWIM: nada no ar como se estivesse na água.\nSPAWNS: salve posições (ficam gravadas por jogo, se o executor permitir), renomeie, veja a distância e clique em IR para voar até lá. O nome aparece discreto em cima do spawn quando você está perto.\nTP: digite na busca para filtrar; a lista mostra a distância. Clique no nome (ou dê Enter na busca para ir no primeiro da lista) para voar até o jogador em velocidade supersônica.\nXRAY: deixa o mapa transparente (caixa: 0 = normal, 0.95 = quase invisível).\nTPTOOL: dá um item no inventário; equipe e clique/toque onde quer ir (você voa rapidinho até lá, atravessando o que tiver no caminho).\nSHIFTLOCK: mostra o cadeado na tela (arraste para mover). Toque nele: azul = travado, branco = solto. Comando: sl / unsl.\nAIMBOT: bolinha verde no centro = alcance (digite o tamanho na caixa). A mira muda ao travar: na cabeça os tracinhos fecham (vermelho), no tronco eles abrem (laranja); a vida do alvo aparece pequena no canto da bolinha. ALVO troca cabeça/tronco, PAREDE = mirar através de paredes, TIME = ignorar seu time. Comando: aim [tamanho] / unaim.\nTECLADO: mostra o botão >_ no canto da tela; toque nele e digite comandos (ex.: fly 80, unfly, np, xy, rj). Digite cmds para ver todos."
+dica.Text = "Mover: arraste o título do painel ou o botão MENU. Tamanho: arraste o ◢ do canto.\nFly: WASD/analógico para mover, mire a câmera para subir/descer.\nEspaço/E = subir, Shift/Q = descer.\nVFLY: use sentado em um veículo. Aparecem setas na tela (esquerda: ▲▼◀▶ andam; direita: SOBE/DESCE) para jogos em que o analógico não move o veículo; arraste o ≡ para mudar de lugar.\nNOCLIP: atravessa paredes (sem o Fly você cai pelo chão).\nSWIM: nada no ar como se estivesse na água.\nSPAWNS: salve posições (ficam gravadas por jogo, se o executor permitir), renomeie, veja a distância e clique em IR para voar até lá. O nome aparece discreto em cima do spawn quando você está perto.\nVIEW: escolha um jogador para ver pela câmera dele (espectar). Na barra de cima, ◀ ▶ trocam de jogador e SAIR volta pra você. Comando: view <jogador> / unview.\nTP: digite na busca para filtrar; a lista mostra a distância. Clique no nome (ou dê Enter na busca para ir no primeiro da lista) para voar até o jogador em velocidade supersônica.\nXRAY: deixa o mapa transparente (caixa: 0 = normal, 0.95 = quase invisível).\nTPTOOL: dá um item no inventário; equipe e clique/toque onde quer ir (você voa até lá em uma fração de segundo, com os efeitos de velocidade e o estrondo na chegada).\nSHIFTLOCK: mostra o cadeado na tela (arraste para mover). Toque nele: azul = travado, branco = solto. O ⇄ embaixo troca o ombro da câmera. Comando: sl / unsl.\nAIMBOT: bolinha verde no centro = alcance (digite o tamanho na caixa). A mira muda ao travar: na cabeça os tracinhos fecham (vermelho), no tronco eles abrem (laranja); a vida do alvo aparece pequena no canto da bolinha. ALVO troca cabeça/tronco, PAREDE = mirar através de paredes, TIME = ignorar seu time. Comando: aim [tamanho] / unaim.\nBARRA DE COMANDOS: a barrinha "> comandos" no canto de baixo da tela (arraste para mover). Toque nela e a barra abre com a lista de comandos em cima, que filtra enquanto você digita (toque num comando para completar). Ex.: fly 80, unfly, np, xy, rj. No PC, a tecla , (vírgula) também abre a barra. Vários comandos de uma vez: fly 80, np."
 dica.TextColor3 = Color3.fromRGB(170, 170, 180)
 dica.Font = Enum.Font.Gotham
 dica.TextSize = 12
@@ -508,6 +508,8 @@ local chamsObjetos = {} -- [Player] = Highlight
 local function removerESP(p)
 	local obj = espObjetos[p]
 	if obj then
+		if obj.tween then obj.tween:Cancel() end
+		for _, a in ipairs(obj.aneis) do a.parte:Destroy() end
 		obj.gui:Destroy()
 		espObjetos[p] = nil
 	end
@@ -519,6 +521,23 @@ local function removerChams(p)
 		h:Destroy()
 		chamsObjetos[p] = nil
 	end
+end
+
+local COR_VIDA_CHEIA = Color3.fromRGB(90, 255, 120)
+local COR_VIDA_BAIXA = Color3.fromRGB(255, 70, 70)
+local COR_ONDA = Color3.fromRGB(120, 220, 255) -- anel do chão (vira vermelho no alerta)
+local DISTANCIA_ALERTA = 30 -- studs: abaixo disso aparece o "!" e o nome treme
+local ultimoESP
+
+-- Pop ao entrar no alcance (cresce com um "quique") e encolhe ao sair
+local function definirDentroESP(obj, dentro)
+	if obj.dentro == dentro then return end
+	obj.dentro = dentro
+	if obj.tween then obj.tween:Cancel() end
+	local info = dentro and TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+		or TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+	obj.tween = TweenService:Create(obj.escala, info, { Scale = dentro and 1 or 0 })
+	obj.tween:Play()
 end
 
 local function criarESP(p)
@@ -534,75 +553,118 @@ local function criarESP(p)
 	bb.Name = "ESP_Nome"
 	bb.Adornee = head
 	bb.AlwaysOnTop = true
-	bb.Size = UDim2.new(0, 200, 0, 58)
-	bb.StudsOffset = Vector3.new(0, 2.7, 0)
+	bb.Size = UDim2.new(0, 200, 0, 66)
+	bb.StudsOffset = Vector3.new(0, 3.2, 0)
 	bb.Parent = gui
 
-	-- Linha de cima: bolinha vermelha piscando + "REC" (câmera de segurança)
-	local rec = Instance.new("Frame")
-	rec.Name = "RecBolinha"
-	rec.AnchorPoint = Vector2.new(0.5, 0.5)
-	rec.Position = UDim2.new(0.5, -18, 0, 7)
-	rec.Size = UDim2.fromOffset(7, 7)
-	rec.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
-	rec.BorderSizePixel = 0
-	rec.Parent = bb
-	Instance.new("UICorner", rec).CornerRadius = UDim.new(1, 0)
+	-- Tudo fica dentro de "conteudo", que cresce com um pop quando o jogador entra no alcance
+	local conteudo = Instance.new("Frame")
+	conteudo.Name = "Conteudo"
+	conteudo.Size = UDim2.new(1, 0, 1, 0)
+	conteudo.BackgroundTransparency = 1
+	conteudo.Parent = bb
+	local escala = Instance.new("UIScale")
+	escala.Scale = 0
+	escala.Parent = conteudo
 
-	local recTexto = Instance.new("TextLabel")
-	recTexto.Name = "RecTexto"
-	recTexto.AnchorPoint = Vector2.new(0, 0.5)
-	recTexto.Position = UDim2.new(0.5, -10, 0, 7)
-	recTexto.Size = UDim2.fromOffset(40, 14)
-	recTexto.BackgroundTransparency = 1
-	recTexto.Text = "REC"
-	recTexto.TextColor3 = Color3.fromRGB(255, 70, 70)
-	recTexto.Font = Enum.Font.Code
-	recTexto.TextSize = 12
-	recTexto.TextXAlignment = Enum.TextXAlignment.Left
-	recTexto.TextTransparency = 0.15
-	recTexto.Parent = bb
+	-- Nome + distância
+	local label = Instance.new("TextLabel")
+	label.Name = "Texto"
+	label.Position = UDim2.fromOffset(0, 18)
+	label.Size = UDim2.new(1, 0, 0, 34)
+	label.BackgroundTransparency = 1
+	label.TextColor3 = COR_ESP
+	label.TextStrokeTransparency = 0.5
+	label.Font = Enum.Font.Gotham
+	label.TextSize = 14
+	label.Text = p.DisplayName
+	label.Parent = conteudo
 
-	-- Nome + distância (fonte de câmera antiga) e dois "fantasmas" para o glitch (vermelho e ciano)
-	local function criarTexto(nome, cor, transp)
-		local l = Instance.new("TextLabel")
-		l.Name = nome
-		l.Position = UDim2.fromOffset(0, 16)
-		l.Size = UDim2.new(1, 0, 0, 40)
-		l.BackgroundTransparency = 1
-		l.TextColor3 = cor
-		l.TextStrokeTransparency = transp
-		l.Font = Enum.Font.Code
-		l.TextSize = 14
-		l.Text = p.DisplayName
-		l.Parent = bb
-		return l
+	-- Barra de vida (verde cheia -> vermelha quase morta)
+	local fundoVida = Instance.new("Frame")
+	fundoVida.Name = "VidaFundo"
+	fundoVida.AnchorPoint = Vector2.new(0.5, 0)
+	fundoVida.Position = UDim2.new(0.5, 0, 0, 56)
+	fundoVida.Size = UDim2.fromOffset(90, 6)
+	fundoVida.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+	fundoVida.BackgroundTransparency = 0.3
+	fundoVida.BorderSizePixel = 0
+	fundoVida.Parent = conteudo
+	Instance.new("UICorner", fundoVida).CornerRadius = UDim.new(1, 0)
+	local contornoVida = Instance.new("UIStroke")
+	contornoVida.Color = Color3.new(0, 0, 0)
+	contornoVida.Thickness = 1
+	contornoVida.Transparency = 0.4
+	contornoVida.Parent = fundoVida
+	local enche = Instance.new("Frame")
+	enche.Name = "Vida"
+	enche.Size = UDim2.fromScale(1, 1)
+	enche.BackgroundColor3 = COR_VIDA_CHEIA
+	enche.BorderSizePixel = 0
+	enche.Parent = fundoVida
+	Instance.new("UICorner", enche).CornerRadius = UDim.new(1, 0)
+
+	-- Ícone de alerta "!" (só aparece quando alguém chega muito perto)
+	local icone = Instance.new("Frame")
+	icone.Name = "Alerta"
+	icone.AnchorPoint = Vector2.new(0.5, 0)
+	icone.Position = UDim2.new(0.5, 0, 0, 0)
+	icone.Size = UDim2.fromOffset(18, 18)
+	icone.BackgroundColor3 = COR_VIDA_BAIXA
+	icone.BackgroundTransparency = 1
+	icone.BorderSizePixel = 0
+	icone.Parent = conteudo
+	Instance.new("UICorner", icone).CornerRadius = UDim.new(1, 0)
+	local iconeEscala = Instance.new("UIScale")
+	iconeEscala.Parent = icone
+	local iconeTexto = Instance.new("TextLabel")
+	iconeTexto.Size = UDim2.fromScale(1, 1)
+	iconeTexto.BackgroundTransparency = 1
+	iconeTexto.Text = "!"
+	iconeTexto.TextColor3 = Color3.new(1, 1, 1)
+	iconeTexto.Font = Enum.Font.GothamBlack
+	iconeTexto.TextSize = 14
+	iconeTexto.TextTransparency = 1
+	iconeTexto.Parent = icone
+
+	-- Ondinhas no chão (radar): dois anéis que nascem sob os pés e crescem sumindo
+	local aneis = {}
+	for i = 1, 2 do
+		local parte = Instance.new("Part")
+		parte.Name = "ESP_Onda"
+		parte.Anchored = true
+		parte.CanCollide = false
+		parte.CanQuery = false
+		parte.CanTouch = false
+		parte.CastShadow = false
+		parte.Transparency = 1
+		parte.Size = Vector3.new(2, 0.1, 2)
+		parte.Parent = workspace.CurrentCamera
+		local sg = Instance.new("SurfaceGui")
+		sg.Face = Enum.NormalId.Top
+		sg.AlwaysOnTop = true
+		sg.SizingMode = Enum.SurfaceGuiSizingMode.FixedSize
+		sg.CanvasSize = Vector2.new(256, 256)
+		sg.LightInfluence = 0
+		sg.Parent = parte
+		local anel = Instance.new("Frame")
+		anel.Size = UDim2.fromScale(1, 1)
+		anel.BackgroundTransparency = 1
+		anel.BorderSizePixel = 0
+		anel.Parent = sg
+		Instance.new("UICorner", anel).CornerRadius = UDim.new(1, 0)
+		local contornoAnel = Instance.new("UIStroke")
+		contornoAnel.Color = COR_ONDA
+		contornoAnel.Thickness = 8
+		contornoAnel.Transparency = 1
+		contornoAnel.Parent = anel
+		aneis[i] = { parte = parte, contorno = contornoAnel }
 	end
-	local fantasmaV = criarTexto("GlitchVermelho", Color3.fromRGB(255, 40, 40), 1)
-	local fantasmaC = criarTexto("GlitchCiano", Color3.fromRGB(40, 255, 255), 1)
-	fantasmaV.TextTransparency = 1
-	fantasmaC.TextTransparency = 1
-	local label = criarTexto("Texto", COR_ESP, 0)
 
-	-- Linha de varredura fininha descendo pelo texto
-	local varredura = Instance.new("Frame")
-	varredura.Name = "Varredura"
-	varredura.Size = UDim2.new(0.8, 0, 0, 1)
-	varredura.AnchorPoint = Vector2.new(0.5, 0)
-	varredura.Position = UDim2.new(0.5, 0, 0, 16)
-	varredura.BackgroundColor3 = Color3.new(1, 1, 1)
-	varredura.BackgroundTransparency = 0.88
-	varredura.BorderSizePixel = 0
-	varredura.Parent = bb
-
-	local agora = os.clock()
 	espObjetos[p] = {
-		gui = bb, label = label,
-		fantasmas = { fantasmaV, fantasmaC },
-		rec = rec, recTexto = recTexto, varredura = varredura,
-		inicio = agora,                           -- glitch de "ligar a câmera" logo ao ativar
-		glitchAte = agora + 0.55,
-		proximo = agora + 3 + math.random() * 4,  -- próximos glitchzinhos curtos, de vez em quando
+		gui = bb, label = label, escala = escala, enche = enche, vida = 1, dentro = false,
+		icone = icone, iconeEscala = iconeEscala, iconeTexto = iconeTexto, alerta = 0,
+		aneis = aneis, fase = math.random(),
 	}
 end
 
@@ -644,44 +706,56 @@ local function atualizarESP()
 	local minhaRaiz = meuChar and meuChar:FindFirstChild("HumanoidRootPart")
 	if not minhaRaiz then return end
 
+	local agora = os.clock()
+	local dt = math.min(agora - (ultimoESP or agora), 0.1)
+	ultimoESP = agora
+	local piscada = 0.5 + 0.5 * math.sin(agora * 14)
+
 	for p, obj in pairs(espObjetos) do
 		local char = p.Character
 		local raiz = char and char:FindFirstChild("HumanoidRootPart")
 		if raiz then
 			local dist = (raiz.Position - minhaRaiz.Position).Magnitude
-			obj.gui.Enabled = dist <= DISTANCIA_MAXIMA
-			local texto = string.format("%s\n[%d studs]", p.DisplayName, math.floor(dist))
-			obj.label.Text = texto
-			for _, g in ipairs(obj.fantasmas) do g.Text = texto end
+			definirDentroESP(obj, dist <= DISTANCIA_MAXIMA)
+			obj.gui.Enabled = obj.dentro or obj.escala.Scale > 0.01
+			obj.label.Text = string.format("%s\n[%d studs]", p.DisplayName, math.floor(dist))
 
-			-- efeito de câmera de segurança (suave, para não atrapalhar a leitura)
-			local agora = os.clock()
-			if agora > obj.proximo then
-				obj.glitchAte = agora + 0.12
-				obj.proximo = agora + 3 + math.random() * 4
+			-- vida: a barra desliza suave até o valor real
+			local hum = char:FindFirstChildOfClass("Humanoid")
+			local alvoVida = hum and math.clamp(hum.Health / math.max(hum.MaxHealth, 1), 0, 1) or 0
+			obj.vida = obj.vida + (alvoVida - obj.vida) * 0.2
+			obj.enche.Size = UDim2.fromScale(obj.vida, 1)
+			obj.enche.BackgroundColor3 = COR_VIDA_BAIXA:Lerp(COR_VIDA_CHEIA, obj.vida)
+
+			-- alerta: "!" piscando + nome vermelho tremendo quando está muito perto
+			local perto = obj.dentro and dist <= DISTANCIA_ALERTA
+			obj.alerta = obj.alerta + ((perto and 1 or 0) - obj.alerta) * math.min(1, dt * 10)
+			local al = obj.alerta
+			if al < 0.01 then al = 0 end
+			local forca = al * (0.55 + 0.45 * piscada)
+			obj.icone.BackgroundTransparency = 1 - forca
+			obj.iconeTexto.TextTransparency = 1 - forca
+			obj.iconeEscala.Scale = 0.7 + 0.5 * al * (0.7 + 0.3 * piscada)
+			obj.label.TextColor3 = COR_ESP:Lerp(COR_VIDA_BAIXA, al * 0.7)
+			obj.label.Position = UDim2.fromOffset((math.random() * 2 - 1) * 1.5 * al, 18 + (math.random() * 2 - 1) * 1 * al)
+
+			-- ondinhas no chão: sobem de tamanho sumindo; mais rápidas e vermelhas no alerta
+			obj.fase = (obj.fase + dt * (0.55 + al * 0.9)) % 1
+			local vis = math.clamp(obj.escala.Scale, 0, 1)
+			local cf, tam = char:GetBoundingBox()
+			local pe = Vector3.new(cf.Position.X, cf.Position.Y - tam.Y / 2 + 0.1, cf.Position.Z)
+			for i, a in ipairs(obj.aneis) do
+				local t = (obj.fase + (i - 1) * 0.5) % 1
+				local d = 2 + t * 8
+				a.parte.Size = Vector3.new(d, 0.1, d)
+				a.parte.CFrame = CFrame.new(pe)
+				a.contorno.Color = COR_ONDA:Lerp(COR_VIDA_BAIXA, al)
+				a.contorno.Transparency = 1 - (1 - t) * vis * 0.85
 			end
-			local forte = agora - obj.inicio < 0.55 -- glitch maior só na hora de ligar
-			if agora < obj.glitchAte then
-				local f = forte and 5 or 2
-				obj.label.Position = UDim2.fromOffset(math.random(-f, f), 16 + math.random(-1, 1))
-				obj.label.TextTransparency = (math.random() < (forte and 0.35 or 0.2)) and 0.6 or 0
-				obj.fantasmas[1].Position = UDim2.fromOffset(math.random(-f, f) - 2, 16)
-				obj.fantasmas[2].Position = UDim2.fromOffset(math.random(-f, f) + 2, 16)
-				obj.fantasmas[1].TextTransparency = 0.55
-				obj.fantasmas[2].TextTransparency = 0.55
-			else
-				obj.label.Position = UDim2.fromOffset(0, 16)
-				obj.label.TextTransparency = 0
-				obj.fantasmas[1].TextTransparency = 1
-				obj.fantasmas[2].TextTransparency = 1
-			end
-			-- bolinha REC piscando e linha de varredura descendo
-			local acesa = math.floor(agora * 1.2) % 2 == 0
-			obj.rec.BackgroundTransparency = acesa and 0 or 0.85
-			obj.recTexto.TextTransparency = acesa and 0.15 or 0.7
-			obj.varredura.Position = UDim2.new(0.5, 0, 0, 16 + ((agora * 0.5) % 1) * 36)
 		else
-			obj.gui.Enabled = false
+			definirDentroESP(obj, false)
+			obj.gui.Enabled = obj.escala.Scale > 0.01
+			for _, a in ipairs(obj.aneis) do a.contorno.Transparency = 1 end
 		end
 	end
 end
@@ -854,6 +928,7 @@ end
 -- FLY
 ------------------------------------------------------------
 local flyBV, flyBG
+local vBV, vBG -- (VFLY) declarados aqui para o efeito de velocidade também enxergar
 
 -- POSE DE HERÓI: mexe nas juntas do corpo (R15 e R6) enquanto voa
 local poseMov = 0 -- 0 = parado (em pé), 1 = voando (deitado, braço esticado)
@@ -981,10 +1056,10 @@ do
 	local TAMANHO_MIN, TAMANHO_MAX = 40, 900
 
 	-- Botões (entram na grade do menu)
-	local botaoAim, caixaAim = criarLinha(13, "AIMBOT", true, aim.tamanho)
-	local botaoAlvo = criarLinha(14, "ALVO", false)
-	local botaoParede = criarLinha(15, "PAREDE", false)
-	local botaoTime = criarLinha(16, "TIME", false)
+	local botaoAim, caixaAim = criarLinha(14, "AIMBOT", true, aim.tamanho)
+	local botaoAlvo = criarLinha(15, "ALVO", false)
+	local botaoParede = criarLinha(16, "PAREDE", false)
+	local botaoTime = criarLinha(17, "TIME", false)
 
 	local function pintarOpcoes()
 		botaoAlvo.Text = "ALVO: " .. (aim.parte == "Head" and "CABEÇA" or "TRONCO")
@@ -1288,15 +1363,76 @@ do
 		f.Parent = efeitoGui
 		return f
 	end
-	local tinta = quadro(VERMELHO)          -- leve tom vermelho no super voo
 	local efeitoFlash = quadro(Color3.new(1, 1, 1))
 
-	-- Blur (embaçado) do super voo
+	-- Blur (embaçado) do super voo: bem fraquinho, só um soco rápido na hora que liga
+	local BLUR_FIXO = 2.5   -- embaçado constante durante o super voo (0 = nenhum)
+	local BLUR_SOCO = 6     -- embaçado extra na hora que liga (some em ~0.4s)
 	local blur = Instance.new("BlurEffect")
 	blur.Name = "BlurSuperVoo"
 	blur.Size = 0
 	blur.Enabled = false
 	blur.Parent = game:GetService("Lighting")
+
+	-- Cor: mais saturada/contrastada com leve tom vermelho (dá clima sem esconder a tela)
+	local correcao = Instance.new("ColorCorrectionEffect")
+	correcao.Name = "CorSuperVoo"
+	correcao.Enabled = false
+	correcao.Parent = game:GetService("Lighting")
+
+	-- Vinheta de energia: brilho vermelho que pulsa só nas 4 bordas da tela
+	local bordas = {}
+	do
+		local defs = { -- { posição, tamanho, rotação do degradê }
+			{ UDim2.fromScale(0, 0), UDim2.fromScale(1, 0.2), 90 },    -- cima
+			{ UDim2.fromScale(0, 0.8), UDim2.fromScale(1, 0.2), 270 }, -- baixo
+			{ UDim2.fromScale(0, 0), UDim2.fromScale(0.14, 1), 0 },    -- esquerda
+			{ UDim2.fromScale(0.86, 0), UDim2.fromScale(0.14, 1), 180 }, -- direita
+		}
+		for _, d in ipairs(defs) do
+			local f = Instance.new("Frame")
+			f.Name = "BordaEnergia"
+			f.Position, f.Size = d[1], d[2]
+			f.BackgroundColor3 = VERMELHO
+			f.BackgroundTransparency = 1
+			f.BorderSizePixel = 0
+			f.Active = false
+			f.Visible = false
+			f.Parent = efeitoGui
+			local g = Instance.new("UIGradient")
+			g.Rotation = d[3]
+			g.Transparency = NumberSequence.new({
+				NumberSequenceKeypoint.new(0, 0.3),
+				NumberSequenceKeypoint.new(0.4, 0.75),
+				NumberSequenceKeypoint.new(1, 1),
+			})
+			g.Parent = f
+			bordas[#bordas + 1] = f
+		end
+	end
+
+	-- Ondas de choque: anéis que saem do centro quando o super voo liga
+	local aneis = {}
+	for i = 1, 3 do
+		local a = Instance.new("Frame")
+		a.Name = "OndaChoque"
+		a.AnchorPoint = Vector2.new(0.5, 0.5)
+		a.Position = UDim2.fromScale(0.5, 0.5)
+		a.Size = UDim2.fromOffset(0, 0)
+		a.BackgroundTransparency = 1
+		a.BorderSizePixel = 0
+		a.Active = false
+		a.Visible = false
+		a.Parent = efeitoGui
+		Instance.new("UICorner", a).CornerRadius = UDim.new(1, 0)
+		local s = Instance.new("UIStroke")
+		s.Color = i == 1 and Color3.new(1, 1, 1) or VERMELHO
+		s.Thickness = 6
+		s.Parent = a
+		aneis[i] = { frame = a, stroke = s }
+	end
+	local inicioOnda -- os.clock() de quando o super voo ligou
+	local inicioSoco -- idem, para o blur de impacto
 
 	-- Barrinha de carga do super voo
 	local barra = Instance.new("Frame")
@@ -1324,17 +1460,20 @@ do
 
 	-- Riscos: brancos (os de índice acima da quantidade base só aparecem no super voo) e vermelhos (só no super voo)
 	local riscos = {}
+	-- "raio" = fração da distância do centro até a borda da tela naquela direção.
+	-- Os riscos só vivem entre RISCO_INI e RISCO_FIM, ou seja, só na borda (o meio fica limpo).
+	local RISCO_INI, RISCO_FIM = 0.62, 1.1
 	local function reiniciarLinha(l, inicio)
 		l.ang = math.random() * math.pi * 2
-		l.raio = inicio and (0.2 + math.random() * 0.9) or (0.2 + math.random() * 0.15)
+		l.raio = inicio and (RISCO_INI + math.random() * (RISCO_FIM - RISCO_INI)) or (RISCO_INI + math.random() * 0.08)
 		if l.vermelha then
-			l.vel = 2.6 + math.random() * 2
-			l.comp = 0.2 + math.random() * 0.3
+			l.vel = 1.5 + math.random() * 1.0
+			l.comp = 0.10 + math.random() * 0.10
 			l.grossura = math.random(2, 4)
 		else
-			l.vel = 1.6 + math.random() * 1.4
-			l.comp = 0.10 + math.random() * 0.15
-			l.grossura = math.random(1, 3)
+			l.vel = 0.9 + math.random() * 0.8
+			l.comp = 0.06 + math.random() * 0.08
+			l.grossura = math.random(1, 2)
 		end
 	end
 	local function criarRisco(vermelha, extra)
@@ -1346,6 +1485,13 @@ do
 		f.Active = false
 		f.Visible = false
 		f.Parent = efeitoGui
+		-- rastro de cometa: a ponta de fora é forte, o rabo some
+		local g = Instance.new("UIGradient")
+		g.Transparency = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 1),
+			NumberSequenceKeypoint.new(1, 0),
+		})
+		g.Parent = f
 		local l = { frame = f, vermelha = vermelha, extra = extra }
 		reiniciarLinha(l, true)
 		riscos[#riscos + 1] = l
@@ -1362,9 +1508,13 @@ do
 
 		-- alvo: 0 se não está voando ou está devagar; sobe de 0 a 1 perto da velocidade máxima
 		local alvo = 0
-		if EFEITO_VELOCIDADE and estado.fly and flyBV then
-			local vel = flyBV.Velocity.Magnitude
-			local maxima = velocidadeFly * MULTIPLICADOR_FLY
+		local vel, maxima = 0, 0
+		if estado.fly and flyBV then
+			vel, maxima = flyBV.Velocity.Magnitude, velocidadeFly * MULTIPLICADOR_FLY
+		elseif estado.vfly and vBV then
+			vel, maxima = vBV.Velocity.Magnitude, velocidadeVFly
+		end
+		if EFEITO_VELOCIDADE and (flyBV or vBV) then
 			if vel >= EFEITO_VEL_MINIMA and maxima > 0 then
 				alvo = math.clamp((vel / maxima - 0.7) / 0.3, 0, 1)
 			end
@@ -1383,7 +1533,7 @@ do
 				carga = 0
 			end
 		else
-			if efeitoIntens >= 0.95 and estado.fly then
+			if efeitoIntens >= 0.95 and (estado.fly or estado.vfly) then
 				carga = math.min(1, carga + dt / SUPER.tempoCarga)
 			else
 				carga = math.max(0, carga - dt * 1.5)
@@ -1392,8 +1542,10 @@ do
 				SUPER.ativo = true
 				-- clarão vermelho/branco na hora que o super voo liga
 				efeitoFlash.BackgroundColor3 = Color3.fromRGB(255, 200, 200)
-				efeitoFlash.BackgroundTransparency = 0.25
-				TweenService:Create(efeitoFlash, TweenInfo.new(0.6), { BackgroundTransparency = 1 }):Play()
+				efeitoFlash.BackgroundTransparency = 0.5
+				TweenService:Create(efeitoFlash, TweenInfo.new(0.5), { BackgroundTransparency = 1 }):Play()
+				-- ondas de choque + soco de blur
+				inicioOnda, inicioSoco = agora, agora
 			end
 		end
 		superMix = superMix + ((SUPER.ativo and 1 or 0) - superMix) * (1 - math.exp(-dt * 5))
@@ -1414,16 +1566,44 @@ do
 			flashFeito = false
 		end
 
-		-- blur e tom vermelho do super voo
-		blur.Enabled = superMix > 0
-		blur.Size = 16 * superMix
-		tinta.BackgroundTransparency = 1 - 0.15 * superMix
+		-- blur fraquinho (+ soco rápido na hora que liga) e correção de cor
+		local soco = 0
+		if inicioSoco then
+			soco = math.clamp(1 - (agora - inicioSoco) / 0.4, 0, 1)
+			if soco <= 0 then inicioSoco = nil end
+		end
+		blur.Enabled = superMix > 0 or soco > 0
+		blur.Size = BLUR_FIXO * superMix + BLUR_SOCO * soco
+		correcao.Enabled = superMix > 0
+		correcao.Saturation = 0.3 * superMix
+		correcao.Contrast = 0.12 * superMix
+		correcao.TintColor = Color3.new(1, 1, 1):Lerp(Color3.fromRGB(255, 225, 225), superMix)
 
-		-- riscos saindo do centro para as bordas
+		-- vinheta de energia nas bordas, pulsando
+		local pulsoBorda = 0.75 + 0.25 * math.sin(agora * 9)
+		for _, b in ipairs(bordas) do
+			b.Visible = superMix > 0.01
+			b.BackgroundTransparency = 1 - superMix * pulsoBorda
+		end
+
+		-- ondas de choque
+		for i, a in ipairs(aneis) do
+			local t = inicioOnda and (agora - inicioOnda - (i - 1) * 0.15) / 0.7 or 2
+			if t >= 0 and t <= 1 then
+				local d = efeitoGui.AbsoluteSize.Magnitude * (1 - (1 - t) ^ 2) * 1.05
+				a.frame.Visible = true
+				a.frame.Size = UDim2.fromOffset(d, d)
+				a.stroke.Transparency = t
+				a.stroke.Thickness = 2 + 8 * (1 - t)
+			else
+				a.frame.Visible = false
+			end
+		end
+
+		-- riscos nas bordas da tela (o meio fica limpo)
 		local tela = efeitoGui.AbsoluteSize
 		if tela.X <= 0 then tela = workspace.CurrentCamera.ViewportSize end
 		local centro = tela / 2
-		local metade = tela.Magnitude / 2
 		for _, l in ipairs(riscos) do
 			local f = l.frame
 			local mostrar
@@ -1439,15 +1619,18 @@ do
 			else
 				f.Visible = true
 				l.raio = l.raio + l.vel * dt * (0.8 + efeitoIntens) * (1 + superMix * 1.5)
-				if l.raio > 1.15 then
+				if l.raio > RISCO_FIM then
 					reiniciarLinha(l, false)
 				end
 				local dir = Vector2.new(math.cos(l.ang), math.sin(l.ang))
-				local pos = centro + dir * l.raio * metade
-				local entra = math.clamp((l.raio - 0.2) / 0.2, 0, 1)
-				local sai = math.clamp((1.15 - l.raio) / 0.3, 0, 1)
+				-- distância do centro até a borda da tela nessa direção
+				local ax, ay = math.abs(dir.X), math.abs(dir.Y)
+				local borda = math.min(ax > 0.001 and centro.X / ax or math.huge, ay > 0.001 and centro.Y / ay or math.huge)
+				local pos = centro + dir * l.raio * borda
+				local entra = math.clamp((l.raio - RISCO_INI) / 0.12, 0, 1)
+				local sai = math.clamp((RISCO_FIM - l.raio) / 0.12, 0, 1)
 				f.Position = UDim2.fromOffset(pos.X, pos.Y)
-				f.Size = UDim2.fromOffset(l.comp * metade * (0.5 + l.raio) * (1 + superMix * 0.6), l.grossura)
+				f.Size = UDim2.fromOffset(l.comp * borda * (1 + superMix * 0.6), l.grossura)
 				f.Rotation = math.deg(l.ang)
 				if l.vermelha then
 					f.BackgroundTransparency = 1 - superMix * 0.9 * entra * sai
@@ -1567,9 +1750,103 @@ botaoFly.MouseButton1Click:Connect(function() definirFly(not estado.fly) end)
 ------------------------------------------------------------
 -- VFLY (voar com veículo enquanto sentado)
 ------------------------------------------------------------
-local vBV, vBG
+local ultimoVFly
+
+-- SETAS NA TELA (para jogos em que o analógico não controla o veículo):
+-- esquerda = frente / trás / lados, direita = subir / descer. Segure para mover; arraste o "≡" para mudar de lugar.
+local setasV = { frente = false, tras = false, esq = false, dir = false, sobe = false, desce = false }
+local clusterMovV, clusterAltV
+do
+	local COR_SETA = Color3.fromRGB(30, 30, 38)
+	local COR_SETA_ON = Color3.fromRGB(60, 200, 110)
+
+	local function criarCluster(titulo, ancora, posicao, largura)
+		local c = Instance.new("Frame")
+		c.Name = "Setas" .. titulo
+		c.AnchorPoint = ancora
+		c.Position = posicao
+		c.Size = UDim2.fromOffset(largura, 136)
+		c.BackgroundTransparency = 1
+		c.Visible = false
+		c.ZIndex = 8
+		c.Parent = gui
+
+		local alca = Instance.new("TextButton")
+		alca.Size = UDim2.new(1, 0, 0, 20)
+		alca.BackgroundColor3 = COR_SETA
+		alca.BackgroundTransparency = 0.35
+		alca.Text = "≡ " .. titulo
+		alca.TextColor3 = Color3.new(1, 1, 1)
+		alca.Font = Enum.Font.GothamBold
+		alca.TextSize = 12
+		alca.AutoButtonColor = false
+		alca.ZIndex = 8
+		alca.Parent = c
+		Instance.new("UICorner", alca).CornerRadius = UDim.new(0, 8)
+		tornarMovel(alca, c)
+		return c
+	end
+
+	local function criarSeta(cluster, texto, x, y, w, chave)
+		local b = Instance.new("TextButton")
+		b.Name = "Seta_" .. chave
+		b.Position = UDim2.fromOffset(x, 26 + y)
+		b.Size = UDim2.fromOffset(w, 54)
+		b.BackgroundColor3 = COR_SETA
+		b.BackgroundTransparency = 0.35
+		b.Text = texto
+		b.TextColor3 = Color3.new(1, 1, 1)
+		b.Font = Enum.Font.GothamBold
+		b.TextSize = 18
+		b.AutoButtonColor = false
+		b.ZIndex = 8
+		b.Parent = cluster
+		Instance.new("UICorner", b).CornerRadius = UDim.new(0, 12)
+		local contorno = Instance.new("UIStroke")
+		contorno.Color = Color3.new(1, 1, 1)
+		contorno.Transparency = 0.5
+		contorno.Thickness = 1.2
+		contorno.Parent = b
+
+		local function soltar()
+			setasV[chave] = false
+			b.BackgroundColor3 = COR_SETA
+			b.BackgroundTransparency = 0.35
+		end
+		b.InputBegan:Connect(function(input)
+			local tipo = input.UserInputType
+			if tipo ~= Enum.UserInputType.MouseButton1 and tipo ~= Enum.UserInputType.Touch then return end
+			setasV[chave] = true
+			b.BackgroundColor3 = COR_SETA_ON
+			b.BackgroundTransparency = 0.15
+			input.Changed:Connect(function()
+				if input.UserInputState == Enum.UserInputState.End then soltar() end
+			end)
+		end)
+		return b
+	end
+
+	clusterMovV = criarCluster("VFLY", Vector2.new(0, 0), UDim2.new(0, 16, 0.5, -68), 174)
+	criarSeta(clusterMovV, "▲", 60, 0, 54, "frente")
+	criarSeta(clusterMovV, "◀", 0, 60, 54, "esq")
+	criarSeta(clusterMovV, "▼", 60, 60, 54, "tras")
+	criarSeta(clusterMovV, "▶", 120, 60, 54, "dir")
+
+	clusterAltV = criarCluster("ALTURA", Vector2.new(1, 0), UDim2.new(1, -16, 0.5, -68), 84)
+	criarSeta(clusterAltV, "▲\nSOBE", 0, 0, 84, "sobe")
+	criarSeta(clusterAltV, "▼\nDESCE", 0, 60, 84, "desce")
+end
+
+local function atualizarSetasVFly()
+	clusterMovV.Visible = estado.vfly
+	clusterAltV.Visible = estado.vfly
+	if not estado.vfly then
+		for k in pairs(setasV) do setasV[k] = false end
+	end
+end
 
 local function pararVFly()
+	ultimoVFly = nil
 	if vBV then vBV:Destroy() vBV = nil end
 	if vBG then vBG:Destroy() vBG = nil end
 end
@@ -1604,7 +1881,30 @@ local function atualizarVFly()
 	end
 
 	local dir, flat = direcaoDeVoo(hum)
-	vBV.Velocity = dir * velocidadeVFly
+
+	-- soma o que vem das setas da tela (frente/trás seguem a câmera, lados e altura são retos)
+	local cam = workspace.CurrentCamera
+	local extra = Vector3.zero
+	local fb = (setasV.frente and 1 or 0) - (setasV.tras and 1 or 0)
+	if fb ~= 0 then extra = extra + cam.CFrame.LookVector * fb end
+	local lado = (setasV.dir and 1 or 0) - (setasV.esq and 1 or 0)
+	if lado ~= 0 then
+		local r = Vector3.new(cam.CFrame.RightVector.X, 0, cam.CFrame.RightVector.Z)
+		if r.Magnitude > 0.001 then extra = extra + r.Unit * lado end
+	end
+	local alt = (setasV.sobe and 1 or 0) - (setasV.desce and 1 or 0)
+	if alt ~= 0 then extra = extra + Vector3.new(0, alt, 0) end
+	if extra.Magnitude > 0 then
+		dir = dir + extra
+		if dir.Magnitude > 1 then dir = dir.Unit end
+	end
+
+	-- aceleração suave e SUPER VOO, igual ao FLY
+	local agora = os.clock()
+	local dt = math.min(agora - (ultimoVFly or agora), 0.1)
+	ultimoVFly = agora
+	local alvoVel = dir * velocidadeVFly * (SUPER.ativo and SUPER.mult or 1)
+	vBV.Velocity = vBV.Velocity:Lerp(alvoVel, 1 - math.exp(-dt * (SUPER.ativo and 12 or 8)))
 
 	-- Alinha a frente do assento com a direção da câmera
 	if flat.Magnitude > 0.001 then
@@ -1617,6 +1917,7 @@ end
 local function definirVFly(v)
 	estado.vfly = v
 	pintarBotao(botaoVFly, "VFLY", v)
+	atualizarSetasVFly()
 	atualizarBotaoVertical()
 end
 botaoVFly.MouseButton1Click:Connect(function() definirVFly(not estado.vfly) end)
@@ -1625,13 +1926,47 @@ botaoVFly.MouseButton1Click:Connect(function() definirVFly(not estado.vfly) end)
 -- SWIM (nadar no ar)
 ------------------------------------------------------------
 local swimBV
+local ultimoSwim
+local swimHum        -- humanoid que está com os estados travados em "nadando"
+local swimEstados    -- [estado] = estava ligado antes? (para devolver ao normal)
+
+-- Trava o humanoid em "nadando": desliga os outros estados UMA vez, assim o Roblox não
+-- fica trocando nadando <-> caindo a cada frame (era isso que fazia a animação travar).
+local function travarEstadoNado(hum)
+	if swimHum == hum then return end
+	swimHum = hum
+	swimEstados = {}
+	for _, est in ipairs(Enum.HumanoidStateType:GetEnumItems()) do
+		if est ~= Enum.HumanoidStateType.Swimming and est ~= Enum.HumanoidStateType.Dead
+			and est ~= Enum.HumanoidStateType.None and est ~= Enum.HumanoidStateType.Physics then
+			local ok, ligado = pcall(function() return hum:GetStateEnabled(est) end)
+			if ok then
+				swimEstados[est] = ligado
+				pcall(function() hum:SetStateEnabled(est, false) end)
+			end
+		end
+	end
+	hum:SetStateEnabled(Enum.HumanoidStateType.Swimming, true)
+	hum:ChangeState(Enum.HumanoidStateType.Swimming)
+end
+
+local function destravarEstadoNado()
+	local hum = swimHum
+	if hum and swimEstados then
+		for est, ligado in pairs(swimEstados) do
+			pcall(function() hum:SetStateEnabled(est, ligado) end)
+		end
+		if hum.Parent and hum:GetState() == Enum.HumanoidStateType.Swimming then
+			hum:ChangeState(Enum.HumanoidStateType.Freefall)
+		end
+	end
+	swimHum, swimEstados = nil, nil
+end
 
 local function pararSwim()
 	if swimBV then swimBV:Destroy() swimBV = nil end
-	local _, hum = pegarPersonagem()
-	if hum and hum:GetState() == Enum.HumanoidStateType.Swimming then
-		hum:ChangeState(Enum.HumanoidStateType.Freefall)
-	end
+	ultimoSwim = nil
+	destravarEstadoNado()
 end
 
 local function atualizarSwim()
@@ -1657,14 +1992,19 @@ local function atualizarSwim()
 		swimBV.Parent = raiz
 	end
 
-	-- Mantém o estado de natação (toca a animação de nadar)
-	hum:SetStateEnabled(Enum.HumanoidStateType.Swimming, true)
+	-- Estado de natação travado (toca a animação de nadar sem ficar piscando)
+	travarEstadoNado(hum)
 	if hum:GetState() ~= Enum.HumanoidStateType.Swimming then
 		hum:ChangeState(Enum.HumanoidStateType.Swimming)
 	end
 
+	-- Aceleração suave, como a água de verdade: não arranca nem para de uma vez
+	local agora = os.clock()
+	local dt = math.min(agora - (ultimoSwim or agora), 0.1)
+	ultimoSwim = agora
 	local dir = direcaoDeVoo(hum)
-	swimBV.Velocity = dir * velocidadeSwim
+	local taxa = dir.Magnitude > 0.05 and 6 or 4
+	swimBV.Velocity = swimBV.Velocity:Lerp(dir * velocidadeSwim, 1 - math.exp(-dt * taxa))
 end
 
 local function definirSwim(v)
@@ -1799,9 +2139,9 @@ do
 		if agua < 0.01 then agua = 0 end
 		entrada = entrada * math.exp(-dt * 1.6)
 
-		tinta.BackgroundTransparency = 1 - 0.3 * agua
+		tinta.BackgroundTransparency = 1 - 0.16 * agua
 		blur.Enabled = agua > 0
-		blur.Size = (3 * agua) + 8 * entrada
+		blur.Size = (1 * agua) + 4 * entrada
 
 		local tela = aguaGui.AbsoluteSize
 		if tela.X <= 0 then tela = workspace.CurrentCamera.ViewportSize end
@@ -1840,14 +2180,25 @@ do
 	end)
 
 	-- Balanço bem leve da câmera, como flutuando (depois do script da câmera do Roblox)
+	-- O balanço do frame anterior é desfeito ANTES do script da câmera rodar; senão o Roblox lê a
+	-- câmera já balançada e o balanço se soma a cada frame (a câmera fica "nadando" sozinha).
+	local balancoAnterior = CFrame.new()
+	RunService:BindToRenderStep("EfeitoAguaSwimDesfaz", Enum.RenderPriority.First.Value, function()
+		local cam = workspace.CurrentCamera
+		if cam and balancoAnterior ~= CFrame.new() then
+			cam.CFrame = cam.CFrame * balancoAnterior:Inverse()
+		end
+		balancoAnterior = CFrame.new()
+	end)
 	RunService:BindToRenderStep("EfeitoAguaSwim", Enum.RenderPriority.Camera.Value + 1, function()
 		if agua <= 0.01 then return end
 		local cam = workspace.CurrentCamera
 		if not cam then return end
 		local t = os.clock()
-		cam.CFrame = cam.CFrame
-			* CFrame.new(0, math.sin(t * 1.2) * 0.08 * agua, 0)
+		local balanco = CFrame.new(0, math.sin(t * 1.2) * 0.08 * agua, 0)
 			* CFrame.Angles(math.sin(t * 0.8) * 0.004 * agua, 0, math.sin(t * 1.0) * 0.012 * agua)
+		cam.CFrame = cam.CFrame * balanco
+		balancoAnterior = balanco
 	end)
 end
 
@@ -2509,6 +2860,256 @@ botaoTP.MouseButton1Click:Connect(function()
 end)
 
 ------------------------------------------------------------
+-- VIEW (espectar jogador: a câmera passa a mostrar a visão dele)
+------------------------------------------------------------
+local iniciarView, pararView
+do
+	local viewAlvo = nil -- jogador que está sendo observado
+	local COR_BTN = Color3.fromRGB(45, 45, 52)
+	local COR_BTN_ON = Color3.fromRGB(40, 120, 70)
+
+	-- Painel com a lista de jogadores (igual ao do TP)
+	local painelView = Instance.new("Frame")
+	painelView.Name = "PainelView"
+	painelView.AnchorPoint = Vector2.new(1, 0.5)
+	painelView.Position = UDim2.new(0.5, -160, 0.5, 0)
+	painelView.Size = UDim2.new(0, 270, 0, 400)
+	painelView.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+	painelView.Visible = false
+	painelView.Parent = gui
+	Instance.new("UICorner", painelView).CornerRadius = UDim.new(0, 14)
+
+	local tituloView = Instance.new("TextLabel")
+	tituloView.Size = UDim2.new(1, 0, 0, 40)
+	tituloView.BackgroundTransparency = 1
+	tituloView.Text = "Ver jogador..."
+	tituloView.TextColor3 = Color3.new(1, 1, 1)
+	tituloView.Font = Enum.Font.GothamBold
+	tituloView.TextSize = 20
+	tituloView.Active = true
+	tituloView.Parent = painelView
+	tornarMovel(tituloView, painelView)
+
+	local buscaView = Instance.new("TextBox")
+	buscaView.Name = "BuscaView"
+	buscaView.Position = UDim2.new(0.05, 0, 0, 46)
+	buscaView.Size = UDim2.new(0.9, 0, 0, 30)
+	buscaView.BackgroundColor3 = Color3.fromRGB(45, 45, 52)
+	buscaView.PlaceholderText = "Buscar jogador..."
+	buscaView.PlaceholderColor3 = Color3.fromRGB(150, 150, 160)
+	buscaView.Text = ""
+	buscaView.TextColor3 = Color3.new(1, 1, 1)
+	buscaView.Font = Enum.Font.GothamBold
+	buscaView.TextSize = 14
+	buscaView.ClearTextOnFocus = false
+	buscaView.TextXAlignment = Enum.TextXAlignment.Left
+	buscaView.Parent = painelView
+	Instance.new("UICorner", buscaView).CornerRadius = UDim.new(0, 8)
+	do
+		local pad = Instance.new("UIPadding")
+		pad.PaddingLeft = UDim.new(0, 10)
+		pad.PaddingRight = UDim.new(0, 10)
+		pad.Parent = buscaView
+	end
+
+	local listaView = Instance.new("ScrollingFrame")
+	listaView.Position = UDim2.new(0.05, 0, 0, 84)
+	listaView.Size = UDim2.new(0.9, 0, 1, -94)
+	listaView.BackgroundTransparency = 1
+	listaView.BorderSizePixel = 0
+	listaView.ScrollBarThickness = 4
+	listaView.CanvasSize = UDim2.new(0, 0, 0, 0)
+	listaView.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	listaView.Parent = painelView
+	local layoutView = Instance.new("UIListLayout")
+	layoutView.Padding = UDim.new(0, 6)
+	layoutView.SortOrder = Enum.SortOrder.Name
+	layoutView.Parent = listaView
+
+	-- Barra de cima enquanto está vendo: ◀ nome ▶ SAIR
+	local barra = Instance.new("Frame")
+	barra.Name = "BarraView"
+	barra.AnchorPoint = Vector2.new(0.5, 0)
+	barra.Position = UDim2.new(0.5, 0, 0, 14)
+	barra.Size = UDim2.fromOffset(280, 42)
+	barra.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+	barra.BackgroundTransparency = 0.15
+	barra.Visible = false
+	barra.ZIndex = 9
+	barra.Parent = gui
+	Instance.new("UICorner", barra).CornerRadius = UDim.new(0, 12)
+	local contornoBarra = Instance.new("UIStroke")
+	contornoBarra.Color = Color3.new(1, 1, 1)
+	contornoBarra.Transparency = 0.6
+	contornoBarra.Thickness = 1.2
+	contornoBarra.Parent = barra
+
+	local function botaoBarra(texto, x, w, cor)
+		local b = Instance.new("TextButton")
+		b.Position = UDim2.fromOffset(x, 5)
+		b.Size = UDim2.fromOffset(w, 32)
+		b.BackgroundColor3 = cor or COR_BTN
+		b.Text = texto
+		b.TextColor3 = Color3.new(1, 1, 1)
+		b.Font = Enum.Font.GothamBold
+		b.TextSize = 14
+		b.ZIndex = 10
+		b.Parent = barra
+		Instance.new("UICorner", b).CornerRadius = UDim.new(0, 8)
+		return b
+	end
+	local botaoAnt = botaoBarra("◀", 6, 32)
+	local botaoProx = botaoBarra("▶", 184, 32)
+	local botaoSair = botaoBarra("SAIR", 224, 50, COR_OFF)
+
+	local nomeView = Instance.new("TextLabel")
+	nomeView.Position = UDim2.fromOffset(42, 0)
+	nomeView.Size = UDim2.fromOffset(138, 42)
+	nomeView.BackgroundTransparency = 1
+	nomeView.Text = ""
+	nomeView.TextColor3 = Color3.new(1, 1, 1)
+	nomeView.Font = Enum.Font.GothamBold
+	nomeView.TextSize = 14
+	nomeView.TextTruncate = Enum.TextTruncate.AtEnd
+	nomeView.Active = true -- arrastar o nome move a barra
+	nomeView.ZIndex = 10
+	nomeView.Parent = barra
+	tornarMovel(nomeView, barra)
+
+	local botoesView = {} -- [Player] = TextButton
+
+	local function pintarLista()
+		for p, b in pairs(botoesView) do
+			b.BackgroundColor3 = (p == viewAlvo) and COR_BTN_ON or COR_BTN
+		end
+	end
+
+	-- Jogadores (menos você) em ordem de nome
+	local function listaOrdenada()
+		local lista = {}
+		for _, p in ipairs(Players:GetPlayers()) do
+			if p ~= player then lista[#lista + 1] = p end
+		end
+		table.sort(lista, function(a, b) return a.DisplayName:lower() < b.DisplayName:lower() end)
+		return lista
+	end
+
+	local function meuHumanoid()
+		local _, hum = pegarPersonagem()
+		if hum then return hum end
+		return player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+	end
+
+	pararView = function()
+		if not viewAlvo then return end
+		viewAlvo = nil
+		local cam = workspace.CurrentCamera
+		local hum = meuHumanoid()
+		if cam and hum then cam.CameraSubject = hum end
+		barra.Visible = false
+		botaoView.Text = "VIEW"
+		VIDRO.aplicar(botaoView, false)
+		pintarLista()
+	end
+
+	iniciarView = function(p)
+		if not p or p == player or not p.Parent then return false end
+		viewAlvo = p
+		nomeView.Text = p.DisplayName
+		barra.Visible = true
+		painelView.Visible = false
+		botaoView.Text = "VIEW: " .. p.DisplayName
+		VIDRO.aplicar(botaoView, true)
+		pintarLista()
+		return true
+	end
+
+	local function ciclar(passo)
+		local lista = listaOrdenada()
+		if #lista == 0 then
+			pararView()
+			return
+		end
+		local idx = 0
+		for i, p in ipairs(lista) do
+			if p == viewAlvo then idx = i break end
+		end
+		iniciarView(lista[(idx - 1 + passo) % #lista + 1])
+	end
+	botaoAnt.MouseButton1Click:Connect(function() ciclar(-1) end)
+	botaoProx.MouseButton1Click:Connect(function() ciclar(1) end)
+	botaoSair.MouseButton1Click:Connect(pararView)
+
+	-- Segue o jogador todo frame (depois do script da câmera): cobre ele renascer e você renascer
+	RunService:BindToRenderStep("ViewSeguir", Enum.RenderPriority.Camera.Value + 3, function()
+		if not viewAlvo then return end
+		if not viewAlvo.Parent then
+			pararView()
+			return
+		end
+		local cam = workspace.CurrentCamera
+		local hum = viewAlvo.Character and viewAlvo.Character:FindFirstChildOfClass("Humanoid")
+		if cam and hum and cam.CameraSubject ~= hum then
+			cam.CameraSubject = hum
+		end
+	end)
+
+	-- Lista de jogadores
+	local function filtrarView()
+		local q = buscaView.Text:lower()
+		for p, b in pairs(botoesView) do
+			b.Visible = q == "" or p.DisplayName:lower():find(q, 1, true) ~= nil or p.Name:lower():find(q, 1, true) ~= nil
+		end
+	end
+	buscaView:GetPropertyChangedSignal("Text"):Connect(filtrarView)
+
+	local function criarBotaoView(p)
+		if p == player or botoesView[p] then return end
+		local b = Instance.new("TextButton")
+		b.Name = p.DisplayName:lower() .. p.UserId
+		b.Size = UDim2.new(1, -6, 0, 46)
+		b.BackgroundColor3 = (p == viewAlvo) and COR_BTN_ON or COR_BTN
+		b.RichText = true
+		b.Text = string.format('<b>%s</b>\n<font size="12" color="rgb(160,160,170)">@%s</font>',
+			escaparRich(p.DisplayName), escaparRich(p.Name))
+		b.TextColor3 = Color3.new(1, 1, 1)
+		b.Font = Enum.Font.GothamBold
+		b.TextSize = 14
+		b.TextXAlignment = Enum.TextXAlignment.Left
+		b.TextTruncate = Enum.TextTruncate.AtEnd
+		b.Parent = listaView
+		Instance.new("UICorner", b).CornerRadius = UDim.new(0, 8)
+		local pad = Instance.new("UIPadding")
+		pad.PaddingLeft = UDim.new(0, 10)
+		pad.PaddingRight = UDim.new(0, 10)
+		pad.Parent = b
+		b.MouseButton1Click:Connect(function() iniciarView(p) end)
+		botoesView[p] = b
+	end
+
+	for _, p in ipairs(Players:GetPlayers()) do criarBotaoView(p) end
+	Players.PlayerAdded:Connect(criarBotaoView)
+	Players.PlayerRemoving:Connect(function(p)
+		local b = botoesView[p]
+		if b then
+			b:Destroy()
+			botoesView[p] = nil
+		end
+		if p == viewAlvo then pararView() end
+	end)
+
+	-- Botão VIEW do menu: desligado abre a lista; ligado volta para a sua câmera
+	botaoView.MouseButton1Click:Connect(function()
+		if viewAlvo then
+			pararView()
+		else
+			painelView.Visible = not painelView.Visible
+			if painelView.Visible then posicionarAoLado(painelView) end
+		end
+	end)
+end
+
+------------------------------------------------------------
 -- XRAY (mapa semitransparente, só no seu cliente) com onda de revelação e SONAR
 ------------------------------------------------------------
 -- Ao ligar: uma onda parte de você e o mapa vai ficando transparente conforme ela passa (com fade suave).
@@ -2531,12 +3132,15 @@ end
 
 do
 	local RAIO_ONDA = 500        -- studs: até onde a onda de revelação vai
-	local DURACAO_ONDA = 2.2     -- segundos que a onda leva para chegar lá
+	local DURACAO_ONDA = 0.7     -- segundos que a onda leva para chegar lá (era 2.2)
 	local SONAR_INTERVALO = 4    -- segundos entre um sonar e outro
 	local SONAR_ALCANCE = 120    -- studs que cada sonar alcança
 	local SONAR_DURACAO = 1.8    -- segundos que o sonar leva para chegar no alcance
 	local COR_SONAR = Color3.fromRGB(90, 220, 255)
 	local TAMANHO_BALDE = 10     -- studs por faixa de distância (organiza as partes pela onda)
+	local RAIO_PERTO = 250       -- studs: o que está até aqui é pego primeiro, na hora
+	local FADE_ENTRADA = 8       -- velocidade do fade de cada parte (maior = mais rápido; 8 = ~0.12s)
+	local ORCAMENTO_FRAME = 0.008 -- segundos por frame gastos varrendo o mapa (maior = mais rápido, mais risco de engasgar)
 
 	local partes = {}     -- [BasePart] = nível 0..1 (quanto já ficou transparente)
 	local ativas = {}     -- [BasePart] = true enquanto faz o fade de entrada
@@ -2702,13 +3306,20 @@ do
 
 		conexao = workspace.DescendantAdded:Connect(registrar)
 		task.spawn(function()
-			local n = 0
+			-- 1) o que está perto de você primeiro (uma busca só: aparece quase na hora)
+			if raiz then
+				for _, obj in ipairs(workspace:GetPartBoundsInRadius(origemOnda, RAIO_PERTO, OverlapParams.new())) do
+					registrar(obj)
+				end
+			end
+			-- 2) o resto do mapa, em fatias de tempo (antes: só 300 partes por frame, o que demorava em mapa grande)
+			local t0 = os.clock()
 			for _, obj in ipairs(workspace:GetDescendants()) do
 				if minhaVersao ~= versao or not estado.xray then return end
 				registrar(obj)
-				n += 1
-				if n % 300 == 0 then
-					task.wait() -- evita travar em mapas grandes
+				if os.clock() - t0 > ORCAMENTO_FRAME then
+					task.wait()
+					t0 = os.clock()
 				end
 			end
 		end)
@@ -2796,7 +3407,7 @@ do
 				ativas[parte] = nil
 				partes[parte] = nil
 			else
-				local n = math.min(1, partes[parte] + dt * 3.5)
+				local n = math.min(1, partes[parte] + dt * FADE_ENTRADA)
 				partes[parte] = n
 				if n >= 1 then ativas[parte] = nil end
 				aplicarNivel(parte, agora)
@@ -2864,6 +3475,10 @@ caixaXray.FocusLost:Connect(aplicarCaixaXray)
 -- TELEPORTE SUAVE (dash): em vez de aparecer lá de uma vez, você voa rapidinho até o ponto
 -- (acelera, passa direto por paredes e freia na chegada), com os riscos de vento e a tremida do fly
 local DASH_VELOCIDADE = 220 -- studs por segundo (aumente para ir mais rápido)
+-- TPTOOL (o item): false = voa até lá ultra rápido (uns 0.35s) com riscos de vento, tremida, FOV e estrondo na chegada
+--                  true = teleporte instantâneo, sem animação nenhuma
+local TPTOOL_INSTANTANEO = false
+local TPTOOL_VELOCIDADE = 3000 -- studs/s (a duração mínima do voo forte é 0.35s)
 do
 	local conexao, terminarAtual
 
@@ -3058,7 +3673,14 @@ local function criarTPTool()
 		mouse.TargetFilter = player.Character -- ignora o próprio personagem
 		local alvo = mouse.Hit
 		if alvo then
-			iniciarDash(alvo.Position + Vector3.new(0, 3, 0))
+			local destino = alvo.Position + Vector3.new(0, 3, 0)
+			if TPTOOL_INSTANTANEO then
+				-- teleporte na hora, mantendo para onde o personagem estava virado
+				raiz.CFrame = CFrame.new(destino) * raiz.CFrame.Rotation
+				raiz.AssemblyLinearVelocity = Vector3.zero
+			else
+				iniciarDash(destino, { velocidade = TPTOOL_VELOCIDADE, forte = true })
+			end
 		end
 	end)
 
@@ -3166,7 +3788,9 @@ local definirShiftLock, atualizarShiftLock
 do
 	local COR_BRANCO = Color3.fromRGB(255, 255, 255)
 	local COR_AZUL = Color3.fromRGB(0, 170, 255)
-	local DESLOCAMENTO_CAMERA = Vector3.new(1.75, 0, 0) -- câmera por cima do ombro (clássico)
+	local ALCANCE_OMBRO = 1.75 -- quanto a câmera fica para o lado (clássico: por cima do ombro)
+	local lado = 1 -- 1 = ombro direito, -1 = ombro esquerdo (botão ⇄ troca)
+	local ultimoSL
 	local travado = false -- cadeado azul (travado) ou branco (solto)
 	local aplicado = false -- se já mexemos no personagem/câmera
 
@@ -3211,28 +3835,97 @@ do
 	corpo.Parent = botaoLock
 	Instance.new("UICorner", corpo).CornerRadius = UDim.new(0, 4)
 
-	local function pintar()
-		local cor = travado and COR_AZUL or COR_BRANCO
-		contorno.Color = cor
-		contornoArgola.Color = cor
-		corpo.BackgroundColor3 = cor
-	end
-	pintar()
+	-- Onda de brilho que sai do cadeado quando trava
+	local onda = Instance.new("Frame")
+	onda.Name = "OndaLock"
+	onda.AnchorPoint = Vector2.new(0.5, 0.5)
+	onda.Position = UDim2.fromScale(0.5, 0.5)
+	onda.Size = UDim2.fromScale(1, 1)
+	onda.BackgroundTransparency = 1
+	onda.BorderSizePixel = 0
+	onda.Active = false
+	onda.Visible = false
+	onda.ZIndex = 8
+	onda.Parent = botaoLock
+	Instance.new("UICorner", onda).CornerRadius = UDim.new(1, 0)
+	local contornoOnda = Instance.new("UIStroke")
+	contornoOnda.Color = COR_AZUL
+	contornoOnda.Thickness = 3
+	contornoOnda.Parent = onda
 
+	-- Botão pequeno embaixo do cadeado: troca o ombro da câmera (direita <-> esquerda)
+	local botaoLado = Instance.new("TextButton")
+	botaoLado.Name = "TrocarOmbro"
+	botaoLado.AnchorPoint = Vector2.new(0.5, 0)
+	botaoLado.Position = UDim2.new(0.5, 0, 1, 6)
+	botaoLado.Size = UDim2.fromOffset(34, 22)
+	botaoLado.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+	botaoLado.BackgroundTransparency = 0.35
+	botaoLado.Text = "⇄"
+	botaoLado.TextColor3 = Color3.new(1, 1, 1)
+	botaoLado.Font = Enum.Font.GothamBold
+	botaoLado.TextSize = 15
+	botaoLado.AutoButtonColor = true
+	botaoLado.ZIndex = 9
+	botaoLado.Parent = botaoLock
+	Instance.new("UICorner", botaoLado).CornerRadius = UDim.new(0, 8)
+	botaoLado.MouseButton1Click:Connect(function()
+		lado = -lado -- a câmera desliza suave para o outro ombro (ver atualizarShiftLock)
+	end)
+
+	local pulsoContorno -- brilho que respira enquanto está travado
+	local function pintar(animar)
+		local cor = travado and COR_AZUL or COR_BRANCO
+		local info = TweenInfo.new(animar and 0.25 or 0, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+		TweenService:Create(contorno, info, { Color = cor }):Play()
+		TweenService:Create(contornoArgola, info, { Color = cor }):Play()
+		TweenService:Create(corpo, info, { BackgroundColor3 = cor }):Play()
+		-- argola: fechada (travado) ou levantada (solto)
+		TweenService:Create(argola, TweenInfo.new(animar and 0.3 or 0, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+			Position = UDim2.new(0.5, 0, 0.36, travado and 0 or -6),
+		}):Play()
+
+		if pulsoContorno then pulsoContorno:Cancel() pulsoContorno = nil end
+		contorno.Transparency = 0
+		if travado then
+			pulsoContorno = TweenService:Create(contorno,
+				TweenInfo.new(0.9, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Transparency = 0.6 })
+			pulsoContorno:Play()
+		end
+
+		if animar then
+			-- "pop" do botão
+			TweenService:Create(botaoLock, TweenInfo.new(0.1), { Size = UDim2.fromOffset(60, 60) }):Play()
+			task.delay(0.1, function()
+				TweenService:Create(botaoLock, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+					{ Size = UDim2.fromOffset(52, 52) }):Play()
+			end)
+			-- onda de brilho ao travar
+			if travado then
+				onda.Size = UDim2.fromScale(1, 1)
+				contornoOnda.Transparency = 0
+				onda.Visible = true
+				TweenService:Create(onda, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+					{ Size = UDim2.fromScale(2, 2) }):Play()
+				local t = TweenService:Create(contornoOnda, TweenInfo.new(0.5), { Transparency = 1 })
+				t.Completed:Connect(function() onda.Visible = false end)
+				t:Play()
+			end
+		end
+	end
+	pintar(false)
+
+	-- Ao soltar: devolve o mouse e a rotação na hora; a câmera volta ao centro devagar (em atualizarShiftLock)
 	local function restaurar()
 		if not aplicado then return end
-		aplicado = false
 		UserInputService.MouseBehavior = Enum.MouseBehavior.Default
 		local _, hum = pegarPersonagem()
-		if hum then
-			hum.AutoRotate = true
-			hum.CameraOffset = Vector3.zero
-		end
+		if hum then hum.AutoRotate = true end
 	end
 
 	tornarMovel(botaoLock, botaoLock, function()
 		travado = not travado
-		pintar()
+		pintar(true)
 		if not travado then restaurar() end
 	end)
 
@@ -3242,7 +3935,7 @@ do
 		pintarBotao(botaoShiftLock, "SHIFTLOCK", v)
 		if not v then
 			travado = false
-			pintar()
+			pintar(false)
 			restaurar()
 		end
 	end
@@ -3250,14 +3943,33 @@ do
 
 	-- Roda todo frame: trava o mouse no centro e vira o personagem para onde a câmera aponta
 	atualizarShiftLock = function()
-		if not (estado.shiftlock and travado) then return end
+		local agora = os.clock()
+		local dt = math.min(agora - (ultimoSL or agora), 0.1)
+		ultimoSL = agora
 		local raiz, hum = pegarPersonagem()
+
+		if not (estado.shiftlock and travado) then
+			-- soltou: a câmera volta suave para o centro
+			if aplicado then
+				if hum then
+					hum.CameraOffset = hum.CameraOffset:Lerp(Vector3.zero, 1 - math.exp(-dt * 10))
+					if hum.CameraOffset.Magnitude < 0.02 then
+						hum.CameraOffset = Vector3.zero
+						aplicado = false
+					end
+				else
+					aplicado = false
+				end
+			end
+			return
+		end
 		if not raiz then return end
 
 		aplicado = true
 		UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter
 		hum.AutoRotate = false
-		hum.CameraOffset = hum.CameraOffset:Lerp(DESLOCAMENTO_CAMERA, 0.25)
+		-- a câmera desliza até o ombro (e para o outro ombro, se trocar)
+		hum.CameraOffset = hum.CameraOffset:Lerp(Vector3.new(ALCANCE_OMBRO * lado, 0, 0), 1 - math.exp(-dt * 10))
 
 		-- voando/nadando/sentado, quem gira o personagem é o próprio modo
 		if estado.fly or estado.vfly or estado.swim or hum.Sit then return end
@@ -3274,11 +3986,15 @@ end
 ------------------------------------------------------------
 do
 	local toque = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
-	local tecladoLigado = false
+	local tecladoLigado = true -- a barra fica sempre no canto da tela
 	local barraAberta = false
 	local listaAjuda = {}
+	local entradas = {} -- { nomes = {...}, desc = "..." } -> usado para filtrar/completar a lista
+	local manterBarra = false -- true = o comando pediu para a barra continuar aberta (cmds)
 	local comandos = {} -- [palavra] = function(args) -> sucesso, mensagem
 	local LARGURA_ABERTA = 282
+	local LARGURA_FECHADA, ALTURA_FECHADA = 96, 24 -- barrinha fina quando fechada
+	local posSalva -- posição da barrinha antes de subir (celular)
 
 	local function novo(classe, props, pai)
 		local o = Instance.new(classe)
@@ -3293,10 +4009,10 @@ do
 	local cmdFrame = novo("Frame", {
 		Name = "BarraComandos",
 		AnchorPoint = Vector2.new(1, 1),
-		Position = toque and UDim2.new(1, -16, 1, -190) or UDim2.new(1, -16, 1, -16),
-		Size = UDim2.fromOffset(40, 40),
+		Position = toque and UDim2.new(1, -130, 1, -6) or UDim2.new(1, -16, 1, -16), -- no celular fica ao lado do botão de pulo
+		Size = UDim2.fromOffset(LARGURA_FECHADA, ALTURA_FECHADA),
 		BackgroundTransparency = 1,
-		Visible = false,
+		Visible = true,
 		ZIndex = 10,
 	}, gui)
 
@@ -3304,15 +4020,16 @@ do
 		Name = "Icone",
 		AnchorPoint = Vector2.new(1, 0),
 		Position = UDim2.new(1, 0, 0, 0),
-		Size = UDim2.fromOffset(40, 40),
-		BackgroundColor3 = Color3.fromRGB(40, 40, 45),
-		BackgroundTransparency = 0.15,
-		Text = ">_",
-		TextColor3 = Color3.new(1, 1, 1),
-		Font = Enum.Font.GothamBold,
-		TextSize = 16,
+		Size = UDim2.fromOffset(LARGURA_FECHADA, ALTURA_FECHADA),
+		BackgroundColor3 = Color3.fromRGB(25, 25, 30),
+		BackgroundTransparency = 0.25,
+		Text = "> comandos",
+		TextColor3 = Color3.fromRGB(190, 190, 200),
+		Font = Enum.Font.Gotham,
+		TextSize = 12,
 	}, cmdFrame)
-	novo("UICorner", { CornerRadius = UDim.new(0, 10) }, icone)
+	novo("UICorner", { CornerRadius = UDim.new(0, 6) }, icone)
+	novo("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 1, Transparency = 0.7 }, icone)
 
 	local caixaCmd = novo("TextBox", {
 		Name = "Comando",
@@ -3381,10 +4098,10 @@ do
 		Position = UDim2.fromOffset(12, 4),
 		Size = UDim2.new(1, -56, 0, 30),
 		BackgroundTransparency = 1,
-		Text = "Comandos",
+		Text = "Comandos (use , para vários)",
 		TextColor3 = Color3.new(1, 1, 1),
 		Font = Enum.Font.GothamBold,
-		TextSize = 15,
+		TextSize = 13,
 		TextXAlignment = Enum.TextXAlignment.Left,
 	}, ajuda)
 	local fecharAjuda = novo("TextButton", {
@@ -3407,22 +4124,17 @@ do
 		CanvasSize = UDim2.new(),
 		AutomaticCanvasSize = Enum.AutomaticSize.Y,
 	}, ajuda)
-	local textoAjuda = novo("TextLabel", {
-		Size = UDim2.new(1, -8, 0, 0),
-		AutomaticSize = Enum.AutomaticSize.Y,
-		BackgroundTransparency = 1,
-		TextWrapped = true,
-		TextXAlignment = Enum.TextXAlignment.Left,
-		TextYAlignment = Enum.TextYAlignment.Top,
-		TextColor3 = Color3.fromRGB(200, 200, 210),
-		Font = Enum.Font.Gotham,
-		TextSize = 12,
-		Text = "",
-	}, rolagem)
+	novo("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 3) }, rolagem)
 
 	-- Coloca avisos/lista em cima da barra (ou embaixo, se ela estiver no topo da tela)
+	-- Topo da barra na tela, calculado pelas propriedades (AbsolutePosition demora um quadro para atualizar)
+	local function topoDaBarra()
+		local pos, tam, a = cmdFrame.Position, cmdFrame.Size, cmdFrame.AnchorPoint
+		return pos.Y.Scale * tamanhoTela().Y + pos.Y.Offset - a.Y * tam.Y.Offset
+	end
+
 	local function posicionarAcima(obj)
-		if cmdFrame.AbsolutePosition.Y < 90 then
+		if topoDaBarra() < 90 then
 			obj.AnchorPoint = Vector2.new(1, 0)
 			obj.Position = UDim2.new(1, 0, 1, 6)
 		else
@@ -3444,12 +4156,96 @@ do
 		end)
 	end
 
-	local function abrirAjuda()
-		textoAjuda.Text = "Vários de uma vez: fly 80; np\nPara desligar, coloque 'un' na frente (unfly, unnp...)\n\n"
-			.. table.concat(listaAjuda, "\n")
+	-- Completa o comando tocado na lista e deixa o cursor pronto para os argumentos
+	local function completarComando(nome)
+		local antes = caixaCmd.Text:match("^(.*,)") or "" -- tudo até a última vírgula
+		caixaCmd.Text = antes .. (antes ~= "" and " " or "") .. nome .. " "
+		caixaCmd:CaptureFocus()
+		caixaCmd.CursorPosition = #caixaCmd.Text + 1
+	end
+
+	local linhasSugestao = {}
+
+	-- Monta a lista de comandos que combinam com o que está sendo digitado (vazio = todos)
+	local function atualizarSugestoes(texto)
+		for _, l in ipairs(linhasSugestao) do l:Destroy() end
+		table.clear(linhasSugestao)
+
+		local trecho = (texto or ""):match("([^,]*)$") or "" -- só o último comando digitado
+		local palavra = ((trecho:match("^%s*(%S*)") or ""):lower():gsub("^/", ""))
+
+		local achados = {}
+		for i, e in ipairs(entradas) do
+			local melhor, nomeMelhor
+			for _, n in ipairs(e.nomes) do
+				local nota
+				if palavra == "" then nota = 2
+				elseif n == palavra then nota = 1
+				elseif n:sub(1, #palavra) == palavra then nota = 2
+				elseif n:find(palavra, 1, true) then nota = 3 end
+				if nota and (not melhor or nota < melhor) then
+					melhor, nomeMelhor = nota, n
+				end
+			end
+			if melhor then
+				achados[#achados + 1] = { e = e, nota = melhor, i = i, nome = palavra == "" and e.nomes[1] or nomeMelhor }
+			end
+		end
+		table.sort(achados, function(a, b)
+			if a.nota ~= b.nota then return a.nota < b.nota end
+			return a.i < b.i
+		end)
+
+		for k, a in ipairs(achados) do
+			local linha = novo("TextButton", {
+				LayoutOrder = k,
+				Size = UDim2.new(1, -8, 0, 0),
+				AutomaticSize = Enum.AutomaticSize.Y,
+				BackgroundColor3 = Color3.fromRGB(45, 45, 52),
+				BackgroundTransparency = 0.3,
+				Text = a.e.desc,
+				TextWrapped = true,
+				TextXAlignment = Enum.TextXAlignment.Left,
+				TextColor3 = Color3.fromRGB(220, 220, 230),
+				Font = Enum.Font.Gotham,
+				TextSize = 12,
+				AutoButtonColor = true,
+			}, rolagem)
+			novo("UICorner", { CornerRadius = UDim.new(0, 6) }, linha)
+			novo("UIPadding", {
+				PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8),
+				PaddingTop = UDim.new(0, 5), PaddingBottom = UDim.new(0, 5),
+			}, linha)
+			linha.Activated:Connect(function() completarComando(a.nome) end)
+			linhasSugestao[#linhasSugestao + 1] = linha
+		end
+
+		if #achados == 0 then
+			linhasSugestao[1] = novo("TextLabel", {
+				Size = UDim2.new(1, -8, 0, 26),
+				BackgroundTransparency = 1,
+				Text = "Nenhum comando assim",
+				TextColor3 = Color3.fromRGB(150, 150, 160),
+				Font = Enum.Font.Gotham,
+				TextSize = 12,
+			}, rolagem)
+		end
+		rolagem.CanvasPosition = Vector2.new(0, 0)
+	end
+
+	-- Mostra a lista em cima da barra (ou embaixo, se a barra estiver no topo), do tamanho do espaço livre
+	local function mostrarLista()
+		local y = topoDaBarra()
+		local livre = (y < 90) and (tamanhoTela().Y - y - 56) or (y - 12)
+		ajuda.Size = UDim2.fromOffset(LARGURA_ABERTA, math.clamp(livre, 90, 230))
 		posicionarAcima(ajuda)
 		toast.Visible = false
 		ajuda.Visible = true
+	end
+
+	local function abrirAjuda() -- lista completa (comando cmds)
+		atualizarSugestoes("")
+		mostrarLista()
 	end
 	fecharAjuda.Activated:Connect(function() ajuda.Visible = false end)
 
@@ -3458,21 +4254,40 @@ do
 		caixaCmd:ReleaseFocus()
 		caixaCmd.Visible = false
 		botaoEnviar.Visible = false
-		cmdFrame.Size = UDim2.fromOffset(40, 40)
+		ajuda.Visible = false
+		icone.Text = "> comandos"
+		icone.TextSize = 12
+		icone.Size = UDim2.fromOffset(LARGURA_FECHADA, ALTURA_FECHADA)
+		cmdFrame.Size = UDim2.fromOffset(LARGURA_FECHADA, ALTURA_FECHADA)
+		if posSalva then -- celular: volta para o canto de baixo
+			cmdFrame.Position = posSalva
+			posSalva = nil
+		end
 	end
 
 	local function abrirBarra()
 		barraAberta = true
 		-- se o ícone estiver perto da borda esquerda, empurra a barra para dentro da tela
-		local direita = cmdFrame.AbsolutePosition.X + cmdFrame.AbsoluteSize.X
-		local falta = LARGURA_ABERTA - direita
-		if falta > 0 then
-			local p = cmdFrame.Position
-			cmdFrame.Position = UDim2.new(p.X.Scale, p.X.Offset + falta, p.Y.Scale, p.Y.Offset)
+		if toque then
+			-- celular: sobe a barra para ficar acima do teclado da tela
+			posSalva = cmdFrame.Position
+			cmdFrame.Position = UDim2.new(1, -16, 1, -190)
+		else
+			local direita = cmdFrame.AbsolutePosition.X + cmdFrame.AbsoluteSize.X
+			local falta = LARGURA_ABERTA - direita
+			if falta > 0 then
+				local p = cmdFrame.Position
+				cmdFrame.Position = UDim2.new(p.X.Scale, p.X.Offset + falta, p.Y.Scale, p.Y.Offset)
+			end
 		end
+		icone.Text = "X"
+		icone.TextSize = 14
+		icone.Size = UDim2.fromOffset(40, 40)
 		cmdFrame.Size = UDim2.fromOffset(LARGURA_ABERTA, 40)
 		caixaCmd.Visible = true
 		botaoEnviar.Visible = true
+		atualizarSugestoes(caixaCmd.Text)
+		mostrarLista()
 		-- abre o teclado na hora; tenta de novo rapidinho se o celular não pegar de primeira
 		caixaCmd:CaptureFocus()
 		task.spawn(function()
@@ -3489,6 +4304,26 @@ do
 		if barraAberta then fecharBarra() else abrirBarra() end
 	end)
 
+	-- A lista filtra enquanto você digita
+	caixaCmd:GetPropertyChangedSignal("Text"):Connect(function()
+		if barraAberta then
+			atualizarSugestoes(caixaCmd.Text)
+			mostrarLista()
+		end
+	end)
+
+	-- No PC: a tecla , (vírgula) abre a barra (como no Infinite Yield)
+	UserInputService.InputBegan:Connect(function(input, processado)
+		if processado or not tecladoLigado or barraAberta then return end
+		if input.KeyCode ~= Enum.KeyCode.Comma then return end
+		local antes = caixaCmd.Text
+		abrirBarra()
+		task.spawn(function()
+			RunService.RenderStepped:Wait()
+			if caixaCmd.Text == antes .. "," then caixaCmd.Text = antes end -- tira a vírgula que foi digitada
+		end)
+	end)
+
 	----------------------------------------------------------
 	-- Comandos
 	----------------------------------------------------------
@@ -3496,15 +4331,20 @@ do
 	local function comando(nomes, descricao, f)
 		for _, n in ipairs(nomes) do comandos[n] = f end
 		listaAjuda[#listaAjuda + 1] = descricao
+		entradas[#entradas + 1] = { nomes = nomes, desc = descricao }
 	end
 
 	-- Comando liga/desliga: "nome" liga e "unnome" desliga
 	local function alternavel(nomes, descricao, f)
+		local todos = {}
 		for _, n in ipairs(nomes) do
 			comandos[n] = function(args) return f(true, args) end
 			comandos["un" .. n] = function(args) return f(false, args) end
+			todos[#todos + 1] = n
+			todos[#todos + 1] = "un" .. n
 		end
 		listaAjuda[#listaAjuda + 1] = descricao
+		entradas[#entradas + 1] = { nomes = todos, desc = descricao }
 	end
 
 	-- Se vier um número, usa como velocidade (passa pela mesma regra 1-500 da caixa do menu)
@@ -3608,6 +4448,18 @@ do
 		return true, "TP -> " .. alvoJogador.DisplayName
 	end)
 
+	alternavel({ "view" }, "view <jogador> / unview - ver pela câmera de um jogador", function(ligar, args)
+		if not ligar then
+			pararView()
+			return true, "View desligado"
+		end
+		if #args == 0 then return false, "Uso: view <jogador>" end
+		local alvoJogador = acharJogador(table.concat(args, " "))
+		if not alvoJogador then return false, "Jogador não encontrado: " .. table.concat(args, " ") end
+		iniciarView(alvoJogador)
+		return true, "Vendo " .. alvoJogador.DisplayName
+	end)
+
 	comando({ "set" }, "set [nome] - salvar spawn aqui", function(args)
 		local raiz = pegarPersonagem()
 		if not raiz then return false, "Personagem indisponível" end
@@ -3662,8 +4514,8 @@ do
 		return true, aberto and "Menu aberto" or "Menu fechado"
 	end)
 
-	comando({ "cmds", "help", "?" }, "cmds - mostrar esta lista", function()
-		abrirAjuda()
+	comando({ "cmds", "help", "?" }, "cmds - mostrar a lista completa", function()
+		manterBarra = true
 		return true
 	end)
 
@@ -3694,7 +4546,7 @@ do
 		if texto == "" then return end
 
 		local mensagens, tudoCerto = {}, true
-		for trecho in texto:gmatch("[^;]+") do
+		for trecho in texto:gmatch("[^,]+") do
 			local ok, msg = executarComando(trecho)
 			if msg then mensagens[#mensagens + 1] = msg end
 			tudoCerto = tudoCerto and ok
@@ -3705,8 +4557,15 @@ do
 			mostrarToast(table.concat(mensagens, "\n"), tudoCerto)
 		end
 		if tudoCerto then
-			caixaCmd.Text = ""
-			fecharBarra()
+			if manterBarra then
+				manterBarra = false
+				caixaCmd.Text = ""
+				abrirAjuda()
+				task.defer(function() caixaCmd:CaptureFocus() end)
+			else
+				fecharBarra() -- fecha antes de limpar o texto, para a lista não cobrir o aviso
+				caixaCmd.Text = ""
+			end
 		end
 	end
 
@@ -3717,17 +4576,6 @@ do
 		executarLinha(caixaCmd.Text)
 	end)
 
-	-- Botão TECLADO do menu: mostra/esconde o ícone no canto da tela
-	botaoTeclado.MouseButton1Click:Connect(function()
-		tecladoLigado = not tecladoLigado
-		pintarBotao(botaoTeclado, "TECLADO", tecladoLigado)
-		cmdFrame.Visible = tecladoLigado
-		if not tecladoLigado then
-			fecharBarra()
-			ajuda.Visible = false
-			toast.Visible = false
-		end
-	end)
 end
 
 ------------------------------------------------------------
@@ -3752,5 +4600,6 @@ player.CharacterAdded:Connect(function()
 	pintarBotao(botaoSwim, "SWIM", false)
 	pintarBotao(botaoFly, "FLY", false)
 	pintarBotao(botaoVFly, "VFLY", false)
+	atualizarSetasVFly()
 	atualizarBotaoVertical()
 end)
