@@ -14,7 +14,7 @@ local playerGui = player:WaitForChild("PlayerGui")
 ------------------------------------------------------------
 -- CONFIG
 ------------------------------------------------------------
-local DISTANCIA_MAXIMA = 500 -- em studs (use math.huge para sem limite)
+local DISTANCIA_MAXIMA = math.huge -- em studs: sem limite (ESP e Chams valem a qualquer distância; ponha um número, ex.: 500, para limitar)
 local COR_ESP = Color3.fromRGB(255, 255, 255)
 local COR_CHAMS_CONTORNO = Color3.fromRGB(255, 60, 60)
 local COR_CHAMS_PREENCHIMENTO = Color3.fromRGB(255, 60, 60)
@@ -442,7 +442,7 @@ dica.BackgroundTransparency = 1
 dica.TextWrapped = true
 dica.TextXAlignment = Enum.TextXAlignment.Left
 dica.TextYAlignment = Enum.TextYAlignment.Top
-dica.Text = "Mover: arraste o título do painel ou o botão MENU. Tamanho: arraste o ◢ do canto.\nFly: WASD/analógico para mover, mire a câmera para subir/descer.\nEspaço/E = subir, Shift/Q = descer.\nVFLY: use sentado em um veículo. Aparecem setas na tela (esquerda: ▲▼◀▶ andam; direita: SOBE/DESCE) para jogos em que o analógico não move o veículo; arraste o ≡ para mudar de lugar.\nNOCLIP: atravessa paredes (sem o Fly você cai pelo chão).\nSWIM: nada no ar como se estivesse na água.\nSPAWNS: salve posições (ficam gravadas por jogo, se o executor permitir), renomeie, veja a distância e clique em IR para voar até lá. O nome aparece discreto em cima do spawn quando você está perto.\nVIEW: escolha um jogador para ver pela câmera dele (espectar). Na barra de cima, ◀ ▶ trocam de jogador e SAIR volta pra você. Comando: view <jogador> / unview.\nTP: digite na busca para filtrar; a lista mostra a distância. Clique no nome (ou dê Enter na busca para ir no primeiro da lista) para voar até o jogador em velocidade supersônica.\nXRAY: deixa o mapa transparente (caixa: 0 = normal, 0.95 = quase invisível).\nTPTOOL: dá um item no inventário; equipe e clique/toque onde quer ir (você voa até lá em uma fração de segundo, com os efeitos de velocidade e o estrondo na chegada).\nSHIFTLOCK: mostra o cadeado na tela (arraste para mover). Toque nele: azul = travado, branco = solto. O ⇄ embaixo troca o ombro da câmera. Comando: sl / unsl.\nAIMBOT: bolinha verde no centro = alcance (digite o tamanho na caixa). A mira muda ao travar: na cabeça os tracinhos fecham (vermelho), no tronco eles abrem (laranja); a vida do alvo aparece pequena no canto da bolinha. ALVO troca cabeça/tronco, PAREDE = mirar através de paredes, TIME = ignorar seu time. Comando: aim [tamanho] / unaim.\nBARRA DE COMANDOS: a barrinha \"> comandos\" no canto de baixo da tela (arraste para mover). Toque nela e a barra abre com a lista de comandos em cima, que filtra enquanto você digita (toque num comando para completar). Ex.: fly 80, unfly, np, xy, rj. No PC, a tecla , (vírgula) também abre a barra. Vários comandos de uma vez: fly 80, np."
+dica.Text = "Mover: arraste o título do painel ou o botão MENU. Tamanho: arraste o ◢ do canto.\nFly: WASD/analógico para mover, mire a câmera para subir/descer.\nEspaço/E = subir, Shift/Q = descer.\nVFLY: use sentado em um veículo. Aparecem setas na tela (esquerda: ▲▼◀▶ andam; direita: SOBE/DESCE) para jogos em que o analógico não move o veículo; arraste o ≡ para mudar de lugar.\nNOCLIP: atravessa paredes (sem o Fly você cai pelo chão).\nSWIM: nada no ar como se estivesse na água.\nSPAWNS: salve posições (ficam gravadas por jogo, se o executor permitir), renomeie, veja a distância e clique em IR para voar até lá. O nome aparece discreto em cima do spawn quando você está perto.\nVIEW: escolha um jogador para ver pela câmera dele (espectar). Na barra de cima, ◀ ▶ trocam de jogador e SAIR volta pra você. Comando: view <jogador> / unview.\nTP: digite na busca para filtrar; a lista mostra a distância. Clique no nome (ou dê Enter na busca para ir no primeiro da lista) para voar até o jogador em velocidade supersônica.\nXRAY: deixa o mapa transparente (caixa: 0 = normal, 0.95 = quase invisível).\nTPTOOL: dá um item no inventário; equipe e clique/toque onde quer ir (você voa até lá em uma fração de segundo, com os efeitos de velocidade e o estrondo na chegada).\nSHIFTLOCK: mostra o cadeado na tela (arraste para mover). Toque nele: azul = travado, branco = solto. O ⇄ embaixo troca o ombro da câmera. Comando: sl / unsl.\nAIMBOT: bolinha verde no centro = alcance (digite o tamanho na caixa). A mira muda ao travar: na cabeça os tracinhos fecham (vermelho), no tronco eles abrem (laranja); a vida do alvo aparece pequena no canto da bolinha. ALVO troca cabeça/tronco, PAREDE = mirar através de paredes, TIME = ignorar seu time. Comando: aim [tamanho] / unaim.\nBARRA DE COMANDOS: a barrinha \"> comandos\" no canto de baixo da tela (arraste para mover). Toque nela e abre um painel escuro com a caixa de digitar e a lista de comandos logo abaixo, que filtra enquanto você digita (toque num comando para completar). Ao dar Enter, fechar o teclado ou tocar fora, o painel volta para a tira fina. Ex.: fly 80, unfly, np, xy, rj. No PC, a tecla , (vírgula) também abre a barra. Vários comandos de uma vez: fly 80, np."
 dica.TextColor3 = Color3.fromRGB(170, 170, 180)
 dica.Font = Enum.Font.Gotham
 dica.TextSize = 12
@@ -555,6 +555,7 @@ local function criarESP(p)
 	bb.AlwaysOnTop = true
 	bb.Size = UDim2.new(0, 200, 0, 66)
 	bb.StudsOffset = Vector3.new(0, 3.2, 0)
+	bb.MaxDistance = math.huge -- sem corte de distância
 	bb.Parent = gui
 
 	-- Tudo fica dentro de "conteudo", que cresce com um pop quando o jogador entra no alcance
@@ -584,17 +585,17 @@ local function criarESP(p)
 	local fundoVida = Instance.new("Frame")
 	fundoVida.Name = "VidaFundo"
 	fundoVida.AnchorPoint = Vector2.new(0.5, 0)
-	fundoVida.Position = UDim2.new(0.5, 0, 0, 56)
-	fundoVida.Size = UDim2.fromOffset(90, 6)
+	fundoVida.Position = UDim2.new(0.5, 0, 0, 54)
+	fundoVida.Size = UDim2.fromOffset(36, 3) -- pequena e discreta (era 90x6)
 	fundoVida.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
-	fundoVida.BackgroundTransparency = 0.3
+	fundoVida.BackgroundTransparency = 0.4
 	fundoVida.BorderSizePixel = 0
 	fundoVida.Parent = conteudo
 	Instance.new("UICorner", fundoVida).CornerRadius = UDim.new(1, 0)
 	local contornoVida = Instance.new("UIStroke")
 	contornoVida.Color = Color3.new(0, 0, 0)
-	contornoVida.Thickness = 1
-	contornoVida.Transparency = 0.4
+	contornoVida.Thickness = 0.75
+	contornoVida.Transparency = 0.55
 	contornoVida.Parent = fundoVida
 	local enche = Instance.new("Frame")
 	enche.Name = "Vida"
@@ -608,8 +609,8 @@ local function criarESP(p)
 	local icone = Instance.new("Frame")
 	icone.Name = "Alerta"
 	icone.AnchorPoint = Vector2.new(0.5, 0)
-	icone.Position = UDim2.new(0.5, 0, 0, 0)
-	icone.Size = UDim2.fromOffset(18, 18)
+	icone.Position = UDim2.new(0.5, 0, 0, 3)
+	icone.Size = UDim2.fromOffset(12, 12) -- menor (era 18x18)
 	icone.BackgroundColor3 = COR_VIDA_BAIXA
 	icone.BackgroundTransparency = 1
 	icone.BorderSizePixel = 0
@@ -623,7 +624,7 @@ local function criarESP(p)
 	iconeTexto.Text = "!"
 	iconeTexto.TextColor3 = Color3.new(1, 1, 1)
 	iconeTexto.Font = Enum.Font.GothamBlack
-	iconeTexto.TextSize = 14
+	iconeTexto.TextSize = 10
 	iconeTexto.TextTransparency = 1
 	iconeTexto.Parent = icone
 
@@ -1344,6 +1345,10 @@ do
 	local carga = 0        -- 0 a 1: barrinha de carga do super voo
 	local flashFeito = false
 	local fovBase
+	local SUPER_LIMIAR_CARGA = 0.88  -- fração da velocidade máxima para começar a carregar (zona morta)
+	local SUPER_LIMIAR_MANTER = 0.7  -- depois de começar, basta ficar acima disso
+	local SUPER_TOLERANCIA = 0.4     -- segundos que pode sair da velocidade máxima sem perder a carga
+	local semMax = 0                 -- há quanto tempo está fora da velocidade máxima
 	local VERMELHO = Color3.fromRGB(255, 40, 40)
 
 	local efeitoGui = Instance.new("ScreenGui")
@@ -1526,26 +1531,43 @@ do
 		efeitoIntens = efeitoIntens + (alvo - efeitoIntens) * (1 - math.exp(-dt * 4))
 		if efeitoIntens < 0.005 then efeitoIntens = 0 end
 
-		-- carga do super voo: enche enquanto fica na velocidade máxima, esvazia se desacelerar
-		if SUPER.ativo then
-			if alvo < 0.5 then
-				SUPER.ativo = false
-				carga = 0
-			end
+		-- carga do super voo: depende só de estar na velocidade máxima (analógico/teclado/câmera tanto faz).
+		-- Zona morta: para COMEÇAR precisa de >= SUPER_LIMIAR_CARGA da velocidade máxima; depois de começar,
+		-- basta ficar >= SUPER_LIMIAR_MANTER. Se sair disso, a carga fica CONGELADA por SUPER_TOLERANCIA segundos
+		-- (mudar o ângulo, combinar teclas ou girar a câmera não zera); só depois desse tempo ela esvazia.
+		local voando = (estado.fly and flyBV) or (estado.vfly and vBV)
+		if not voando then
+			SUPER.ativo = false
+			carga = 0
+			semMax = 0
 		else
-			if efeitoIntens >= 0.95 and (estado.fly or estado.vfly) then
-				carga = math.min(1, carga + dt / SUPER.tempoCarga)
+			local razao = maxima > 0 and (vel / maxima) or 0
+			local limiar = (SUPER.ativo or carga > 0.02) and SUPER_LIMIAR_MANTER or SUPER_LIMIAR_CARGA
+			if razao >= limiar then
+				semMax = 0
 			else
-				carga = math.max(0, carga - dt * 1.5)
+				semMax = semMax + dt
 			end
-			if carga >= 1 then
-				SUPER.ativo = true
-				-- clarão vermelho/branco na hora que o super voo liga
-				efeitoFlash.BackgroundColor3 = Color3.fromRGB(255, 200, 200)
-				efeitoFlash.BackgroundTransparency = 0.5
-				TweenService:Create(efeitoFlash, TweenInfo.new(0.5), { BackgroundTransparency = 1 }):Play()
-				-- ondas de choque + soco de blur
-				inicioOnda, inicioSoco = agora, agora
+			if SUPER.ativo then
+				if semMax > SUPER_TOLERANCIA then -- parou de verdade: o super acaba
+					SUPER.ativo = false
+					carga = 0
+				end
+			else
+				if semMax == 0 then
+					carga = math.min(1, carga + dt / SUPER.tempoCarga)
+				elseif semMax > SUPER_TOLERANCIA then
+					carga = math.max(0, carga - dt * 2)
+				end -- dentro da tolerância: a carga só fica parada
+				if carga >= 1 then
+					SUPER.ativo = true
+					-- clarão vermelho/branco na hora que o super voo liga
+					efeitoFlash.BackgroundColor3 = Color3.fromRGB(255, 200, 200)
+					efeitoFlash.BackgroundTransparency = 0.5
+					TweenService:Create(efeitoFlash, TweenInfo.new(0.5), { BackgroundTransparency = 1 }):Play()
+					-- ondas de choque + soco de blur
+					inicioOnda, inicioSoco = agora, agora
+				end
 			end
 		end
 		superMix = superMix + ((SUPER.ativo and 1 or 0) - superMix) * (1 - math.exp(-dt * 5))
@@ -2015,7 +2037,7 @@ end
 botaoSwim.MouseButton1Click:Connect(function() definirSwim(not estado.swim) end)
 
 ------------------------------------------------------------
--- EFEITO DE ÁGUA DO SWIM (tela azulada, bolhas subindo, ondinhas de luz, balanço suave)
+-- EFEITO DE ÁGUA DO SWIM (tela azulada, bolhas subindo, balanço suave) — sem os riscos brancos
 ------------------------------------------------------------
 do
 	local agua = 0   -- 0 = fora d'água, 1 = dentro d'água (suavizado)
@@ -2056,35 +2078,6 @@ do
 	blur.Size = 0
 	blur.Enabled = false
 	blur.Parent = game:GetService("Lighting")
-
-	-- Ondinhas de luz (faixas suaves que balançam e deslizam na parte de cima da tela)
-	local ondas = {}
-	for i = 1, 8 do
-		local f = Instance.new("Frame")
-		f.AnchorPoint = Vector2.new(0.5, 0.5)
-		f.BackgroundColor3 = Color3.new(1, 1, 1)
-		f.BackgroundTransparency = 1
-		f.BorderSizePixel = 0
-		f.Active = false
-		f.Visible = false
-		f.Parent = aguaGui
-		local g = Instance.new("UIGradient") -- some nas pontas
-		g.Transparency = NumberSequence.new({
-			NumberSequenceKeypoint.new(0, 1),
-			NumberSequenceKeypoint.new(0.5, 0),
-			NumberSequenceKeypoint.new(1, 1),
-		})
-		g.Parent = f
-		ondas[i] = {
-			frame = f,
-			y = 0.05 + (i - 1) * 0.055 + math.random() * 0.02, -- altura (fração da tela)
-			x = math.random(),                                  -- posição horizontal
-			larg = 0.35 + math.random() * 0.35,
-			vel = (0.015 + math.random() * 0.03) * (math.random() < 0.5 and -1 or 1),
-			fase = math.random() * math.pi * 2,
-			grossura = math.random(2, 4),
-		}
-	end
 
 	-- Bolhas subindo
 	local bolhas = {}
@@ -2146,20 +2139,6 @@ do
 		local tela = aguaGui.AbsoluteSize
 		if tela.X <= 0 then tela = workspace.CurrentCamera.ViewportSize end
 		local t = agora
-
-		for _, o in ipairs(ondas) do
-			local f = o.frame
-			if agua <= 0 then
-				f.Visible = false
-			else
-				f.Visible = true
-				o.x = (o.x + o.vel * dt) % 1.4
-				local y = o.y + math.sin(t * 0.9 + o.fase) * 0.012
-				f.Position = UDim2.fromOffset((o.x - 0.2) * tela.X, y * tela.Y)
-				f.Size = UDim2.fromOffset(o.larg * tela.X, o.grossura)
-				f.BackgroundTransparency = 1 - agua * (0.18 + 0.1 * math.sin(t * 1.4 + o.fase * 2))
-			end
-		end
 
 		for _, b in ipairs(bolhas) do
 			local f = b.frame
@@ -2250,62 +2229,37 @@ player.CharacterAdded:Connect(function()
 end)
 
 ------------------------------------------------------------
--- EFEITOS DO NOCLIP: paredes ficam transparentes perto de você, aura de poder, personagem translúcido
--- (tudo só no seu cliente: ninguém mais vê, e o mapa de verdade não muda)
+-- EFEITOS DO NOCLIP: só as partes que o personagem encosta ou atravessa ficam transparentes
+-- (e voltam ao normal quando você se afasta). Personagem meio transparente enquanto ligado.
+-- Tudo só no seu cliente: ninguém mais vê, e o mapa de verdade não muda.
 ------------------------------------------------------------
 do
-	local RAIO_PAREDE = 8          -- studs: paredes dentro desse raio ficam transparentes
-	local TRANSP_PAREDE = 0.75     -- 0 = normal, 1 = invisível
+	local TRANSP_PAREDE = 0.75     -- 0 = normal, 1 = invisível (nas partes que você toca)
 	local TRANSP_PERSONAGEM = 0.35 -- personagem meio transparente com o noclip ligado (0 = normal)
-	local COR_AURA = Color3.fromRGB(90, 200, 255)
+	local MARGEM = 1.2             -- studs além do corpo: pega também o que está encostando
+	local INTERVALO_BUSCA = 0.04   -- segundos entre uma checagem e outra
 
 	local afetadas = {}  -- [BasePart] = nível 0..1 (quanto já ficou transparente)
-	local perto = {}     -- [BasePart] = true se está dentro do raio agora
+	local perto = {}     -- [BasePart] = true se está encostando/atravessando agora
 	local nivelPersonagem = 0
-	local nivelAura = 0
-	local tocandoAntes = false
 	local ultimaBusca = 0
+	local xrayAntes = false
 
-	-- Aura de poder (esfera de campo de força que aparece quando você está dentro de uma parede)
-	local aura = Instance.new("Part")
-	aura.Name = "AuraNoclip"
-	aura.Shape = Enum.PartType.Ball
-	aura.Material = Enum.Material.ForceField
-	aura.Color = COR_AURA
-	aura.Size = Vector3.new(5, 5, 5)
-	aura.Anchored = true
-	aura.CanCollide = false
-	aura.CanQuery = false
-	aura.CanTouch = false
-	aura.CastShadow = false
-	aura.Transparency = 1
-	aura.Parent = workspace.CurrentCamera
+	-- Sonda invisível do tamanho do corpo: GetPartsInPart usa a geometria real, então só
+	-- volta o que de fato encosta em você (não a parede inteira do outro lado do mapa)
+	local sonda = Instance.new("Part")
+	sonda.Name = "SondaNoclip"
+	sonda.Anchored = true
+	sonda.CanCollide = false
+	sonda.CanQuery = false
+	sonda.CanTouch = false
+	sonda.CastShadow = false
+	sonda.Transparency = 1
+	sonda.Size = Vector3.new(4, 6, 4)
+	sonda.Parent = workspace.CurrentCamera
 
 	local params = OverlapParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
-
-	-- Pulso (anel de energia) quando você entra em uma parede
-	local function pulso(posicao)
-		local p = Instance.new("Part")
-		p.Shape = Enum.PartType.Ball
-		p.Material = Enum.Material.Neon
-		p.Color = COR_AURA
-		p.Size = Vector3.new(3, 3, 3)
-		p.Position = posicao
-		p.Anchored = true
-		p.CanCollide = false
-		p.CanQuery = false
-		p.CanTouch = false
-		p.CastShadow = false
-		p.Transparency = 0.55
-		p.Parent = workspace.CurrentCamera
-		local t = TweenService:Create(p, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-			Size = Vector3.new(15, 15, 15),
-			Transparency = 1,
-		})
-		t:Play()
-		t.Completed:Connect(function() p:Destroy() end)
-	end
 
 	local function ehDeJogador(parte)
 		local m = parte:FindFirstAncestorOfClass("Model")
@@ -2328,62 +2282,60 @@ do
 			end
 		end
 
-		-- 2) Busca (a cada 0.08s) das paredes perto e se você está dentro de alguma
-		local tocando = false
-		if ligado and agora - ultimaBusca > 0.08 then
-			ultimaBusca = agora
-			params.FilterDescendantsInstances = { char, aura }
-			perto = {}
-			for _, parte in ipairs(workspace:GetPartBoundsInRadius(raiz.Position, RAIO_PAREDE, params)) do
-				if parte.CanCollide and parte.Transparency < 1 and not ehDeJogador(parte) then
-					perto[parte] = true
-					if afetadas[parte] == nil then afetadas[parte] = 0 end
+		-- 2) Checa o que está encostando/atravessando o corpo (com o Xray ligado o mapa já está transparente)
+		if ligado and not estado.xray then
+			if agora - ultimaBusca > INTERVALO_BUSCA then
+				ultimaBusca = agora
+				local cam = workspace.CurrentCamera
+				if sonda.Parent ~= cam then sonda.Parent = cam end
+				local cf, tam = char:GetBoundingBox()
+				-- em alta velocidade (fly) aumenta a margem, para não pular paredes finas entre uma checagem e outra
+				local m = MARGEM + math.min(raiz.AssemblyLinearVelocity.Magnitude * 0.04, 5)
+				sonda.Size = tam + Vector3.new(m, m, m)
+				sonda.CFrame = cf
+				params.FilterDescendantsInstances = { char, sonda }
+				perto = {}
+				for _, parte in ipairs(workspace:GetPartsInPart(sonda, params)) do
+					if parte.CanCollide and parte.Transparency < 1 and not ehDeJogador(parte) then
+						perto[parte] = true
+						if afetadas[parte] == nil then afetadas[parte] = 0 end
+					end
 				end
 			end
-			for _, parte in ipairs(workspace:GetPartBoundsInBox(raiz.CFrame, Vector3.new(2.5, 4.5, 2.5), params)) do
-				if parte.CanCollide and not ehDeJogador(parte) then
-					tocando = true
-					break
-				end
-			end
-			if tocando and not tocandoAntes then
-				pulso(raiz.Position)
-			end
-			tocandoAntes = tocando
-			aura:SetAttribute("tocando", tocando)
 		elseif not ligado then
 			perto = {}
-			tocandoAntes = false
-			aura:SetAttribute("tocando", false)
 		end
 
-		-- 3) Paredes ficando transparentes / voltando ao normal aos poucos
-		local passo = 1 - math.exp(-dt * 7)
-		for parte, nivel in pairs(afetadas) do
-			if not parte.Parent then
-				afetadas[parte] = nil
-			else
-				nivel = nivel + ((perto[parte] and 1 or 0) - nivel) * passo
-				if nivel < 0.01 and not perto[parte] then
-					parte.LocalTransparencyModifier = 0
-					afetadas[parte] = nil
-				else
-					afetadas[parte] = nivel
-					parte.LocalTransparencyModifier = nivel * TRANSP_PAREDE
+		-- 3) As partes tocadas ficam transparentes / voltam ao normal aos poucos
+		if estado.xray then
+			-- o Xray cuida da transparência do mapa: solta o que o Noclip tinha mexido, uma vez só
+			if not xrayAntes then
+				xrayAntes = true
+				for parte in pairs(afetadas) do
+					if parte.Parent then parte.LocalTransparencyModifier = 0 end
 				end
 			end
-		end
-
-		-- 4) Aura de poder acompanhando o personagem enquanto está dentro de parede
-		local alvoAura = (ligado and aura:GetAttribute("tocando")) and 1 or 0
-		nivelAura = nivelAura + (alvoAura - nivelAura) * (1 - math.exp(-dt * 8))
-		if nivelAura > 0.01 and raiz then
-			local pulsar = 1 + math.sin(agora * 7) * 0.06
-			aura.Size = Vector3.new(5, 5, 5) * pulsar
-			aura.CFrame = raiz.CFrame * CFrame.Angles(0, agora * 0.8, 0)
-			aura.Transparency = 1 - 0.5 * nivelAura
+			afetadas = {}
+			perto = {}
 		else
-			aura.Transparency = 1
+			xrayAntes = false
+			local subir = 1 - math.exp(-dt * 10) -- fica transparente rápido
+			local descer = 1 - math.exp(-dt * 5) -- volta ao normal mais devagar
+			for parte, nivel in pairs(afetadas) do
+				if not parte.Parent then
+					afetadas[parte] = nil
+				else
+					local alvo = perto[parte] and 1 or 0
+					nivel = nivel + (alvo - nivel) * (alvo == 1 and subir or descer)
+					if nivel < 0.01 and alvo == 0 then
+						parte.LocalTransparencyModifier = 0
+						afetadas[parte] = nil
+					else
+						afetadas[parte] = nivel
+						parte.LocalTransparencyModifier = nivel * TRANSP_PAREDE
+					end
+				end
+			end
 		end
 	end)
 end
@@ -2412,50 +2364,75 @@ local function posicionarAoLado(f)
 	f.Position = UDim2.fromOffset(x, y)
 end
 
+-- Vidro escuro e compacto (mesma linguagem do menu: fundo translúcido + contorno branco fininho)
+VIDRO.vermelho = Color3.fromRGB(255, 110, 110)
+function VIDRO.vidroSpawn(b, cor, transp)
+	b.BackgroundColor3 = cor
+	b.BackgroundTransparency = transp
+	b.TextColor3 = Color3.new(1, 1, 1)
+	b.TextStrokeTransparency = 1
+	b.BorderSizePixel = 0
+	local c = b:FindFirstChildOfClass("UIStroke")
+	if not c then
+		c = Instance.new("UIStroke")
+		c.Parent = b
+	end
+	c.Color = Color3.new(1, 1, 1)
+	c.Thickness = 1
+	c.Transparency = 0.6
+end
 local painelSpawn = Instance.new("Frame")
 painelSpawn.Name = "PainelSpawns"
 painelSpawn.AnchorPoint = Vector2.new(0, 0.5)
 painelSpawn.Position = UDim2.new(0.5, 160, 0.5, 0) -- ao lado do menu principal
-painelSpawn.Size = UDim2.new(0, 270, 0, 400)
+painelSpawn.Size = UDim2.new(0, 220, 0, 290) -- compacto (era 270x400)
 painelSpawn.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+painelSpawn.BackgroundTransparency = 0.18 -- vidro
 painelSpawn.Visible = false
 painelSpawn.Parent = gui
-Instance.new("UICorner", painelSpawn).CornerRadius = UDim.new(0, 14)
+Instance.new("UICorner", painelSpawn).CornerRadius = UDim.new(0, 12)
+do
+	local contornoPainel = Instance.new("UIStroke")
+	contornoPainel.Color = Color3.new(1, 1, 1)
+	contornoPainel.Thickness = 1.2
+	contornoPainel.Transparency = 0.55
+	contornoPainel.Parent = painelSpawn
+end
 
 local tituloSpawn = Instance.new("TextLabel")
-tituloSpawn.Size = UDim2.new(1, 0, 0, 40)
+tituloSpawn.Size = UDim2.new(1, 0, 0, 28)
 tituloSpawn.BackgroundTransparency = 1
 tituloSpawn.Text = "Spawns"
 tituloSpawn.TextColor3 = Color3.new(1, 1, 1)
 tituloSpawn.Font = Enum.Font.GothamBold
-tituloSpawn.TextSize = 20
+tituloSpawn.TextSize = 15
 tituloSpawn.Active = true
 tituloSpawn.Parent = painelSpawn
 tornarMovel(tituloSpawn, painelSpawn)
 
 local botaoCriarSpawn = Instance.new("TextButton")
-botaoCriarSpawn.Position = UDim2.new(0.05, 0, 0, 45)
-botaoCriarSpawn.Size = UDim2.new(0.9, 0, 0, 40)
-botaoCriarSpawn.BackgroundColor3 = COR_ON
+botaoCriarSpawn.Position = UDim2.new(0.05, 0, 0, 32)
+botaoCriarSpawn.Size = UDim2.new(0.9, 0, 0, 26)
 botaoCriarSpawn.Text = "+ Criar spawn aqui"
-botaoCriarSpawn.TextColor3 = Color3.new(1, 1, 1)
-botaoCriarSpawn.Font = Enum.Font.GothamBold
-botaoCriarSpawn.TextSize = 15
+botaoCriarSpawn.Font = Enum.Font.GothamMedium
+botaoCriarSpawn.TextSize = 12
+botaoCriarSpawn.AutoButtonColor = true
+VIDRO.vidroSpawn(botaoCriarSpawn, VIDRO.corOn, 0.62)
 botaoCriarSpawn.Parent = painelSpawn
-Instance.new("UICorner", botaoCriarSpawn).CornerRadius = UDim.new(0, 10)
+Instance.new("UICorner", botaoCriarSpawn).CornerRadius = UDim.new(0, 8)
 
 local listaSpawn = Instance.new("ScrollingFrame")
-listaSpawn.Position = UDim2.new(0.05, 0, 0, 95)
-listaSpawn.Size = UDim2.new(0.9, 0, 1, -105)
+listaSpawn.Position = UDim2.new(0.05, 0, 0, 64)
+listaSpawn.Size = UDim2.new(0.9, 0, 1, -72)
 listaSpawn.BackgroundTransparency = 1
 listaSpawn.BorderSizePixel = 0
-listaSpawn.ScrollBarThickness = 4
+listaSpawn.ScrollBarThickness = 3
 listaSpawn.CanvasSize = UDim2.new(0, 0, 0, 0)
 listaSpawn.AutomaticCanvasSize = Enum.AutomaticSize.Y
 listaSpawn.Parent = painelSpawn
 
 local layoutSpawn = Instance.new("UIListLayout")
-layoutSpawn.Padding = UDim.new(0, 6)
+layoutSpawn.Padding = UDim.new(0, 4)
 layoutSpawn.SortOrder = Enum.SortOrder.LayoutOrder
 layoutSpawn.Parent = listaSpawn
 
@@ -2524,35 +2501,34 @@ local function criarLinhaSpawn(cframeSalvo, nomeSalvo)
 	contadorSpawn += 1
 
 	local linha = Instance.new("Frame")
-	linha.Size = UDim2.new(1, -6, 0, 52)
+	linha.Size = UDim2.new(1, -6, 0, 38)
 	linha.BackgroundTransparency = 1
 	linha.LayoutOrder = contadorSpawn
 	linha.Parent = listaSpawn
 
 	-- Nome editável (clique e digite)
 	local nome = Instance.new("TextBox")
-	nome.Size = UDim2.new(0.55, 0, 0, 34)
-	nome.BackgroundColor3 = Color3.fromRGB(45, 45, 52)
+	nome.Size = UDim2.new(0.56, 0, 0, 25)
+	VIDRO.vidroSpawn(nome, Color3.new(1, 1, 1), 0.88)
 	nome.Text = nomeSalvo or ("Spawn " .. contadorSpawn)
 	nome.PlaceholderText = "nome"
-	nome.TextColor3 = Color3.new(1, 1, 1)
-	nome.PlaceholderColor3 = Color3.fromRGB(140, 140, 140)
-	nome.Font = Enum.Font.GothamBold
-	nome.TextSize = 14
+	nome.PlaceholderColor3 = Color3.fromRGB(150, 150, 160)
+	nome.Font = Enum.Font.GothamMedium
+	nome.TextSize = 12
 	nome.ClearTextOnFocus = false
 	nome.TextTruncate = Enum.TextTruncate.AtEnd
 	nome.Parent = linha
-	Instance.new("UICorner", nome).CornerRadius = UDim.new(0, 8)
+	Instance.new("UICorner", nome).CornerRadius = UDim.new(0, 6)
 
 	-- Distância até o spawn (embaixo do nome)
 	local dist = Instance.new("TextLabel")
-	dist.Position = UDim2.new(0, 4, 0, 36)
-	dist.Size = UDim2.new(0.55, -4, 0, 14)
+	dist.Position = UDim2.new(0, 3, 0, 26)
+	dist.Size = UDim2.new(0.56, -3, 0, 11)
 	dist.BackgroundTransparency = 1
 	dist.Text = "—"
 	dist.TextColor3 = Color3.fromRGB(160, 160, 170)
 	dist.Font = Enum.Font.Gotham
-	dist.TextSize = 12
+	dist.TextSize = 10
 	dist.TextXAlignment = Enum.TextXAlignment.Left
 	dist.Parent = linha
 
@@ -2570,15 +2546,14 @@ local function criarLinhaSpawn(cframeSalvo, nomeSalvo)
 
 	-- Ir até o spawn (voa na velocidade do som, igual ao TP)
 	local ir = Instance.new("TextButton")
-	ir.Position = UDim2.new(0.58, 0, 0, 0)
-	ir.Size = UDim2.new(0.24, 0, 0, 34)
-	ir.BackgroundColor3 = COR_ON
+	ir.Position = UDim2.new(0.585, 0, 0, 0)
+	ir.Size = UDim2.new(0.22, 0, 0, 25)
 	ir.Text = "IR"
-	ir.TextColor3 = Color3.new(1, 1, 1)
 	ir.Font = Enum.Font.GothamBold
-	ir.TextSize = 14
+	ir.TextSize = 12
+	VIDRO.vidroSpawn(ir, VIDRO.corOn, 0.6)
 	ir.Parent = linha
-	Instance.new("UICorner", ir).CornerRadius = UDim.new(0, 8)
+	Instance.new("UICorner", ir).CornerRadius = UDim.new(0, 6)
 
 	ir.MouseButton1Click:Connect(function()
 		if pegarPersonagem() then
@@ -2588,15 +2563,14 @@ local function criarLinhaSpawn(cframeSalvo, nomeSalvo)
 
 	-- Apagar o spawn
 	local apagar = Instance.new("TextButton")
-	apagar.Position = UDim2.new(0.85, 0, 0, 0)
-	apagar.Size = UDim2.new(0.15, 0, 0, 34)
-	apagar.BackgroundColor3 = COR_OFF
+	apagar.Position = UDim2.new(0.83, 0, 0, 0)
+	apagar.Size = UDim2.new(0.17, 0, 0, 25)
 	apagar.Text = "X"
-	apagar.TextColor3 = Color3.new(1, 1, 1)
 	apagar.Font = Enum.Font.GothamBold
-	apagar.TextSize = 14
+	apagar.TextSize = 12
+	VIDRO.vidroSpawn(apagar, VIDRO.vermelho, 0.6)
 	apagar.Parent = linha
-	Instance.new("UICorner", apagar).CornerRadius = UDim.new(0, 8)
+	Instance.new("UICorner", apagar).CornerRadius = UDim.new(0, 6)
 
 	spawnsSalvos[linha] = { nome = nome, cf = cframeSalvo, dist = dist, marca = marca }
 
@@ -3119,51 +3093,81 @@ local transparenciaXray = 0.6
 local definirXray
 local aplicarCaixaXray
 
-local function ehParteDePersonagem(parte)
-	local modelo = parte:FindFirstAncestorOfClass("Model")
-	while modelo do
-		if modelo:FindFirstChildOfClass("Humanoid") then
-			return true
-		end
-		modelo = modelo.Parent and modelo.Parent:FindFirstAncestorOfClass("Model")
-	end
-	return false
-end
-
 do
-	local RAIO_ONDA = 500        -- studs: até onde a onda de revelação vai
-	local DURACAO_ONDA = 0.7     -- segundos que a onda leva para chegar lá (era 2.2)
+	local RAIO_ONDA = 450        -- studs: até onde a onda de revelação vai
+	local DURACAO_ONDA = 1.1     -- segundos que a onda leva para chegar lá (sai rápido e desacelera)
 	local SONAR_INTERVALO = 4    -- segundos entre um sonar e outro
 	local SONAR_ALCANCE = 120    -- studs que cada sonar alcança
 	local SONAR_DURACAO = 1.8    -- segundos que o sonar leva para chegar no alcance
 	local COR_SONAR = Color3.fromRGB(90, 220, 255)
 	local TAMANHO_BALDE = 10     -- studs por faixa de distância (organiza as partes pela onda)
-	local RAIO_PERTO = 250       -- studs: o que está até aqui é pego primeiro, na hora
+	local RAIO_PERTO = 120       -- studs: o que está até aqui entra primeiro (uma busca só)
+	local MAX_PERTO = 1500       -- limite de partes dessa busca (evita engasgo em mapa denso)
 	local FADE_ENTRADA = 8       -- velocidade do fade de cada parte (maior = mais rápido; 8 = ~0.12s)
-	local ORCAMENTO_FRAME = 0.008 -- segundos por frame gastos varrendo o mapa (maior = mais rápido, mais risco de engasgar)
 
-	local partes = {}     -- [BasePart] = nível 0..1 (quanto já ficou transparente)
-	local ativas = {}     -- [BasePart] = true enquanto faz o fade de entrada
+	-- Orçamentos de tempo por frame (segundos). Menor = mais suave, mas o mapa demora mais para ficar transparente.
+	local ORC_VARREDURA = 0.002  -- varrer o mapa e registrar partes novas
+	local ORC_VARREDURA_ONDA = 0.004 -- idem, só enquanto a onda de entrada corre (o mapa acompanha o anel)
+	local ORC_FADE = 0.002       -- aplicar o fade de entrada nas partes
+	local ORC_TRABALHO = 0.0015  -- reaplicar a caixa / desfazer ao desligar
+	local ECO_INTERVALO = 0.12   -- segundos entre as buscas do eco do sonar
+	local ECO_MAX_PARTES = 250   -- máximo de partes que cada busca do eco devolve
+
+	-- Tabelas com chave fraca: partes destruídas saem da memória sozinhas (sem vazamento em sessão longa)
+	local fraco = { __mode = "k" }
+	local partes = setmetatable({}, fraco)    -- [BasePart] = nível 0..1 (quanto já ficou transparente)
+	local inicios = setmetatable({}, fraco)   -- [BasePart] = instante em que começou o fade de entrada
+	local ecos = setmetatable({}, fraco)      -- [BasePart] = instante em que o sonar passou
+	local cachePersonagem = setmetatable({}, fraco) -- [Model] = true (tem Humanoid) ou instante da última checagem
+
+	local ativas = {}     -- lista de partes fazendo o fade de entrada
+	local cursorAtivas = 1
 	local baldes = {}     -- [faixa] = { partes esperando a onda chegar }
-	local ecos = {}       -- [BasePart] = instante em que o sonar passou
 	local aneis = {}      -- anéis/ondas visíveis no momento
-	local conexao
-	local versao = 0
+	local pendentes = {}  -- fila de instâncias novas para registrar (perto de você + DescendantAdded)
+	local iniPend, nPend = 1, 0
+	local pilha, nPilha = {}, 0 -- varredura do mapa por pilha (sem montar uma tabela gigante de uma vez)
+	local trabalho = nil  -- tarefa em fatias: { lista, i, n, modo = "aplicar" | "zerar" }
+	local conexaoAdd
 	local fadeGlobal = 1  -- 1 = normal, cai a 0 ao desligar
 	local saindo = false
 	local ondaAtiva = false
 	local raioOnda = 0
+	local tOnda = 0       -- progresso da onda de entrada (0..1)
 	local baldeAtual = 0
 	local origemOnda = Vector3.zero
 	local proximoSonar = 0
 	local ultimoEco = 0
+	local proximoAplicarEco = 0
 	local ultimo
 
 	local ecoParams = OverlapParams.new()
+	ecoParams.MaxParts = ECO_MAX_PARTES
 
-	-- Anel de energia no chão + casca de campo de força (só visual, no seu cliente)
+	-- É parte de personagem/NPC? (com cache por Model: não sobe a árvore inteira para cada parte do mapa)
+	local function ehPersonagem(parte)
+		local agora = os.clock()
+		local m = parte.Parent
+		while m and m ~= workspace do
+			if m:IsA("Model") then
+				local c = cachePersonagem[m]
+				if c == true then return true end
+				if c == nil or agora - c > 3 then
+					if m:FindFirstChildOfClass("Humanoid") then
+						cachePersonagem[m] = true
+						return true
+					end
+					cachePersonagem[m] = agora -- "não é personagem", rechecado depois de 3s (o Humanoid pode chegar tarde)
+				end
+			end
+			m = m.Parent
+		end
+		return false
+	end
+
+	-- Anel de sonar no chão: 3 camadas (brilho, linha, rastro) em um disco fino, visível por cima de tudo
+	-- (antes era uma casca esférica; vista de dentro ela ficava invisível, por isso a animação "sumia")
 	local function criarAnel(origem, tipo, alcance)
-		local pasta = workspace.CurrentCamera
 		local bloco = Instance.new("Part")
 		bloco.Name = "XrayAnel"
 		bloco.Anchored = true
@@ -3174,46 +3178,45 @@ do
 		bloco.Transparency = 1
 		bloco.Size = Vector3.new(1, 0.1, 1)
 		bloco.CFrame = CFrame.new(origem - Vector3.new(0, 2.6, 0))
-		bloco.Parent = pasta
+		bloco.Parent = workspace.CurrentCamera
 
-		local sg = Instance.new("SurfaceGui")
-		sg.Face = Enum.NormalId.Top
-		sg.SizingMode = Enum.SurfaceGuiSizingMode.FixedSize
-		sg.CanvasSize = Vector2.new(512, 512)
-		sg.AlwaysOnTop = true
-		sg.LightInfluence = 0
-		sg.Adornee = bloco
-		sg.Parent = bloco
-		local quadro = Instance.new("Frame")
-		quadro.Size = UDim2.fromScale(1, 1)
-		quadro.BackgroundTransparency = 1
-		quadro.Parent = sg
-		Instance.new("UICorner", quadro).CornerRadius = UDim.new(0.5, 0)
-		local contorno = Instance.new("UIStroke")
-		contorno.Color = COR_SONAR
-		contorno.Thickness = tipo == "onda" and 7 or 4
-		contorno.Transparency = 1
-		contorno.Parent = quadro
-
-		local esfera = Instance.new("Part")
-		esfera.Name = "XrayCasca"
-		esfera.Shape = Enum.PartType.Ball
-		esfera.Material = Enum.Material.ForceField
-		esfera.Color = COR_SONAR
-		esfera.Anchored = true
-		esfera.CanCollide = false
-		esfera.CanQuery = false
-		esfera.CanTouch = false
-		esfera.CastShadow = false
-		esfera.Transparency = 1
-		esfera.Size = Vector3.new(1, 1, 1)
-		esfera.CFrame = CFrame.new(origem)
-		esfera.Parent = pasta
+		local faixas = {}
+		local onda = tipo == "onda"
+		local camadas = {
+			{ escala = 0.96, espessura = onda and 20 or 12, peso = 0.16, cor = COR_SONAR },                       -- brilho
+			{ escala = 0.96, espessura = onda and 6 or 4, peso = onda and 0.95 or 0.7, cor = COR_SONAR },         -- linha
+			{ escala = 0.88, espessura = onda and 3 or 2, peso = onda and 0.5 or 0.3, cor = Color3.fromRGB(215, 248, 255) }, -- rastro
+		}
+		for _, face in ipairs({ Enum.NormalId.Top, Enum.NormalId.Bottom }) do
+			local sg = Instance.new("SurfaceGui")
+			sg.Face = face
+			sg.SizingMode = Enum.SurfaceGuiSizingMode.FixedSize
+			sg.CanvasSize = Vector2.new(512, 512)
+			sg.AlwaysOnTop = true
+			sg.LightInfluence = 0
+			sg.Adornee = bloco
+			sg.Parent = bloco
+			for _, c in ipairs(camadas) do
+				local quadro = Instance.new("Frame")
+				quadro.AnchorPoint = Vector2.new(0.5, 0.5)
+				quadro.Position = UDim2.fromScale(0.5, 0.5)
+				quadro.Size = UDim2.fromScale(c.escala, c.escala)
+				quadro.BackgroundTransparency = 1
+				quadro.Parent = sg
+				Instance.new("UICorner", quadro).CornerRadius = UDim.new(0.5, 0)
+				local contorno = Instance.new("UIStroke")
+				contorno.Color = c.cor
+				contorno.Thickness = c.espessura
+				contorno.Transparency = 1
+				contorno.Parent = quadro
+				faixas[#faixas + 1] = { contorno = contorno, peso = c.peso }
+			end
+		end
 
 		local anel = {
-			tipo = tipo, bloco = bloco, esfera = esfera, contorno = contorno,
+			tipo = tipo, bloco = bloco, faixas = faixas,
 			origem = origem, raio = 0, alcance = alcance,
-			vel = alcance / (tipo == "onda" and DURACAO_ONDA or SONAR_DURACAO),
+			vel = alcance / SONAR_DURACAO,
 		}
 		aneis[#aneis + 1] = anel
 		return anel
@@ -3224,15 +3227,14 @@ do
 		local d = math.clamp(a.raio * 2, 1, 2000)
 		a.bloco.Size = Vector3.new(d, 0.1, d)
 		a.bloco.CFrame = CFrame.new(a.origem - Vector3.new(0, 2.6, 0))
-		a.esfera.Size = Vector3.new(d, d, d)
-		local forca = a.tipo == "onda" and 0.9 or 0.65
-		a.contorno.Transparency = 1 - forca * (1 - prog ^ 1.6)
-		a.esfera.Transparency = 1 - (a.tipo == "onda" and 0.12 or 0.07) * (1 - prog)
+		local apagar = 1 - prog ^ 2.2 -- some suave perto do alcance máximo
+		for _, f in ipairs(a.faixas) do
+			f.contorno.Transparency = 1 - f.peso * apagar
+		end
 	end
 
 	local function destruirAnel(a)
 		a.bloco:Destroy()
-		a.esfera:Destroy()
 	end
 
 	local function limparAneis()
@@ -3250,17 +3252,25 @@ do
 			local f = 1 - (agora - t) / 0.6
 			if f > 0 then fator = 1 - 0.65 * f end
 		end
-		parte.LocalTransparencyModifier = n * transparenciaXray * fadeGlobal * fator
+		local v = n * transparenciaXray * fadeGlobal * fator
+		if parte.LocalTransparencyModifier ~= v then -- só escreve se mudou (escrever é o que custa)
+			parte.LocalTransparencyModifier = v
+		end
 	end
 
+	-- Coloca a parte na fila do fade de entrada
 	local function ativar(parte)
-		if partes[parte] ~= nil then ativas[parte] = true end
+		if partes[parte] ~= nil and inicios[parte] == nil then
+			inicios[parte] = os.clock()
+			ativas[#ativas + 1] = parte
+		end
 	end
 
 	-- Registra uma parte do mapa e decide quando ela entra na onda
 	local function registrar(obj)
-		if not obj:IsA("BasePart") or obj:IsA("Terrain") or partes[obj] ~= nil then return end
-		if obj.Transparency >= 1 or ehParteDePersonagem(obj) then return end
+		if partes[obj] ~= nil or not obj.Parent then return end
+		if not obj:IsA("BasePart") or obj:IsA("Terrain") then return end
+		if obj.Transparency >= 1 or ehPersonagem(obj) then return end
 		local cam = workspace.CurrentCamera
 		if cam and obj:IsDescendantOf(cam) then return end -- não afeta os próprios efeitos
 		partes[obj] = 0
@@ -3279,63 +3289,184 @@ do
 		end
 	end
 
-	local function finalizarSaida()
-		for parte in pairs(partes) do
-			if parte.Parent then parte.LocalTransparencyModifier = 0 end
+	-- Fade de entrada em fatias de tempo: nunca gasta mais que ORC_FADE por frame
+	local function processarFade(agora)
+		local total = #ativas
+		if total == 0 then return end
+		local limite = os.clock() + ORC_FADE
+		local i = cursorAtivas
+		local feitos = 0
+		while feitos < total and #ativas > 0 do
+			if i > #ativas then i = 1 end
+			local parte = ativas[i]
+			local n0 = partes[parte]
+			if n0 == nil or not parte.Parent then
+				partes[parte] = nil
+				inicios[parte] = nil
+				ativas[i] = ativas[#ativas]
+				ativas[#ativas] = nil
+			else
+				local n = math.clamp((agora - inicios[parte]) * FADE_ENTRADA, 0, 1)
+				if n ~= n0 then
+					partes[parte] = n
+					aplicarNivel(parte, agora)
+				end
+				if n >= 1 then
+					ativas[i] = ativas[#ativas]
+					ativas[#ativas] = nil
+				else
+					i += 1
+				end
+			end
+			feitos += 1
+			if feitos % 40 == 0 and os.clock() > limite then break end
 		end
-		partes, ativas, baldes, ecos = {}, {}, {}, {}
+		cursorAtivas = i
+	end
+
+	-- Varredura em fatias: primeiro a fila (o que está perto + o que apareceu), depois o resto do mapa
+	local function processarVarredura()
+		if nPend == 0 and nPilha == 0 then return end
+		local limite = os.clock() + (ondaAtiva and ORC_VARREDURA_ONDA or ORC_VARREDURA)
+		local feitos = 0
+		while iniPend <= nPend do
+			local obj = pendentes[iniPend]
+			pendentes[iniPend] = nil
+			iniPend += 1
+			registrar(obj)
+			feitos += 1
+			if feitos % 32 == 0 and os.clock() > limite then return end
+		end
+		if nPend > 0 then pendentes, iniPend, nPend = {}, 1, 0 end
+
+		local cam = workspace.CurrentCamera
+		while nPilha > 0 do
+			local obj = pilha[nPilha]
+			pilha[nPilha] = nil
+			nPilha -= 1
+			if obj ~= cam and not obj:IsA("Terrain") then
+				if obj:IsA("BasePart") then registrar(obj) end
+				-- não entra em personagens/NPCs (as partes deles não participam do xray)
+				if not (obj:IsA("Model") and obj:FindFirstChildOfClass("Humanoid")) then
+					local filhos = obj:GetChildren()
+					for k = 1, #filhos do
+						nPilha += 1
+						pilha[nPilha] = filhos[k]
+					end
+				end
+			end
+			feitos += 1
+			if feitos % 32 == 0 and os.clock() > limite then return end
+		end
+	end
+
+	-- Tarefa em fatias sobre todas as partes registradas (reaplicar a caixa ou zerar ao sair)
+	local function iniciarTrabalho(modo)
+		local lista, n = {}, 0
+		for parte in pairs(partes) do
+			n += 1
+			lista[n] = parte
+		end
+		trabalho = { lista = lista, i = 1, n = n, modo = modo }
+	end
+
+	-- devolve true quando a tarefa termina
+	local function processarTrabalho(agora)
+		local t = trabalho
+		if not t then return false end
+		local limite = os.clock() + ORC_TRABALHO
+		local lista = t.lista
+		local i = t.i
+		local zerar = t.modo == "zerar"
+		while i <= t.n do
+			local parte = lista[i]
+			if parte.Parent then
+				if zerar then
+					if parte.LocalTransparencyModifier ~= 0 then parte.LocalTransparencyModifier = 0 end
+				else
+					aplicarNivel(parte, agora)
+				end
+			end
+			i += 1
+			if i % 40 == 0 and os.clock() > limite then break end
+		end
+		t.i = i
+		if i > t.n then
+			trabalho = nil
+			return true
+		end
+		return false
+	end
+
+	local function finalizarSaida()
+		partes = setmetatable({}, fraco)
+		inicios = setmetatable({}, fraco)
+		ecos = setmetatable({}, fraco)
+		ativas, cursorAtivas = {}, 1
+		baldes = {}
+		trabalho = nil
 		limparAneis()
 		saindo = false
 		fadeGlobal = 1
 	end
 
 	local function ligar()
-		if saindo then finalizarSaida() end
-		versao += 1
-		local minhaVersao = versao
 		fadeGlobal = 1
+		pendentes, iniPend, nPend = {}, 1, 0
+		pilha, nPilha = { workspace }, 1
+		ativas, cursorAtivas = {}, 1
+		if saindo then
+			-- ligou de novo no meio da saída: reaproveita as partes já registradas (sem varredura pesada)
+			saindo = false
+			for parte in pairs(partes) do
+				if parte.Parent and partes[parte] > 0 then
+					partes[parte] = 1
+					inicios[parte] = nil
+				end
+			end
+			iniciarTrabalho("aplicar")
+		end
 
 		local raiz = pegarPersonagem()
 		origemOnda = raiz and raiz.Position or workspace.CurrentCamera.CFrame.Position
 		ondaAtiva = true
 		raioOnda = 0
+		tOnda = 0
 		baldeAtual = 0
 		baldes = {}
 		criarAnel(origemOnda, "onda", RAIO_ONDA)
 		proximoSonar = os.clock() + DURACAO_ONDA + 1.2
 
-		conexao = workspace.DescendantAdded:Connect(registrar)
-		task.spawn(function()
-			-- 1) o que está perto de você primeiro (uma busca só: aparece quase na hora)
-			if raiz then
-				for _, obj in ipairs(workspace:GetPartBoundsInRadius(origemOnda, RAIO_PERTO, OverlapParams.new())) do
-					registrar(obj)
-				end
-			end
-			-- 2) o resto do mapa, em fatias de tempo (antes: só 300 partes por frame, o que demorava em mapa grande)
-			local t0 = os.clock()
-			for _, obj in ipairs(workspace:GetDescendants()) do
-				if minhaVersao ~= versao or not estado.xray then return end
-				registrar(obj)
-				if os.clock() - t0 > ORCAMENTO_FRAME then
-					task.wait()
-					t0 = os.clock()
-				end
-			end
+		-- partes novas entram na fila (o registro de verdade acontece aos poucos, no loop)
+		conexaoAdd = workspace.DescendantAdded:Connect(function(obj)
+			nPend += 1
+			pendentes[nPend] = obj
 		end)
+
+		-- o que está perto de você entra primeiro na fila (uma busca só, com limite de partes)
+		if raiz then
+			local params = OverlapParams.new()
+			params.MaxParts = MAX_PERTO
+			for _, obj in ipairs(workspace:GetPartBoundsInRadius(origemOnda, RAIO_PERTO, params)) do
+				nPend += 1
+				pendentes[nPend] = obj
+			end
+		end
 	end
 
 	local function desligar()
-		versao += 1
-		if conexao then
-			conexao:Disconnect()
-			conexao = nil
+		if conexaoAdd then
+			conexaoAdd:Disconnect()
+			conexaoAdd = nil
 		end
 		ondaAtiva = false
 		baldes = {}
-		for _, a in ipairs(aneis) do destruirAnel(a) end
-		aneis = {}
-		saindo = true -- o fade de saída roda no loop abaixo
+		ativas, cursorAtivas = {}, 1
+		pendentes, iniPend, nPend = {}, 1, 0
+		pilha, nPilha = {}, 0
+		trabalho = nil
+		limparAneis()
+		saindo = true -- o fade de saída roda no loop abaixo, em fatias
 	end
 
 	definirXray = function(v)
@@ -3351,11 +3482,8 @@ do
 			transparenciaXray = math.clamp(n, 0, 0.95)
 		end
 		caixaXray.Text = tostring(transparenciaXray)
-		if estado.xray or saindo then
-			local agora = os.clock()
-			for parte in pairs(partes) do
-				if parte.Parent then aplicarNivel(parte, agora) end
-			end
+		if estado.xray then
+			iniciarTrabalho("aplicar") -- reaplica em fatias, sem travar ao mudar o valor
 		end
 	end
 
@@ -3365,15 +3493,15 @@ do
 		ultimo = agora
 		if not (estado.xray or saindo) then return end
 
-		-- saída suave: o mapa volta ao normal em ~0.4s
+		-- saída suave: o mapa volta ao normal em ~0.4s, feito em fatias
 		if saindo then
-			fadeGlobal = fadeGlobal - dt * 2.5
-			if fadeGlobal <= 0 then
-				finalizarSaida()
+			fadeGlobal = math.max(0, fadeGlobal - dt * 2.5)
+			if fadeGlobal > 0 then
+				if not trabalho or trabalho.modo ~= "aplicar" then iniciarTrabalho("aplicar") end
+				if processarTrabalho(agora) then trabalho = nil end -- recomeça a próxima passada
 			else
-				for parte in pairs(partes) do
-					if parte.Parent then aplicarNivel(parte, agora) end
-				end
+				if not trabalho or trabalho.modo ~= "zerar" then iniciarTrabalho("zerar") end
+				if processarTrabalho(agora) then finalizarSaida() end
 			end
 			return
 		end
@@ -3382,7 +3510,8 @@ do
 
 		-- onda de revelação: libera as partes por faixa de distância
 		if ondaAtiva then
-			raioOnda = math.min(RAIO_ONDA, raioOnda + (RAIO_ONDA / DURACAO_ONDA) * dt)
+			tOnda = math.min(1, tOnda + dt / DURACAO_ONDA)
+			raioOnda = RAIO_ONDA * (1 - (1 - tOnda) ^ 2.2) -- ease-out: parte forte e desacelera
 			local limite = math.floor(raioOnda / TAMANHO_BALDE)
 			for b = baldeAtual, limite do
 				local lista = baldes[b]
@@ -3392,7 +3521,7 @@ do
 				end
 			end
 			baldeAtual = limite + 1
-			if raioOnda >= RAIO_ONDA then
+			if tOnda >= 1 then
 				for _, lista in pairs(baldes) do -- o que sobrou (muito longe) entra junto no fim
 					for _, parte in ipairs(lista) do ativar(parte) end
 				end
@@ -3401,18 +3530,10 @@ do
 			end
 		end
 
-		-- partes entrando (fade de ~0.3s)
-		for parte in pairs(ativas) do
-			if not parte.Parent then
-				ativas[parte] = nil
-				partes[parte] = nil
-			else
-				local n = math.min(1, partes[parte] + dt * FADE_ENTRADA)
-				partes[parte] = n
-				if n >= 1 then ativas[parte] = nil end
-				aplicarNivel(parte, agora)
-			end
-		end
+		-- trabalho pesado sempre em fatias de tempo (cada um com seu orçamento)
+		processarFade(agora)
+		processarVarredura()
+		processarTrabalho(agora)
 
 		-- sonar periódico saindo de você
 		if not ondaAtiva and raiz and agora >= proximoSonar then
@@ -3438,7 +3559,7 @@ do
 					table.remove(aneis, i)
 				else
 					atualizarAnel(a)
-					if agora - ultimoEco > 0.05 then
+					if agora - ultimoEco > ECO_INTERVALO then
 						ultimoEco = agora
 						for _, parte in ipairs(workspace:GetPartBoundsInRadius(a.origem, a.raio + 4, ecoParams)) do
 							local n = partes[parte]
@@ -3454,13 +3575,16 @@ do
 			end
 		end
 
-		-- eco do sonar: a parte fica um pouco mais visível e volta suave
-		for parte, t in pairs(ecos) do
-			if not parte.Parent then
-				ecos[parte] = nil
-			else
-				if agora - t >= 0.6 then ecos[parte] = nil end
-				aplicarNivel(parte, agora)
+		-- eco do sonar: a parte fica um pouco mais visível e volta suave (20 vezes por segundo basta)
+		if agora >= proximoAplicarEco then
+			proximoAplicarEco = agora + 0.05
+			for parte, t in pairs(ecos) do
+				if not parte.Parent then
+					ecos[parte] = nil
+				else
+					if agora - t >= 0.6 then ecos[parte] = nil end
+					aplicarNivel(parte, agora)
+				end
 			end
 		end
 	end)
@@ -3507,41 +3631,12 @@ do
 
 	local versaoFx = 0
 
-	local function anelEstrondo(atraso, espessura)
-		task.delay(atraso, function()
-			local tela = fxGui.AbsoluteSize
-			if tela.X <= 0 then tela = workspace.CurrentCamera.ViewportSize end
-			local anel = Instance.new("Frame")
-			anel.AnchorPoint = Vector2.new(0.5, 0.5)
-			anel.Position = UDim2.fromScale(0.5, 0.5)
-			anel.Size = UDim2.fromOffset(40, 40)
-			anel.BackgroundTransparency = 1
-			anel.BorderSizePixel = 0
-			anel.Active = false
-			anel.Parent = fxGui
-			Instance.new("UICorner", anel).CornerRadius = UDim.new(0.5, 0)
-			local contorno = Instance.new("UIStroke")
-			contorno.Color = Color3.fromRGB(235, 248, 255)
-			contorno.Thickness = espessura
-			contorno.Transparency = 0.1
-			contorno.Parent = anel
-			local info = TweenInfo.new(0.55, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-			local d = tela.Magnitude * 1.1
-			TweenService:Create(anel, info, { Size = UDim2.fromOffset(d, d) }):Play()
-			TweenService:Create(contorno, info, { Transparency = 1, Thickness = 1 }):Play()
-			task.delay(0.6, function() anel:Destroy() end)
-		end)
-	end
-
 	local function estrondo()
 		versaoFx += 1
 		local minha = versaoFx
 		-- clarão
 		fxFlash.BackgroundTransparency = 0.2
 		TweenService:Create(fxFlash, TweenInfo.new(0.35, Enum.EasingStyle.Quad), { BackgroundTransparency = 1 }):Play()
-		-- ondas de choque saindo do centro da tela
-		anelEstrondo(0, 8)
-		anelEstrondo(0.09, 4)
 		-- embaçado que some rápido
 		if ESTRONDO_BLUR > 0 then
 			fxBlur.Enabled = true
@@ -3795,80 +3890,134 @@ do
 	local aplicado = false -- se já mexemos no personagem/câmera
 
 	-- Cadeado na tela (arraste para mudar de lugar, toque para travar/soltar)
+	-- Visual: cadeado de verdade (corpo + argola em U + furo da chave), pequeno, sem fundo redondo.
+	-- Contorno escuro bem fino para aparecer em qualquer cenário (céu claro, parede branca...).
 	local botaoLock = Instance.new("TextButton")
 	botaoLock.Name = "BotaoShiftLock"
 	botaoLock.AnchorPoint = Vector2.new(0.5, 0.5)
 	botaoLock.Position = UDim2.new(0.9, 0, 0.45, 0)
-	botaoLock.Size = UDim2.fromOffset(52, 52)
-	botaoLock.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
-	botaoLock.BackgroundTransparency = 0.35
+	botaoLock.Size = UDim2.fromOffset(44, 44) -- só a área de toque; não tem fundo
+	botaoLock.BackgroundTransparency = 1
 	botaoLock.Text = ""
 	botaoLock.AutoButtonColor = false
 	botaoLock.Visible = false
 	botaoLock.ZIndex = 9
 	botaoLock.Parent = gui
-	Instance.new("UICorner", botaoLock).CornerRadius = UDim.new(1, 0)
+	local escala = Instance.new("UIScale") -- usado no "pop" ao tocar
+	escala.Parent = botaoLock
 
+	-- Brilho discreto atrás do cadeado (só aparece, azul e respirando, enquanto está travado)
+	local halo = Instance.new("Frame")
+	halo.Name = "Halo"
+	halo.AnchorPoint = Vector2.new(0.5, 0.5)
+	halo.Position = UDim2.fromScale(0.5, 0.5)
+	halo.Size = UDim2.fromOffset(38, 38)
+	halo.BackgroundTransparency = 1
+	halo.Active = false
+	halo.ZIndex = 1
+	halo.Parent = botaoLock
+	Instance.new("UICorner", halo).CornerRadius = UDim.new(0.32, 0)
 	local contorno = Instance.new("UIStroke")
-	contorno.Thickness = 2
-	contorno.Parent = botaoLock
+	contorno.Color = COR_AZUL
+	contorno.Thickness = 1.5
+	contorno.Transparency = 1
+	contorno.Parent = halo
 
-	-- Desenho do cadeado: argola + corpo
-	local argola = Instance.new("Frame")
-	argola.AnchorPoint = Vector2.new(0.5, 0.5)
-	argola.Position = UDim2.new(0.5, 0, 0.36, 0)
-	argola.Size = UDim2.fromOffset(15, 17)
-	argola.BackgroundTransparency = 1
-	argola.ZIndex = 1
-	argola.Parent = botaoLock
-	Instance.new("UICorner", argola).CornerRadius = UDim.new(0.5, 0)
-	local contornoArgola = Instance.new("UIStroke")
-	contornoArgola.Thickness = 3
-	contornoArgola.Parent = argola
+	-- Argola (U): um quadro arredondado com borda; a metade de baixo fica escondida atrás do corpo
+	local function fazerArgola(nome, espessura, zindex)
+		local f = Instance.new("Frame")
+		f.Name = nome
+		f.AnchorPoint = Vector2.new(0.5, 0.5)
+		f.Position = UDim2.new(0.5, 0, 0, 18)
+		f.Size = UDim2.fromOffset(14, 20)
+		f.BackgroundTransparency = 1
+		f.Active = false
+		f.ZIndex = zindex
+		f.Parent = botaoLock
+		Instance.new("UICorner", f).CornerRadius = UDim.new(0.5, 0)
+		local c = Instance.new("UIStroke")
+		c.Thickness = espessura
+		c.Parent = f
+		return f, c
+	end
+	local sombraArgola, sombraArgolaContorno = fazerArgola("SombraArgola", 5.5, 1)
+	sombraArgolaContorno.Color = Color3.new(0, 0, 0)
+	sombraArgolaContorno.Transparency = 0.6
+	local argola, contornoArgola = fazerArgola("Argola", 3, 2)
 
+	-- Corpo do cadeado
 	local corpo = Instance.new("Frame")
+	corpo.Name = "Corpo"
 	corpo.AnchorPoint = Vector2.new(0.5, 0.5)
-	corpo.Position = UDim2.new(0.5, 0, 0.6, 0)
-	corpo.Size = UDim2.fromOffset(24, 18)
+	corpo.Position = UDim2.new(0.5, 0, 0, 27)
+	corpo.Size = UDim2.fromOffset(22, 16)
 	corpo.BorderSizePixel = 0
-	corpo.ZIndex = 2
+	corpo.Active = false
+	corpo.ZIndex = 3
 	corpo.Parent = botaoLock
 	Instance.new("UICorner", corpo).CornerRadius = UDim.new(0, 4)
+	local contornoCorpo = Instance.new("UIStroke")
+	contornoCorpo.Color = Color3.new(0, 0, 0)
+	contornoCorpo.Thickness = 1.5
+	contornoCorpo.Transparency = 0.5
+	contornoCorpo.Parent = corpo
+
+	-- Furo da chave (bolinha + haste)
+	local COR_FURO = Color3.fromRGB(25, 25, 32)
+	local furo = Instance.new("Frame")
+	furo.AnchorPoint = Vector2.new(0.5, 0.5)
+	furo.Position = UDim2.new(0.5, 0, 0.4, 0)
+	furo.Size = UDim2.fromOffset(4, 4)
+	furo.BackgroundColor3 = COR_FURO
+	furo.BorderSizePixel = 0
+	furo.Active = false
+	furo.ZIndex = 4
+	furo.Parent = corpo
+	Instance.new("UICorner", furo).CornerRadius = UDim.new(1, 0)
+	local haste = Instance.new("Frame")
+	haste.AnchorPoint = Vector2.new(0.5, 0.5)
+	haste.Position = UDim2.new(0.5, 0, 0.72, 0)
+	haste.Size = UDim2.fromOffset(2, 5)
+	haste.BackgroundColor3 = COR_FURO
+	haste.BorderSizePixel = 0
+	haste.Active = false
+	haste.ZIndex = 4
+	haste.Parent = corpo
 
 	-- Onda de brilho que sai do cadeado quando trava
 	local onda = Instance.new("Frame")
 	onda.Name = "OndaLock"
 	onda.AnchorPoint = Vector2.new(0.5, 0.5)
 	onda.Position = UDim2.fromScale(0.5, 0.5)
-	onda.Size = UDim2.fromScale(1, 1)
+	onda.Size = UDim2.fromScale(0.85, 0.85)
 	onda.BackgroundTransparency = 1
 	onda.BorderSizePixel = 0
 	onda.Active = false
 	onda.Visible = false
-	onda.ZIndex = 8
+	onda.ZIndex = 1
 	onda.Parent = botaoLock
-	Instance.new("UICorner", onda).CornerRadius = UDim.new(1, 0)
+	Instance.new("UICorner", onda).CornerRadius = UDim.new(0.32, 0)
 	local contornoOnda = Instance.new("UIStroke")
 	contornoOnda.Color = COR_AZUL
-	contornoOnda.Thickness = 3
+	contornoOnda.Thickness = 2
 	contornoOnda.Parent = onda
 
 	-- Botão pequeno embaixo do cadeado: troca o ombro da câmera (direita <-> esquerda)
 	local botaoLado = Instance.new("TextButton")
 	botaoLado.Name = "TrocarOmbro"
 	botaoLado.AnchorPoint = Vector2.new(0.5, 0)
-	botaoLado.Position = UDim2.new(0.5, 0, 1, 6)
-	botaoLado.Size = UDim2.fromOffset(34, 22)
+	botaoLado.Position = UDim2.new(0.5, 0, 1, 2)
+	botaoLado.Size = UDim2.fromOffset(30, 18)
 	botaoLado.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
-	botaoLado.BackgroundTransparency = 0.35
+	botaoLado.BackgroundTransparency = 0.45
 	botaoLado.Text = "⇄"
 	botaoLado.TextColor3 = Color3.new(1, 1, 1)
 	botaoLado.Font = Enum.Font.GothamBold
-	botaoLado.TextSize = 15
+	botaoLado.TextSize = 13
 	botaoLado.AutoButtonColor = true
 	botaoLado.ZIndex = 9
 	botaoLado.Parent = botaoLock
-	Instance.new("UICorner", botaoLado).CornerRadius = UDim.new(0, 8)
+	Instance.new("UICorner", botaoLado).CornerRadius = UDim.new(0, 7)
 	botaoLado.MouseButton1Click:Connect(function()
 		lado = -lado -- a câmera desliza suave para o outro ombro (ver atualizarShiftLock)
 	end)
@@ -3877,36 +4026,38 @@ do
 	local function pintar(animar)
 		local cor = travado and COR_AZUL or COR_BRANCO
 		local info = TweenInfo.new(animar and 0.25 or 0, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-		TweenService:Create(contorno, info, { Color = cor }):Play()
 		TweenService:Create(contornoArgola, info, { Color = cor }):Play()
 		TweenService:Create(corpo, info, { BackgroundColor3 = cor }):Play()
 		-- argola: fechada (travado) ou levantada (solto)
-		TweenService:Create(argola, TweenInfo.new(animar and 0.3 or 0, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-			Position = UDim2.new(0.5, 0, 0.36, travado and 0 or -6),
-		}):Play()
+		local infoArgola = TweenInfo.new(animar and 0.3 or 0, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+		local posArgola = UDim2.new(0.5, 0, 0, travado and 18 or 12)
+		TweenService:Create(argola, infoArgola, { Position = posArgola }):Play()
+		TweenService:Create(sombraArgola, infoArgola, { Position = posArgola }):Play()
 
 		if pulsoContorno then pulsoContorno:Cancel() pulsoContorno = nil end
-		contorno.Transparency = 0
 		if travado then
+			contorno.Transparency = 0.55
 			pulsoContorno = TweenService:Create(contorno,
-				TweenInfo.new(0.9, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Transparency = 0.6 })
+				TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Transparency = 0.85 })
 			pulsoContorno:Play()
+		else
+			contorno.Transparency = 1
 		end
 
 		if animar then
-			-- "pop" do botão
-			TweenService:Create(botaoLock, TweenInfo.new(0.1), { Size = UDim2.fromOffset(60, 60) }):Play()
+			-- "pop" do cadeado
+			TweenService:Create(escala, TweenInfo.new(0.1), { Scale = 1.18 }):Play()
 			task.delay(0.1, function()
-				TweenService:Create(botaoLock, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
-					{ Size = UDim2.fromOffset(52, 52) }):Play()
+				TweenService:Create(escala, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+					{ Scale = 1 }):Play()
 			end)
 			-- onda de brilho ao travar
 			if travado then
-				onda.Size = UDim2.fromScale(1, 1)
+				onda.Size = UDim2.fromScale(0.85, 0.85)
 				contornoOnda.Transparency = 0
 				onda.Visible = true
 				TweenService:Create(onda, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-					{ Size = UDim2.fromScale(2, 2) }):Play()
+					{ Size = UDim2.fromScale(1.7, 1.7) }):Play()
 				local t = TweenService:Create(contornoOnda, TweenInfo.new(0.5), { Transparency = 1 })
 				t.Completed:Connect(function() onda.Visible = false end)
 				t:Play()
@@ -3992,9 +4143,11 @@ local function iniciarTeclado()
 	local entradas = {} -- { nomes = {...}, desc = "..." } -> usado para filtrar/completar a lista
 	local manterBarra = false -- true = o comando pediu para a barra continuar aberta (cmds)
 	local comandos = {} -- [palavra] = function(args) -> sucesso, mensagem
-	local LARGURA_ABERTA = 282
-	local LARGURA_FECHADA, ALTURA_FECHADA = 96, 24 -- barrinha fina quando fechada
-	local posSalva -- posição da barrinha antes de subir (celular)
+	local LARGURA_FECHADA, ALTURA_FECHADA = 88, 18 -- tira fina quando fechada
+	local LARGURA_PAINEL = 250 -- painel aberto (caixa + lista juntos)
+	local ALTURA_CAIXA, ALTURA_LINHA, MAX_LINHAS = 26, 22, 7
+	local tAbriu = 0 -- quando a barra abriu (ignora perda de foco logo no começo)
+	local tocandoPainel = false -- dedo/mouse apertando dentro do painel (não fecha)
 
 	local function novo(classe, props, pai)
 		local o = Instance.new(classe)
@@ -4004,7 +4157,7 @@ local function iniciarTeclado()
 	end
 
 	----------------------------------------------------------
-	-- Interface: ícone ">_" (arrastável) que abre a barra
+	-- Interface: tira fina "> comandos" (arrastável) + painel único aberto
 	----------------------------------------------------------
 	local cmdFrame = novo("Frame", {
 		Name = "BarraComandos",
@@ -4018,121 +4171,107 @@ local function iniciarTeclado()
 
 	local icone = novo("TextButton", {
 		Name = "Icone",
-		AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.new(1, 0, 0, 0),
-		Size = UDim2.fromOffset(LARGURA_FECHADA, ALTURA_FECHADA),
-		BackgroundColor3 = Color3.fromRGB(25, 25, 30),
-		BackgroundTransparency = 0.25,
+		Size = UDim2.fromScale(1, 1),
+		BackgroundColor3 = Color3.fromRGB(18, 18, 22),
+		BackgroundTransparency = 0.2,
+		AutoButtonColor = false,
 		Text = "> comandos",
-		TextColor3 = Color3.fromRGB(190, 190, 200),
+		TextColor3 = Color3.fromRGB(170, 170, 182),
 		Font = Enum.Font.Gotham,
-		TextSize = 12,
+		TextSize = 11,
 	}, cmdFrame)
-	novo("UICorner", { CornerRadius = UDim.new(0, 6) }, icone)
-	novo("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 1, Transparency = 0.7 }, icone)
+	novo("UICorner", { CornerRadius = UDim.new(0, 4) }, icone)
+	novo("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 1, Transparency = 0.82 }, icone)
+
+	-- Painel único: caixa de digitar em cima e a lista de comandos logo abaixo
+	local painelCmd = novo("Frame", {
+		Name = "PainelComandos",
+		AnchorPoint = Vector2.new(1, 1),
+		Position = UDim2.new(1, -10, 1, -40),
+		Size = UDim2.fromOffset(LARGURA_PAINEL, ALTURA_CAIXA + 16 + MAX_LINHAS * ALTURA_LINHA),
+		BackgroundColor3 = Color3.fromRGB(18, 18, 22),
+		BackgroundTransparency = 0.08,
+		Active = true,
+		Visible = false,
+		ZIndex = 11,
+	}, gui)
+	novo("UICorner", { CornerRadius = UDim.new(0, 6) }, painelCmd)
+	novo("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 1, Transparency = 0.82 }, painelCmd)
 
 	local caixaCmd = novo("TextBox", {
 		Name = "Comando",
-		AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.new(1, -92, 0, 0),
-		Size = UDim2.fromOffset(190, 40),
-		BackgroundColor3 = Color3.fromRGB(25, 25, 30),
+		Position = UDim2.fromOffset(6, 6),
+		Size = UDim2.new(1, -12, 0, ALTURA_CAIXA),
+		BackgroundColor3 = Color3.fromRGB(32, 32, 38),
 		Text = "",
 		PlaceholderText = "comando (cmds = lista)",
-		PlaceholderColor3 = Color3.fromRGB(140, 140, 140),
+		PlaceholderColor3 = Color3.fromRGB(120, 120, 130),
 		TextColor3 = Color3.new(1, 1, 1),
 		Font = Enum.Font.Gotham,
-		TextSize = 14,
+		TextSize = 13,
 		TextXAlignment = Enum.TextXAlignment.Left,
 		ClearTextOnFocus = false,
-		ShowNativeInput = false, -- no celular: digita direto na barra, sem a caixa branca com OK
-		Visible = false,
-	}, cmdFrame)
-	novo("UICorner", { CornerRadius = UDim.new(0, 10) }, caixaCmd)
-	novo("UIPadding", { PaddingLeft = UDim.new(0, 10) }, caixaCmd)
+	}, painelCmd)
+	novo("UICorner", { CornerRadius = UDim.new(0, 4) }, caixaCmd)
+	novo("UIPadding", { PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8) }, caixaCmd)
+	-- iOS: sem a caixa de texto nativa (o quadrado branco); digita direto na barra
+	pcall(function() caixaCmd.ShowNativeInput = false end)
 
-	local botaoEnviar = novo("TextButton", {
-		Name = "Enviar",
-		AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.new(1, -46, 0, 0),
-		Size = UDim2.fromOffset(40, 40),
-		BackgroundColor3 = COR_ON,
-		Text = "OK",
-		TextColor3 = Color3.new(1, 1, 1),
-		Font = Enum.Font.GothamBold,
-		TextSize = 14,
-		Visible = false,
-	}, cmdFrame)
-	novo("UICorner", { CornerRadius = UDim.new(0, 10) }, botaoEnviar)
-
-	-- Aviso curto com o resultado do comando
+	-- Aviso curto com o resultado do comando (aparece em cima da tira)
 	local toast = novo("TextLabel", {
 		Name = "Aviso",
 		AutomaticSize = Enum.AutomaticSize.XY,
 		Size = UDim2.fromOffset(0, 0),
-		BackgroundColor3 = Color3.fromRGB(25, 25, 30),
+		BackgroundColor3 = Color3.fromRGB(18, 18, 22),
 		BackgroundTransparency = 0.1,
 		TextWrapped = true,
 		Font = Enum.Font.GothamBold,
-		TextSize = 13,
+		TextSize = 12,
 		TextXAlignment = Enum.TextXAlignment.Left,
 		Text = "",
 		Visible = false,
 	}, cmdFrame)
-	novo("UICorner", { CornerRadius = UDim.new(0, 8) }, toast)
+	novo("UICorner", { CornerRadius = UDim.new(0, 6) }, toast)
 	novo("UIPadding", {
 		PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8),
-		PaddingTop = UDim.new(0, 6), PaddingBottom = UDim.new(0, 6),
+		PaddingTop = UDim.new(0, 5), PaddingBottom = UDim.new(0, 5),
 	}, toast)
-	novo("UISizeConstraint", { MaxSize = Vector2.new(280, 200) }, toast)
+	novo("UISizeConstraint", { MaxSize = Vector2.new(260, 160) }, toast)
 
-	-- Lista de comandos
-	local ajuda = novo("Frame", {
-		Name = "Ajuda",
-		Size = UDim2.fromOffset(290, 230),
-		BackgroundColor3 = Color3.fromRGB(25, 25, 30),
-		Visible = false,
-	}, cmdFrame)
-	novo("UICorner", { CornerRadius = UDim.new(0, 12) }, ajuda)
-	novo("TextLabel", {
-		Position = UDim2.fromOffset(12, 4),
-		Size = UDim2.new(1, -56, 0, 30),
-		BackgroundTransparency = 1,
-		Text = "Comandos (use , para vários)",
-		TextColor3 = Color3.new(1, 1, 1),
-		Font = Enum.Font.GothamBold,
-		TextSize = 13,
-		TextXAlignment = Enum.TextXAlignment.Left,
-	}, ajuda)
-	local fecharAjuda = novo("TextButton", {
-		AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.new(1, -6, 0, 5),
-		Size = UDim2.fromOffset(32, 28),
-		BackgroundColor3 = COR_OFF,
-		Text = "X",
-		TextColor3 = Color3.new(1, 1, 1),
-		Font = Enum.Font.GothamBold,
-		TextSize = 14,
-	}, ajuda)
-	novo("UICorner", { CornerRadius = UDim.new(0, 8) }, fecharAjuda)
+	-- Lista de comandos (dentro do mesmo painel, com rolagem)
 	local rolagem = novo("ScrollingFrame", {
-		Position = UDim2.fromOffset(10, 38),
-		Size = UDim2.new(1, -20, 1, -46),
+		Position = UDim2.fromOffset(6, ALTURA_CAIXA + 10),
+		Size = UDim2.new(1, -12, 1, -(ALTURA_CAIXA + 16)),
 		BackgroundTransparency = 1,
 		BorderSizePixel = 0,
-		ScrollBarThickness = 4,
+		ScrollBarThickness = 3,
+		ScrollingDirection = Enum.ScrollingDirection.Y,
 		CanvasSize = UDim2.new(),
 		AutomaticCanvasSize = Enum.AutomaticSize.Y,
-	}, ajuda)
-	novo("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 3) }, rolagem)
+	}, painelCmd)
+	novo("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 1) }, rolagem)
 
-	-- Coloca avisos/lista em cima da barra (ou embaixo, se ela estiver no topo da tela)
-	-- Topo da barra na tela, calculado pelas propriedades (AbsolutePosition demora um quadro para atualizar)
+	-- Toque/clique dentro do painel não pode fechar a barra (completar comando, rolar a lista)
+	painelCmd.InputBegan:Connect(function(input)
+		local t = input.UserInputType
+		if t == Enum.UserInputType.Touch or t == Enum.UserInputType.MouseButton1 then
+			tocandoPainel = true
+		end
+	end)
+	UserInputService.InputEnded:Connect(function(input)
+		local t = input.UserInputType
+		if tocandoPainel and (t == Enum.UserInputType.Touch or t == Enum.UserInputType.MouseButton1) then
+			task.delay(0.25, function() tocandoPainel = false end)
+		end
+	end)
+
+	-- Topo da tira na tela, calculado pelas propriedades (AbsolutePosition demora um quadro para atualizar)
 	local function topoDaBarra()
 		local pos, tam, a = cmdFrame.Position, cmdFrame.Size, cmdFrame.AnchorPoint
 		return pos.Y.Scale * tamanhoTela().Y + pos.Y.Offset - a.Y * tam.Y.Offset
 	end
 
+	-- Aviso fica em cima da tira (ou embaixo, se a tira estiver no topo da tela)
 	local function posicionarAcima(obj)
 		if topoDaBarra() < 90 then
 			obj.AnchorPoint = Vector2.new(1, 0)
@@ -4199,93 +4338,90 @@ local function iniciarTeclado()
 		for k, a in ipairs(achados) do
 			local linha = novo("TextButton", {
 				LayoutOrder = k,
-				Size = UDim2.new(1, -8, 0, 0),
-				AutomaticSize = Enum.AutomaticSize.Y,
-				BackgroundColor3 = Color3.fromRGB(45, 45, 52),
-				BackgroundTransparency = 0.3,
+				Size = UDim2.new(1, -6, 0, ALTURA_LINHA),
+				BackgroundColor3 = Color3.fromRGB(40, 40, 48),
+				BackgroundTransparency = 0.6,
 				Text = a.e.desc,
-				TextWrapped = true,
+				TextTruncate = Enum.TextTruncate.AtEnd,
 				TextXAlignment = Enum.TextXAlignment.Left,
-				TextColor3 = Color3.fromRGB(220, 220, 230),
+				TextColor3 = Color3.fromRGB(205, 205, 215),
 				Font = Enum.Font.Gotham,
-				TextSize = 12,
+				TextSize = 11,
 				AutoButtonColor = true,
 			}, rolagem)
-			novo("UICorner", { CornerRadius = UDim.new(0, 6) }, linha)
-			novo("UIPadding", {
-				PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8),
-				PaddingTop = UDim.new(0, 5), PaddingBottom = UDim.new(0, 5),
-			}, linha)
+			novo("UICorner", { CornerRadius = UDim.new(0, 4) }, linha)
+			novo("UIPadding", { PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 6) }, linha)
 			linha.Activated:Connect(function() completarComando(a.nome) end)
 			linhasSugestao[#linhasSugestao + 1] = linha
 		end
 
 		if #achados == 0 then
 			linhasSugestao[1] = novo("TextLabel", {
-				Size = UDim2.new(1, -8, 0, 26),
+				Size = UDim2.new(1, -6, 0, ALTURA_LINHA),
 				BackgroundTransparency = 1,
 				Text = "Nenhum comando assim",
-				TextColor3 = Color3.fromRGB(150, 150, 160),
+				TextColor3 = Color3.fromRGB(140, 140, 150),
 				Font = Enum.Font.Gotham,
-				TextSize = 12,
+				TextSize = 11,
 			}, rolagem)
 		end
 		rolagem.CanvasPosition = Vector2.new(0, 0)
 	end
 
-	-- Mostra a lista em cima da barra (ou embaixo, se a barra estiver no topo), do tamanho do espaço livre
+	-- Painel de tamanho fixo (uns 7 comandos visíveis), logo acima do teclado da tela no celular
+	local function ajustarPainel()
+		local tela = tamanhoTela()
+		local fundo = tela.Y - 40 -- PC: um pouco acima da tira
+		if toque then
+			fundo = tela.Y * 0.52 -- palpite até o teclado aparecer
+			local okV, visivel = pcall(function() return UserInputService.OnScreenKeyboardVisible end)
+			if okV and visivel then
+				local okP, pos = pcall(function() return UserInputService.OnScreenKeyboardPosition end)
+				if okP and typeof(pos) == "Vector2" and pos.Y > 0 then
+					fundo = pos.Y - 6 -- topo do teclado
+				end
+			end
+		end
+		-- em telas baixas, mostra menos linhas para o painel caber
+		local fixo = ALTURA_CAIXA + 16
+		local linhas = math.clamp(math.floor((fundo - 8 - fixo) / ALTURA_LINHA), 3, MAX_LINHAS)
+		painelCmd.Size = UDim2.fromOffset(LARGURA_PAINEL, fixo + linhas * ALTURA_LINHA)
+		painelCmd.Position = UDim2.fromOffset(tela.X - 10, fundo)
+	end
+
 	local function mostrarLista()
-		local y = topoDaBarra()
-		local livre = (y < 90) and (tamanhoTela().Y - y - 56) or (y - 12)
-		ajuda.Size = UDim2.fromOffset(LARGURA_ABERTA, math.clamp(livre, 90, 230))
-		posicionarAcima(ajuda)
+		ajustarPainel()
 		toast.Visible = false
-		ajuda.Visible = true
+		painelCmd.Visible = true
 	end
 
 	local function abrirAjuda() -- lista completa (comando cmds)
 		atualizarSugestoes("")
 		mostrarLista()
 	end
-	fecharAjuda.Activated:Connect(function() ajuda.Visible = false end)
+
+	-- Teclado da tela mexeu (abriu, fechou, mudou de tamanho): reposiciona o painel
+	pcall(function()
+		for _, p in ipairs({ "OnScreenKeyboardVisible", "OnScreenKeyboardPosition", "OnScreenKeyboardSize" }) do
+			UserInputService:GetPropertyChangedSignal(p):Connect(function()
+				if barraAberta then ajustarPainel() end
+			end)
+		end
+	end)
 
 	local function fecharBarra()
 		barraAberta = false
-		caixaCmd:ReleaseFocus()
-		caixaCmd.Visible = false
-		botaoEnviar.Visible = false
-		ajuda.Visible = false
-		icone.Text = "> comandos"
-		icone.TextSize = 12
-		icone.Size = UDim2.fromOffset(LARGURA_FECHADA, ALTURA_FECHADA)
-		cmdFrame.Size = UDim2.fromOffset(LARGURA_FECHADA, ALTURA_FECHADA)
-		if posSalva then -- celular: volta para o canto de baixo
-			cmdFrame.Position = posSalva
-			posSalva = nil
-		end
+		pcall(function() caixaCmd:ReleaseFocus() end)
+		painelCmd.Visible = false
+		icone.Visible = true
 	end
 
 	local function abrirBarra()
 		barraAberta = true
-		-- se o ícone estiver perto da borda esquerda, empurra a barra para dentro da tela
-		if toque then
-			-- celular: sobe a barra para ficar acima do teclado da tela
-			posSalva = cmdFrame.Position
-			cmdFrame.Position = UDim2.new(1, -16, 1, -190)
-		else
-			local direita = cmdFrame.AbsolutePosition.X + cmdFrame.AbsoluteSize.X
-			local falta = LARGURA_ABERTA - direita
-			if falta > 0 then
-				local p = cmdFrame.Position
-				cmdFrame.Position = UDim2.new(p.X.Scale, p.X.Offset + falta, p.Y.Scale, p.Y.Offset)
-			end
-		end
-		icone.Text = "X"
-		icone.TextSize = 14
-		icone.Size = UDim2.fromOffset(40, 40)
-		cmdFrame.Size = UDim2.fromOffset(LARGURA_ABERTA, 40)
-		caixaCmd.Visible = true
-		botaoEnviar.Visible = true
+		tAbriu = os.clock()
+		toastVersao += 1
+		toast.Visible = false
+		icone.Visible = false
 		atualizarSugestoes(caixaCmd.Text)
 		mostrarLista()
 		-- abre o teclado na hora; tenta de novo rapidinho se o celular não pegar de primeira
@@ -4299,9 +4435,9 @@ local function iniciarTeclado()
 		end)
 	end
 
-	-- Toque rápido no ícone abre/fecha a barra; arrastar move o ícone
+	-- Toque rápido na tira abre a barra; arrastar move a tira
 	tornarMovel(icone, cmdFrame, function()
-		if barraAberta then fecharBarra() else abrirBarra() end
+		if not barraAberta then abrirBarra() end
 	end)
 
 	-- A lista filtra enquanto você digita
@@ -4310,6 +4446,17 @@ local function iniciarTeclado()
 			atualizarSugestoes(caixaCmd.Text)
 			mostrarLista()
 		end
+	end)
+
+	-- Aberta sem foco (ex.: rolou a lista): tocar fora do painel fecha
+	UserInputService.InputBegan:Connect(function(input)
+		local t = input.UserInputType
+		if not barraAberta or (t ~= Enum.UserInputType.Touch and t ~= Enum.UserInputType.MouseButton1) then return end
+		task.delay(0.06, function()
+			if barraAberta and not caixaCmd:IsFocused() and not tocandoPainel and os.clock() - tAbriu > 0.35 then
+				fecharBarra()
+			end
+		end)
 	end)
 
 	-- No PC: a tecla , (vírgula) abre a barra (como no Infinite Yield)
@@ -4443,8 +4590,8 @@ local function iniciarTeclado()
 		local alvo = alvoJogador.Character and alvoJogador.Character:FindFirstChild("HumanoidRootPart")
 		local minha = pegarPersonagem()
 		if not (alvo and minha) then return false, alvoJogador.DisplayName .. " indisponível" end
-		minha.AssemblyLinearVelocity = Vector3.zero
-		minha.CFrame = alvo.CFrame + Vector3.new(0, 3, 0)
+		-- mesma animação do botão TP do menu (voo supersônico + efeitos)
+		iniciarDash(alvo.Position + Vector3.new(0, 3, 0), { velocidade = DASH_VELOCIDADE_TP, forte = true })
 		return true, "TP -> " .. alvoJogador.DisplayName
 	end)
 
@@ -4541,9 +4688,10 @@ local function iniciarTeclado()
 		return ok, msg
 	end
 
+	-- Retorna true se o comando pediu para a barra continuar aberta (cmds)
 	local function executarLinha(texto)
 		texto = texto:match("^%s*(.-)%s*$")
-		if texto == "" then return end
+		if texto == "" then return false end
 
 		local mensagens, tudoCerto = {}, true
 		for trecho in texto:gmatch("[^,]+") do
@@ -4553,7 +4701,6 @@ local function iniciarTeclado()
 		end
 
 		if #mensagens > 0 then
-			ajuda.Visible = false
 			mostrarToast(table.concat(mensagens, "\n"), tudoCerto)
 		end
 		if tudoCerto then
@@ -4562,18 +4709,27 @@ local function iniciarTeclado()
 				caixaCmd.Text = ""
 				abrirAjuda()
 				task.defer(function() caixaCmd:CaptureFocus() end)
-			else
-				fecharBarra() -- fecha antes de limpar o texto, para a lista não cobrir o aviso
-				caixaCmd.Text = ""
+				return true
 			end
+			caixaCmd.Text = ""
 		end
+		return false
 	end
 
+	-- Parou de digitar (Enter, teclado fechado ou toque fora) = a barra volta para a tira fina
 	caixaCmd.FocusLost:Connect(function(enter)
-		if enter then executarLinha(caixaCmd.Text) end
-	end)
-	botaoEnviar.Activated:Connect(function()
-		executarLinha(caixaCmd.Text)
+		if not barraAberta then return end
+		if enter then
+			-- executa o comando e só depois fecha
+			if not executarLinha(caixaCmd.Text) then fecharBarra() end
+			return
+		end
+		if os.clock() - tAbriu < 0.35 then return end -- foco ainda está pegando no celular
+		task.delay(0.12, function()
+			-- tocar num comando da lista completa o texto e devolve o foco: não fecha
+			if not barraAberta or caixaCmd:IsFocused() or tocandoPainel then return end
+			fecharBarra()
+		end)
 	end)
 
 end
