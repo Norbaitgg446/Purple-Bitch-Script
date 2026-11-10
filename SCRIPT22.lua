@@ -1890,7 +1890,7 @@ local function atualizarFly()
 	-- o super voo só vale voando para a FRENTE
 	local alvoVel = dir * velocidadeFly * MULTIPLICADOR_FLY * ((SUPER.ativo and (estado.flyFrente or 0) > 0.5) and SUPER.mult or 1)
 	-- PARADO: flutua subindo e descendo bem de leve (só quando você não está se movendo)
-	local BOB_ALTURA, BOB_PERIODO = 0.7, 3 -- studs de sobe-e-desce e segundos de cada ida e volta
+	local BOB_ALTURA, BOB_PERIODO = 0.2, 4.5 -- studs de sobe-e-desce e segundos de cada ida e volta
 	local freqBob = 2 * math.pi / BOB_PERIODO
 	alvoVel = alvoVel + Vector3.new(0, BOB_ALTURA * freqBob * math.cos(agora * freqBob) * (estado.flyOcioso or 0), 0)
 	flyBV.Velocity = flyBV.Velocity:Lerp(alvoVel, 1 - math.exp(-dt * (SUPER.ativo and 12 or 8)))
@@ -2500,6 +2500,7 @@ do
 				local cam = workspace.CurrentCamera
 				if sonda.Parent ~= cam then sonda.Parent = cam end
 				local cf, tam = char:GetBoundingBox()
+				local pes = cf.Position.Y - tam.Y / 2 -- altura dos pés
 				-- em alta velocidade (fly) aumenta a margem, para não pular paredes finas entre uma checagem e outra
 				local m = MARGEM + math.min(raiz.AssemblyLinearVelocity.Magnitude * 0.04, 5)
 				sonda.Size = tam + Vector3.new(m, m, m)
@@ -2507,7 +2508,10 @@ do
 				params.FilterDescendantsInstances = { char, sonda }
 				perto = {}
 				for _, parte in ipairs(workspace:GetPartsInPart(sonda, params)) do
-					if parte.CanCollide and parte.Transparency < 1 and not ehDeJogador(parte) then
+					local c, sz = parte.CFrame, parte.Size
+					local meiaAltura = (math.abs(c.RightVector.Y) * sz.X + math.abs(c.UpVector.Y) * sz.Y + math.abs(c.LookVector.Y) * sz.Z) / 2
+					local ehChao = parte.Position.Y + meiaAltura <= pes + 1.2 -- o topo está na altura dos pés ou abaixo: é o chão
+					if parte.CanCollide and parte.Transparency < 1 and not ehChao and not ehDeJogador(parte) then
 						perto[parte] = true
 						if afetadas[parte] == nil then afetadas[parte] = 0 end
 					end
@@ -4728,7 +4732,37 @@ do -- bloco (libera variáveis locais)
 		return p.Unit
 	end
 
+	local animCaminhar, animHum
+	local tParado, esperaAgarrar = 0, 0
+
+	-- Com PlatformStand o jogo desliga as animações: toca a de andar na mão
+	local function pararAnim()
+		if animCaminhar then pcall(function() animCaminhar:Stop(0.2) end) end
+	end
+	local function atualizarAnim(hum, andando, ritmo)
+		pcall(function()
+			local animador = hum:FindFirstChildOfClass("Animator")
+			if not animador then return end
+			if animHum ~= hum or not animCaminhar then
+				local a = Instance.new("Animation")
+				a.AnimationId = hum.RigType == Enum.HumanoidRigType.R15 and "rbxassetid://507777826" or "rbxassetid://180426354"
+				animCaminhar = animador:LoadAnimation(a)
+				animCaminhar.Priority = Enum.AnimationPriority.Action
+				animCaminhar.Looped = true
+				animHum = hum
+			end
+			if andando then
+				if not animCaminhar.IsPlaying then animCaminhar:Play(0.15) end
+				animCaminhar:AdjustSpeed(math.clamp(ritmo, 0.4, 2))
+			elseif animCaminhar.IsPlaying then
+				animCaminhar:Stop(0.2)
+			end
+		end)
+	end
+
 	local function largar(raiz, hum)
+		pararAnim()
+		tParado = 0
 		if bv then bv:Destroy() bv = nil end
 		if bg then bg:Destroy() bg = nil end
 		if raiz and raiz.Parent then
@@ -4743,7 +4777,10 @@ do -- bloco (libera variáveis locais)
 			raiz.AssemblyLinearVelocity = Vector3.zero
 			raiz.AssemblyAngularVelocity = Vector3.zero
 		end
-		if hum and hum.Parent then hum.PlatformStand = false end
+		if hum and hum.Parent then
+			hum.PlatformStand = false
+			pcall(function() hum:ChangeState(Enum.HumanoidStateType.GettingUp) end) -- destrava o personagem
+		end
 		pecaAntes, cfAntes = nil, nil
 		normalAlvo, normalSuave = Vector3.yAxis, Vector3.yAxis
 		solto = true
@@ -4775,6 +4812,11 @@ do -- bloco (libera variáveis locais)
 		if not raiz then
 			solto = true
 			bv, bg = nil, nil
+			pararAnim()
+			return
+		end
+		if hum.Health <= 0 then
+			if not solto then largar(raiz, hum) end
 			return
 		end
 		-- Fly, VFly, Swim ou sentado: o WALL espera
@@ -4790,6 +4832,7 @@ do -- bloco (libera variáveis locais)
 
 		-- Solto: só procura chão por perto (jogo normal) para agarrar
 		if solto then
+			if os.clock() < esperaAgarrar then return end -- acabou de se soltar: deixa o jogo normal agir um instante
 			local r = workspace:Raycast(pos, Vector3.new(0, -(alc + 3), 0), params)
 			if r then agarrar(raiz, hum, r.Normal) end
 			return
@@ -4882,6 +4925,19 @@ do -- bloco (libera variáveis locais)
 			vNormal = math.clamp((altura - dist) * 12, -40, 40)
 		end
 		bv.Velocity = desejado * hum.WalkSpeed + n * vNormal
+		atualizarAnim(hum, andando, hum.WalkSpeed / 14)
+
+		-- Preso (querendo andar e sem sair do lugar): solta e deixa o personagem normal por um instante
+		if andando and pulo <= 0 and raiz.AssemblyLinearVelocity.Magnitude < 1.5 then
+			tParado = tParado + dt
+			if tParado > 0.8 then
+				esperaAgarrar = os.clock() + 0.6
+				largar(raiz, hum)
+				return
+			end
+		else
+			tParado = 0
+		end
 
 		-- Corpo: de pé na superfície, virado para onde anda
 		if andando then
@@ -4915,6 +4971,8 @@ do -- bloco (libera variáveis locais)
 
 	player.CharacterAdded:Connect(function()
 		bv, bg = nil, nil
+		animCaminhar, animHum = nil, nil
+		tParado, esperaAgarrar = 0, 0
 		pecaAntes, cfAntes = nil, nil
 		normalAlvo, normalSuave = Vector3.yAxis, Vector3.yAxis
 		solto = true
@@ -5553,47 +5611,113 @@ local function iniciarTeclado()
 		return true
 	end)
 
-	-- ZOOM: aproxima/afasta a câmera além do limite normal do jogo
-	local zoomOriginal -- { min, max } do jogo, guardado na primeira vez
-	local ZOOM_MIN_LIVRE, ZOOM_MAX_LIVRE = 0.5, 5000
+	-- ZOOM (luneta de pirata): aproxima a imagem como uma luneta, com a lente redonda e o escuro em volta
+	-- zoom [x] liga (x = aumento, de 1.5 a 40; padrão 6) | unzoom desliga | com ela ligada, a roda do mouse ajusta
+	local LUNETA_PADRAO, LUNETA_MIN, LUNETA_MAX = 6, 1.5, 40
+	local lunetaLigada = false   -- o que a pessoa pediu
+	local lunetaAtiva = false    -- true enquanto o efeito existe (inclui o fade de saída)
+	local lunetaFator = LUNETA_PADRAO
+	local lunetaFovBase, lunetaSensBase
+	local lunetaProgresso = 0    -- 0 = câmera normal, 1 = luneta completa
+	local lunetaConexoes = {}
+	local lunetaGui, lunetaLente, lunetaEscuro, lunetaAro, lunetaMiraH, lunetaMiraV
 
-	alternavel({ "zoom" }, "zoom [distância] / unzoom - câmera mais perto ou mais longe (sem número = zoom livre)", function(ligar, args)
-		if not ligar then
-			if zoomOriginal then
-				player.CameraMinZoomDistance = zoomOriginal[1]
-				player.CameraMaxZoomDistance = zoomOriginal[2]
-				zoomOriginal = nil
+	local function lunetaEncerrar()
+		for _, c in ipairs(lunetaConexoes) do c:Disconnect() end
+		table.clear(lunetaConexoes)
+		local cam = workspace.CurrentCamera
+		if cam and lunetaFovBase then cam.FieldOfView = lunetaFovBase end
+		if lunetaSensBase then pcall(function() UserInputService.MouseDeltaSensitivity = lunetaSensBase end) end
+		if lunetaGui then lunetaGui:Destroy() lunetaGui = nil end
+		lunetaAtiva = false
+		lunetaProgresso = 0
+	end
+
+	local function lunetaMontar()
+		lunetaGui = novo("ScreenGui", { Name = "Luneta", ResetOnSpawn = false, IgnoreGuiInset = true, DisplayOrder = 4 }, playerGui)
+		local base = {
+			AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
+			BackgroundTransparency = 1, BorderSizePixel = 0, Active = false,
+		}
+		-- lente: círculo vazio; o "escuro em volta" é a borda bem grossa dele
+		lunetaLente = novo("Frame", base, lunetaGui)
+		novo("UICorner", { CornerRadius = UDim.new(1, 0) }, lunetaLente)
+		lunetaEscuro = novo("UIStroke", { Color = Color3.new(0, 0, 0), Thickness = 100, Transparency = 1 }, lunetaLente)
+		-- aro de latão da luneta
+		lunetaAro = novo("Frame", base, lunetaGui)
+		novo("UICorner", { CornerRadius = UDim.new(1, 0) }, lunetaAro)
+		novo("UIStroke", { Color = Color3.fromRGB(150, 105, 45), Thickness = 6, Transparency = 0.1 }, lunetaAro)
+		-- mira fina no centro
+		lunetaMiraH = novo("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
+			Size = UDim2.new(0.5, 0, 0, 1), BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.5,
+			BorderSizePixel = 0, Active = false }, lunetaGui)
+		lunetaMiraV = novo("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
+			Size = UDim2.new(0, 1, 0.5, 0), BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.5,
+			BorderSizePixel = 0, Active = false }, lunetaGui)
+	end
+
+	local function lunetaIniciar()
+		local cam = workspace.CurrentCamera
+		if not cam then return end
+		lunetaAtiva = true
+		lunetaFovBase = cam.FieldOfView
+		lunetaSensBase = UserInputService.MouseDeltaSensitivity
+		lunetaMontar()
+
+		lunetaConexoes[#lunetaConexoes + 1] = RunService.RenderStepped:Connect(function(dt)
+			local c = workspace.CurrentCamera
+			if not c or not lunetaGui then return end
+			local alvo = lunetaLigada and 1 or 0
+			lunetaProgresso = lunetaProgresso + (alvo - lunetaProgresso) * (1 - math.exp(-dt * 7))
+			if not lunetaLigada and lunetaProgresso < 0.01 then
+				lunetaEncerrar()
+				return
 			end
+			local p = lunetaProgresso
+
+			-- campo de visão: mais fechado = mais perto (aumento real = tan(fov/2) dividido pelo fator)
+			local fovZoom = 2 * math.deg(math.atan(math.tan(math.rad(lunetaFovBase / 2)) / lunetaFator))
+			c.FieldOfView = lunetaFovBase + (fovZoom - lunetaFovBase) * p
+			pcall(function()
+				UserInputService.MouseDeltaSensitivity = lunetaSensBase / (1 + (lunetaFator - 1) * 0.6 * p)
+			end)
+
+			-- lente redonda: diâmetro = 88% do lado menor; a lente "abre" junto com o zoom
+			local tela = c.ViewportSize
+			local lado = math.min(tela.X, tela.Y) * 0.88
+			local diametro = lado * (1.5 - 0.5 * p)
+			local meiaDiagonal = 0.5 * math.sqrt(tela.X * tela.X + tela.Y * tela.Y)
+			lunetaLente.Size = UDim2.fromOffset(diametro, diametro)
+			lunetaAro.Size = UDim2.fromOffset(diametro, diametro)
+			lunetaEscuro.Thickness = math.max(2, math.ceil(meiaDiagonal - diametro / 2 + 6))
+			lunetaEscuro.Transparency = 1 - p
+			lunetaAro.UIStroke.Transparency = 1 - p * 0.9
+			lunetaMiraH.BackgroundTransparency = 1 - p * 0.5
+			lunetaMiraV.BackgroundTransparency = 1 - p * 0.5
+		end)
+
+		-- roda do mouse muda o aumento enquanto a luneta está ligada
+		lunetaConexoes[#lunetaConexoes + 1] = UserInputService.InputChanged:Connect(function(input)
+			if lunetaLigada and input.UserInputType == Enum.UserInputType.MouseWheel then
+				lunetaFator = math.clamp(lunetaFator * (1 + 0.15 * input.Position.Z), LUNETA_MIN, LUNETA_MAX)
+			end
+		end)
+	end
+
+	alternavel({ "zoom" }, "zoom [x] / unzoom - luneta de pirata (x = aumento de 1.5 a 40, padrão 6; roda do mouse ajusta)", function(ligar, args)
+		if not ligar then
+			lunetaLigada = false -- o efeito some suave e se encerra sozinho
 			return true
 		end
-
-		local n
 		if args[1] then
-			n = tonumber(args[1])
-			if not n or n < ZOOM_MIN_LIVRE or n > ZOOM_MAX_LIVRE then
-				return false, "zoom: use um número de " .. ZOOM_MIN_LIVRE .. " a " .. ZOOM_MAX_LIVRE
+			local n = tonumber(args[1])
+			if not n or n < LUNETA_MIN or n > LUNETA_MAX then
+				return false, "zoom: use um aumento de " .. LUNETA_MIN .. " a " .. LUNETA_MAX
 			end
+			lunetaFator = n
 		end
-
-		if not zoomOriginal then
-			zoomOriginal = { player.CameraMinZoomDistance, player.CameraMaxZoomDistance }
-		end
-
-		if n then
-			-- trava a distância por um instante para a câmera ir até ela, depois solta (dá para rolar/pinçar)
-			player.CameraMinZoomDistance = n
-			player.CameraMaxZoomDistance = n
-			task.spawn(function()
-				RunService.RenderStepped:Wait()
-				RunService.RenderStepped:Wait()
-				if not zoomOriginal then return end -- unzoom no meio
-				player.CameraMinZoomDistance = ZOOM_MIN_LIVRE
-				player.CameraMaxZoomDistance = ZOOM_MAX_LIVRE
-			end)
-		else
-			player.CameraMinZoomDistance = ZOOM_MIN_LIVRE
-			player.CameraMaxZoomDistance = ZOOM_MAX_LIVRE
-		end
+		lunetaLigada = true
+		if not lunetaAtiva then lunetaIniciar() end
 		return true
 	end)
 
@@ -6034,12 +6158,14 @@ local function iniciarTeclado()
 	local pararCabeca -- definido no SENTAR NA CABEÇA, mais abaixo
 	local orbLigada = false
 	local orbAlvo -- Player
-	local orbVel, orbDist = 90, 12
+	local orbVel, orbDist = 90, 7 -- graus/s e distância inicial (studs)
+	local ORB_ALTURA = 3.5 -- quanto você flutua acima do jogador, como um planeta
 	local orbAngulo = 0
 	local orbConexoes = {}
 	local orbColisoes = {}
 	local orbPlataformaAntes = false
 	local orbHum, orbRaiz
+	local orbAnim -- animação de sentado enquanto orbita
 
 	-- Tira o corpo de dentro de uma parede (sobe até achar espaço livre)
 	local function orbLivrar(raiz)
@@ -6076,6 +6202,7 @@ local function iniciarTeclado()
 			end
 		end
 		table.clear(orbColisoes)
+		if orbAnim then pcall(function() orbAnim:Stop(0.2) end) orbAnim = nil end
 		if orbHum and orbHum.Parent then orbHum.PlatformStand = orbPlataformaAntes end
 		orbAlvo, orbRaiz, orbHum = nil, nil, nil
 	end
@@ -6094,6 +6221,18 @@ local function iniciarTeclado()
 		orbAngulo = 0
 		orbPlataformaAntes = hum.PlatformStand
 		hum.PlatformStand = true
+
+		-- pose de sentado enquanto gira (com PlatformStand o jogo não toca a animação sozinho)
+		pcall(function()
+			local animador = hum:FindFirstChildOfClass("Animator")
+			if not animador then return end
+			local a = Instance.new("Animation")
+			a.AnimationId = hum.RigType == Enum.HumanoidRigType.R15 and "rbxassetid://2506281703" or "rbxassetid://178130996"
+			orbAnim = animador:LoadAnimation(a)
+			orbAnim.Priority = Enum.AnimationPriority.Action4
+			orbAnim.Looped = true
+			orbAnim:Play(0.2)
+		end)
 
 		-- começa do lado em que você já está
 		local alvoRaiz = alvoJogador.Character and alvoJogador.Character:FindFirstChild("HumanoidRootPart")
@@ -6127,7 +6266,8 @@ local function iniciarTeclado()
 
 			orbAngulo = orbAngulo + math.rad(orbVel) * math.min(dt, 0.1)
 			local centro = centroRaiz.Position
-			local pos = centro + Vector3.new(math.cos(orbAngulo), 0, math.sin(orbAngulo)) * orbDist
+			local flutua = ORB_ALTURA + 0.35 * math.sin(os.clock() * 1.6) -- sobe e desce de leve
+			local pos = centro + Vector3.new(math.cos(orbAngulo), 0, math.sin(orbAngulo)) * orbDist + Vector3.new(0, flutua, 0)
 			local olhar = Vector3.new(centro.X, pos.Y, centro.Z) -- de frente para o jogador, sem inclinar
 			orbRaiz.CFrame = CFrame.lookAt(pos, olhar)
 			orbRaiz.AssemblyLinearVelocity = Vector3.zero
@@ -6549,7 +6689,7 @@ local function iniciarTeclado()
 		MENU.trad.JUMP = "FORÇA DO PULO"
 		MENU.trad.FLYJUMP = "PULO INFINITO"
 		MENU.trad.FREECAM = "CÂMERA LIVRE"
-		MENU.trad.ZOOM = "ZOOM LIVRE"
+		MENU.trad.ZOOM = "ZOOM LUNETA"
 		MENU.trad.REGUA = "RÉGUA"
 		MENU.trad.SEGUIR = "SEGUIR JOGADOR"
 		MENU.trad.ORBITAR = "ORBITAR JOGADOR"
@@ -6605,7 +6745,7 @@ local function iniciarTeclado()
 			{ nome = "JUMP", ordem = 22, nomes = { "jump" }, caixa = "100", dica = "força", vivo = true },
 			{ nome = "FLYJUMP", ordem = 23, nomes = { "flyjump", "fj" } },
 			{ nome = "FREECAM", ordem = 24, nomes = { "freecam", "fc" }, caixa = "60", dica = "vel." },
-			{ nome = "ZOOM", ordem = 25, nomes = { "zoom" }, caixa = "", dica = "dist.", vivo = true },
+			{ nome = "ZOOM", ordem = 25, nomes = { "zoom" }, caixa = "", dica = "x (aumento)", vivo = true },
 			{ nome = "REGUA", ordem = 26, nomes = { "regua", "ruler" } },
 			{ nome = "SEGUIR", ordem = 27, nomes = { "seguir", "follow" }, caixa = "", dica = "jogador" },
 			{ nome = "ORBITAR", ordem = 28, nomes = { "orbitar", "orbit" }, caixa = "", dica = "jogador" },
