@@ -3984,7 +3984,7 @@ end
 ------------------------------------------------------------
 -- TECLADO (barra de comandos digitados)
 ------------------------------------------------------------
-do
+local function iniciarTeclado()
 	local toque = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 	local tecladoLigado = true -- a barra fica sempre no canto da tela
 	local barraAberta = false
@@ -4577,6 +4577,7 @@ do
 	end)
 
 end
+iniciarTeclado()
 
 ------------------------------------------------------------
 -- LOOP PRINCIPAL
