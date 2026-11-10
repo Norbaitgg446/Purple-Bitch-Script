@@ -315,7 +315,7 @@ local MENU = { atual = "Movimento", abas = {}, mostrar = nil,
 	-- liga/desliga da categoria Config
 	cfg = { barraVida = true, alertaChams = true, swimEfeitos = true, noclipTransp = true, tpInstantaneo = false, tpToolInstantaneo = false } }
 do -- bloco (libera variáveis locais)
-local CATEGORIAS = { "Movimento", "Combate", "Visão", "Teleporte", "Extras", "Config", "Ajuda" }
+local CATEGORIAS = { "Movimento", "Combate", "Visão", "Jogadores", "Spawns", "Extras", "Config", "Ajuda" }
 local LARGURA_LATERAL = 104
 local COR_DESTAQUE = Color3.fromRGB(130, 60, 255)
 conteudo.Position = UDim2.new(0, LARGURA_LATERAL + 12, 0, 40)
@@ -470,11 +470,11 @@ MENU.trad = {
 }
 -- Em que categoria cada botão fica (o que não está aqui vai para "Extras")
 MENU.categoria = {
-	FLY = "Movimento", VFLY = "Movimento", SWIM = "Movimento", NOCLIP = "Movimento", SHIFTLOCK = "Movimento",
+	FLY = "Movimento", VFLY = "Movimento", SWIM = "Movimento", NOCLIP = "Movimento", SHIFTLOCK = "Visão",
 	GRUDAR = "Movimento", WALL = "Movimento",
 	ESP = "Combate", CHAMS = "Combate", AIMBOT = "Combate", ALVO = "Combate", PAREDE = "Combate", TIME = "Combate",
-	XRAY = "Visão", VIEW = "Visão",
-	TP = "Teleporte", TPTOOL = "Teleporte", SPAWNS = "Teleporte",
+	XRAY = "Visão", VIEW = "Jogadores",
+	TP = "Jogadores", TPTOOL = "Extras", SPAWNS = "Spawns",
 	REJOIN = "Extras", NOTAS = "Extras",
 }
 
@@ -6516,6 +6516,165 @@ local function iniciarTeclado()
 			end
 			return true -- sem mensagem: ninguém precisa saber que existe
 		end
+	end
+
+	----------------------------------------------------------
+	-- BOTÕES NO MENU para os comandos que antes só existiam digitando
+	-- Cada botão chama o mesmo comando; se você ligar/desligar digitando, o botão acompanha.
+	-- Caixinha ao lado = argumento do comando (velocidade, distância ou nome do jogador).
+	----------------------------------------------------------
+	do
+		MENU.trad.SPEED = "VELOCIDADE DE ANDAR"
+		MENU.trad.JUMP = "FORÇA DO PULO"
+		MENU.trad.FLYJUMP = "PULO INFINITO"
+		MENU.trad.FREECAM = "CÂMERA LIVRE"
+		MENU.trad.ZOOM = "ZOOM LIVRE"
+		MENU.trad.REGUA = "RÉGUA"
+		MENU.trad.SEGUIR = "SEGUIR JOGADOR"
+		MENU.trad.ORBITAR = "ORBITAR JOGADOR"
+		MENU.trad.HSIT = "SENTAR NA CABEÇA"
+		MENU.trad.AFK = "ANTI-AFK"
+		MENU.trad.AVISOS = "AVISOS DE ENTRADA"
+		MENU.trad.FPS1 = "FPS LEVE"
+		MENU.trad.FPS2 = "FPS MÉDIO"
+		MENU.trad.FPS3 = "FPS MÁXIMO"
+
+		MENU.categoria.SPEED = "Movimento"
+		MENU.categoria.JUMP = "Movimento"
+		MENU.categoria.FLYJUMP = "Movimento"
+		MENU.categoria.SIT = "Extras"
+		MENU.categoria.FREECAM = "Visão"
+		MENU.categoria.ZOOM = "Visão"
+		MENU.categoria.REGUA = "Extras"
+		MENU.categoria.SEGUIR = "Jogadores"
+		MENU.categoria.ORBITAR = "Jogadores"
+		MENU.categoria.HSIT = "Jogadores"
+		MENU.categoria.AFK = "Extras"
+		MENU.categoria.AVISOS = "Extras"
+		MENU.categoria.FPS1 = "Extras"
+		MENU.categoria.FPS2 = "Extras"
+		MENU.categoria.FPS3 = "Extras"
+
+		-- quebra o texto da caixinha em palavras (os argumentos do comando)
+		local function separar(caixa)
+			local t = {}
+			if caixa then
+				for p in caixa.Text:gmatch("%S+") do t[#t + 1] = p end
+			end
+			return t
+		end
+
+		-- roda o comando como se tivesse sido digitado; mostra a mensagem dele (se houver)
+		local function chamar(chave, args)
+			local f = comandos[chave]
+			if not f then return false end
+			local rodou, ok, msg = pcall(f, args)
+			if not rodou then
+				warn("Erro no botão " .. chave .. ": " .. tostring(ok))
+				mostrarToast("Erro ao executar " .. chave, false)
+				return false
+			end
+			if msg then mostrarToast(msg, ok ~= false) end
+			return ok ~= false
+		end
+
+		-- caixa: texto inicial da caixinha (nil = sem caixinha) | vivo: Enter na caixinha atualiza com o botão ligado
+		local lista = {
+			{ nome = "SPEED", ordem = 21, nomes = { "speed" }, caixa = "50", dica = "vel.", vivo = true },
+			{ nome = "JUMP", ordem = 22, nomes = { "jump" }, caixa = "100", dica = "força", vivo = true },
+			{ nome = "FLYJUMP", ordem = 23, nomes = { "flyjump", "fj" } },
+			{ nome = "FREECAM", ordem = 24, nomes = { "freecam", "fc" }, caixa = "60", dica = "vel." },
+			{ nome = "ZOOM", ordem = 25, nomes = { "zoom" }, caixa = "", dica = "dist.", vivo = true },
+			{ nome = "REGUA", ordem = 26, nomes = { "regua", "ruler" } },
+			{ nome = "SEGUIR", ordem = 27, nomes = { "seguir", "follow" }, caixa = "", dica = "jogador" },
+			{ nome = "ORBITAR", ordem = 28, nomes = { "orbitar", "orbit" }, caixa = "", dica = "jogador" },
+			{ nome = "HSIT", ordem = 29, nomes = { "hsit", "headsit", "sentarcabeca" }, caixa = "", dica = "jogador" },
+			{ nome = "AFK", ordem = 30, nomes = { "afk" }, ligado = true }, -- o anti-AFK já começa ligado
+			{ nome = "AVISOS", ordem = 31, nomes = { "avisos" } },
+		}
+
+		for _, it in ipairs(lista) do
+			local b, caixa = criarLinha(it.ordem, it.nome, it.caixa ~= nil, it.caixa)
+			it.ligado = (it.ligado == true)
+			pintarBotao(b, it.nome, it.ligado)
+
+			if caixa then
+				caixa.PlaceholderText = it.dica
+				caixa.TextScaled = true -- nome de jogador comprido encolhe em vez de sumir
+				local lim = Instance.new("UITextSizeConstraint")
+				lim.MaxTextSize = 15
+				lim.MinTextSize = 8
+				lim.Parent = caixa
+			end
+
+			local function definir(v)
+				it.ligado = v
+				pintarBotao(b, it.nome, v)
+			end
+
+			-- liga/desliga digitado também muda o botão
+			for _, n in ipairs(it.nomes) do
+				local origLigar, origDesligar = comandos[n], comandos["un" .. n]
+				comandos[n] = function(a)
+					local ok, msg = origLigar(a)
+					if ok ~= false then definir(true) end
+					return ok, msg
+				end
+				comandos["un" .. n] = function(a)
+					local ok, msg = origDesligar(a)
+					if ok ~= false then definir(false) end
+					return ok, msg
+				end
+			end
+
+			b.MouseButton1Click:Connect(function()
+				if it.ligado then
+					chamar("un" .. it.nomes[1], {})
+				else
+					chamar(it.nomes[1], separar(caixa))
+				end
+			end)
+
+			if caixa and it.vivo then
+				caixa.FocusLost:Connect(function(enter)
+					if enter and it.ligado then chamar(it.nomes[1], separar(caixa)) end
+				end)
+			end
+		end
+
+		-- FPS 1/2/3: só um nível por vez; tocar no que está ligado volta ao visual normal
+		local botoesFps = {}
+		local fpsAtual = 0
+		local function marcarFps(n)
+			fpsAtual = n
+			for i = 1, 3 do pintarBotao(botoesFps[i], "FPS" .. i, i == n) end
+		end
+		for i = 1, 3 do
+			botoesFps[i] = criarLinha(31 + i, "FPS" .. i, false)
+			pintarBotao(botoesFps[i], "FPS" .. i, false)
+		end
+		for i = 1, 3 do
+			local origFps = comandos["fps" .. i]
+			comandos["fps" .. i] = function(a)
+				local ok, msg = origFps(a)
+				if ok ~= false then marcarFps(i) end
+				return ok, msg
+			end
+			botoesFps[i].MouseButton1Click:Connect(function()
+				if fpsAtual == i then chamar("unfps", {}) else chamar("fps" .. i, {}) end
+			end)
+		end
+		local origUnfps = comandos["unfps"]
+		comandos["unfps"] = function(a)
+			local ok, msg = origUnfps(a)
+			if ok ~= false then marcarFps(0) end
+			return ok, msg
+		end
+
+		-- SENTAR: ação única, não liga/desliga
+		local botaoSentar = criarLinha(35, "SIT", false)
+		botaoSentar.Text = "SENTAR"
+		botaoSentar.MouseButton1Click:Connect(function() chamar("sit", {}) end)
 	end
 
 	----------------------------------------------------------
