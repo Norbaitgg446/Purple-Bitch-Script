@@ -499,6 +499,8 @@ end
 -- Toque rápido no botão abre/fecha; arrastar move o botão
 tornarMovel(botao, botao, alternarPainel)
 
+local atualizarESP, definirChams, definirESP
+do -- bloco (libera variáveis locais)
 ------------------------------------------------------------
 -- ESP (nome + distância) e CHAMS (contorno/preenchimento)
 ------------------------------------------------------------
@@ -700,7 +702,7 @@ local function atualizarTodos()
 	end
 end
 
-local function atualizarESP()
+function atualizarESP()
 	if not estado.esp then return end
 
 	local meuChar = player.Character
@@ -782,7 +784,7 @@ Players.PlayerRemoving:Connect(function(p)
 	removerChams(p)
 end)
 
-local function definirESP(v)
+function definirESP(v)
 	estado.esp = v
 	pintarBotao(botaoESP, "ESP", v)
 	atualizarTodos()
@@ -833,7 +835,7 @@ do
 	end)
 end
 
-local function definirChams(v)
+function definirChams(v)
 	estado.chams = v
 	pintarBotao(botaoChams, "CHAMS", v)
 	atualizarTodos()
@@ -842,6 +844,7 @@ end
 botaoESP.MouseButton1Click:Connect(function() definirESP(not estado.esp) end)
 botaoChams.MouseButton1Click:Connect(function() definirChams(not estado.chams) end)
 
+end -- fim do bloco (libera variáveis locais)
 ------------------------------------------------------------
 -- VELOCIDADE (caixas de texto)
 ------------------------------------------------------------
@@ -925,16 +928,18 @@ local function pegarPersonagem()
 	return nil
 end
 
+local aplicarPoseFly, flyBG, flyBV, iniciarFly, pararFly, poseLean, poseMov, vBG, vBV
+do -- bloco (libera variáveis locais)
 ------------------------------------------------------------
 -- FLY
 ------------------------------------------------------------
-local flyBV, flyBG
-local vBV, vBG -- (VFLY) declarados aqui para o efeito de velocidade também enxergar
+-- (declarado antes)
+-- (declarado antes)
 
 -- POSE DE HERÓI: mexe nas juntas do corpo (R15 e R6) enquanto voa
-local poseMov = 0 -- 0 = parado (em pé), 1 = voando (deitado, braço esticado)
+poseMov = 0 -- 0 = parado (em pé), 1 = voando (deitado, braço esticado)
 local poseChar, poseJuntas
-local poseLean = 0 -- inclinação calculada em atualizarFly e usada na pose
+poseLean = 0 -- inclinação calculada em atualizarFly e usada na pose
 local animateDesligado -- script "Animate" do personagem, desligado enquanto voa
 
 local function acharJunta(char, nome)
@@ -956,7 +961,7 @@ local function limparPoseFly()
 	end
 end
 
-local function aplicarPoseFly(char, hum, inclinacao)
+function aplicarPoseFly(char, hum, inclinacao)
 	-- para as animações normais (andar/cair) enquanto voa, senão elas desfazem a pose
 	local animate = char:FindFirstChild("Animate")
 	if animate and animate:IsA("LocalScript") and not animate.Disabled then
@@ -1014,7 +1019,7 @@ local function aplicarPoseFly(char, hum, inclinacao)
 	end
 end
 
-local function pararFly()
+function pararFly()
 	limparPoseFly()
 	if flyBV then flyBV:Destroy() flyBV = nil end
 	if flyBG then flyBG:Destroy() flyBG = nil end
@@ -1022,7 +1027,7 @@ local function pararFly()
 	if hum then hum.PlatformStand = false end
 end
 
-local function iniciarFly(raiz, hum)
+function iniciarFly(raiz, hum)
 	if flyBV then flyBV:Destroy() end
 	if flyBG then flyBG:Destroy() end
 
@@ -1041,6 +1046,7 @@ local function iniciarFly(raiz, hum)
 	hum.PlatformStand = true
 end
 
+end -- fim do bloco (libera variáveis locais)
 ------------------------------------------------------------
 -- AIMBOT (bolinha verde = alcance; trava a câmera no alvo sem atraso)
 ------------------------------------------------------------
@@ -1769,6 +1775,8 @@ local function definirFly(v)
 end
 botaoFly.MouseButton1Click:Connect(function() definirFly(not estado.fly) end)
 
+local atualizarSetasVFly, atualizarVFly, definirVFly, pararVFly
+do -- bloco (libera variáveis locais)
 ------------------------------------------------------------
 -- VFLY (voar com veículo enquanto sentado)
 ------------------------------------------------------------
@@ -1859,7 +1867,7 @@ do
 	criarSeta(clusterAltV, "▼\nDESCE", 0, 60, 84, "desce")
 end
 
-local function atualizarSetasVFly()
+function atualizarSetasVFly()
 	clusterMovV.Visible = estado.vfly
 	clusterAltV.Visible = estado.vfly
 	if not estado.vfly then
@@ -1867,13 +1875,13 @@ local function atualizarSetasVFly()
 	end
 end
 
-local function pararVFly()
+function pararVFly()
 	ultimoVFly = nil
 	if vBV then vBV:Destroy() vBV = nil end
 	if vBG then vBG:Destroy() vBG = nil end
 end
 
-local function atualizarVFly()
+function atualizarVFly()
 	if not estado.vfly then
 		if vBV then pararVFly() end
 		return
@@ -1936,7 +1944,7 @@ local function atualizarVFly()
 	end
 end
 
-local function definirVFly(v)
+function definirVFly(v)
 	estado.vfly = v
 	pintarBotao(botaoVFly, "VFLY", v)
 	atualizarSetasVFly()
@@ -1944,10 +1952,13 @@ local function definirVFly(v)
 end
 botaoVFly.MouseButton1Click:Connect(function() definirVFly(not estado.vfly) end)
 
+end -- fim do bloco (libera variáveis locais)
+local atualizarSwim, definirSwim, pararSwim, swimBV
+do -- bloco (libera variáveis locais)
 ------------------------------------------------------------
 -- SWIM (nadar no ar)
 ------------------------------------------------------------
-local swimBV
+-- (declarado antes)
 local ultimoSwim
 local swimHum        -- humanoid que está com os estados travados em "nadando"
 local swimEstados    -- [estado] = estava ligado antes? (para devolver ao normal)
@@ -1985,13 +1996,13 @@ local function destravarEstadoNado()
 	swimHum, swimEstados = nil, nil
 end
 
-local function pararSwim()
+function pararSwim()
 	if swimBV then swimBV:Destroy() swimBV = nil end
 	ultimoSwim = nil
 	destravarEstadoNado()
 end
 
-local function atualizarSwim()
+function atualizarSwim()
 	-- Fly e VFly têm prioridade sobre o swim
 	if not estado.swim or estado.fly then
 		if swimBV then pararSwim() end
@@ -2029,13 +2040,14 @@ local function atualizarSwim()
 	swimBV.Velocity = swimBV.Velocity:Lerp(dir * velocidadeSwim, 1 - math.exp(-dt * taxa))
 end
 
-local function definirSwim(v)
+function definirSwim(v)
 	estado.swim = v
 	pintarBotao(botaoSwim, "SWIM", v)
 	atualizarBotaoVertical()
 end
 botaoSwim.MouseButton1Click:Connect(function() definirSwim(not estado.swim) end)
 
+end -- fim do bloco (libera variáveis locais)
 ------------------------------------------------------------
 -- EFEITO DE ÁGUA DO SWIM (tela azulada, bolhas subindo, balanço suave) — sem os riscos brancos
 ------------------------------------------------------------
@@ -2181,6 +2193,8 @@ do
 	end)
 end
 
+local definirNoclip
+do -- bloco (libera variáveis locais)
 ------------------------------------------------------------
 -- NOCLIP (atravessar paredes)
 ------------------------------------------------------------
@@ -2215,7 +2229,7 @@ RunService.Stepped:Connect(function()
 	end
 end)
 
-local function definirNoclip(v)
+function definirNoclip(v)
 	estado.noclip = v
 	pintarBotao(botaoNoclip, "NOCLIP", v)
 	if not v then
@@ -2228,6 +2242,7 @@ player.CharacterAdded:Connect(function()
 	colisaoOriginal = {}
 end)
 
+end -- fim do bloco (libera variáveis locais)
 ------------------------------------------------------------
 -- EFEITOS DO NOCLIP: só as partes que o personagem encosta ou atravessa ficam transparentes
 -- (e voltam ao normal quando você se afasta). Personagem meio transparente enquanto ligado.
@@ -2340,13 +2355,15 @@ do
 	end)
 end
 
+local DASH_VELOCIDADE_TP, criarLinhaSpawn, iniciarDash, posicionarAoLado, salvarSpawns, spawnsSalvos
+do -- bloco (libera variáveis locais)
 ------------------------------------------------------------
 -- SPAWNS (salvar posições, renomear e teleportar)
 ------------------------------------------------------------
-local iniciarDash -- definido mais abaixo (no bloco do TPTOOL); SPAWNS e TP usam
-local DASH_VELOCIDADE_TP = 700 -- studs por segundo no teleporte do TP e dos SPAWNS (aumente para ir mais rápido)
+-- (declarado antes)
+DASH_VELOCIDADE_TP = 700 -- studs por segundo no teleporte do TP e dos SPAWNS (aumente para ir mais rápido)
 -- Abre um painel lateral colado ao menu (à direita; se não couber, à esquerda)
-local function posicionarAoLado(f)
+function posicionarAoLado(f)
 	local tela = tamanhoTela()
 	local pos = painel.AbsolutePosition
 	local larguraMenu = tamanhoPainel.X.Offset
@@ -2436,7 +2453,7 @@ layoutSpawn.Padding = UDim.new(0, 4)
 layoutSpawn.SortOrder = Enum.SortOrder.LayoutOrder
 layoutSpawn.Parent = listaSpawn
 
-local spawnsSalvos = {} -- [Frame da linha] = { nome = TextBox, cf = CFrame, dist = TextLabel, marca = Part }
+spawnsSalvos = {} -- [Frame da linha] = { nome = TextBox, cf = CFrame, dist = TextLabel, marca = Part }
 local contadorSpawn = 0
 local carregandoSpawns = true -- true enquanto lê o arquivo (não regrava no meio)
 
@@ -2447,7 +2464,7 @@ local function temArquivos()
 	return typeof(writefile) == "function" and typeof(readfile) == "function" and typeof(isfile) == "function"
 end
 
-local function salvarSpawns()
+function salvarSpawns()
 	if carregandoSpawns or not temArquivos() then return end
 	local lista = {}
 	for linha, d in pairs(spawnsSalvos) do
@@ -2497,7 +2514,7 @@ local function criarMarcaSpawn(cframeSalvo, texto)
 	return parte, t
 end
 
-local function criarLinhaSpawn(cframeSalvo, nomeSalvo)
+function criarLinhaSpawn(cframeSalvo, nomeSalvo)
 	contadorSpawn += 1
 
 	local linha = Instance.new("Frame")
@@ -2640,6 +2657,9 @@ botaoSpawns.MouseButton1Click:Connect(function()
 	end
 end)
 
+end -- fim do bloco (libera variáveis locais)
+local escaparRich
+do -- bloco (libera variáveis locais)
 ------------------------------------------------------------
 -- TP (teleportar até jogadores)
 ------------------------------------------------------------
@@ -2707,7 +2727,7 @@ listaTP.Size = UDim2.new(0.9, 0, 1, -94)
 local botoesTP = {} -- [Player] = TextButton
 local avisosTP = {} -- [Player] = instante até quando o aviso "indisponível" fica na tela
 
-local function escaparRich(t)
+function escaparRich(t)
 	return (t:gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;"):gsub('"', "&quot;"):gsub("'", "&apos;"))
 end
 
@@ -2833,6 +2853,7 @@ botaoTP.MouseButton1Click:Connect(function()
 	end
 end)
 
+end -- fim do bloco (libera variáveis locais)
 ------------------------------------------------------------
 -- VIEW (espectar jogador: a câmera passa a mostrar a visão dele)
 ------------------------------------------------------------
@@ -3595,6 +3616,8 @@ caixaXray.FocusLost:Connect(aplicarCaixaXray)
 
 ------------------------------------------------------------
 -- TPTOOL (item que leva você até onde você clicar, em um dash rápido)
+local definirTPTool
+do -- bloco (libera variáveis locais)
 ------------------------------------------------------------
 -- TELEPORTE SUAVE (dash): em vez de aparecer lá de uma vez, você voa rapidinho até o ponto
 -- (acelera, passa direto por paredes e freia na chegada), com os riscos de vento e a tremida do fly
@@ -3783,7 +3806,7 @@ local function criarTPTool()
 	tpTool = ferramenta
 end
 
-local function definirTPTool(v)
+function definirTPTool(v)
 	if v == estado.tptool then return end
 	estado.tptool = v
 	pintarBotao(botaoTPTool, "TPTOOL", v)
@@ -3803,6 +3826,7 @@ player.CharacterAdded:Connect(function()
 	end
 end)
 
+end -- fim do bloco (libera variáveis locais)
 ------------------------------------------------------------
 -- REJOIN (reentrar no server)
 ------------------------------------------------------------
