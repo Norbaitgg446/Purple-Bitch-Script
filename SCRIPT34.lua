@@ -4143,10 +4143,86 @@ local function prepararReexecucao()
 	return true
 end
 
+local telaRejoin -- { gui, con, escuro, traco, texto }
+
+local function mostrarTelaRejoin()
+	if telaRejoin then return end
+	local g = Instance.new("ScreenGui")
+	g.Name = "ReentrandoTela"
+	g.ResetOnSpawn = false
+	g.IgnoreGuiInset = true
+	g.DisplayOrder = 100
+	g.Parent = playerGui
+
+	local escuro = Instance.new("Frame")
+	escuro.Size = UDim2.fromScale(1, 1)
+	escuro.BackgroundColor3 = Color3.new(0, 0, 0)
+	escuro.BackgroundTransparency = 1
+	escuro.BorderSizePixel = 0
+	escuro.Active = true -- segura os toques enquanto reentra
+	escuro.Parent = g
+
+	-- spinner: anel com um arco que gira
+	local roda = Instance.new("Frame")
+	roda.AnchorPoint = Vector2.new(0.5, 0.5)
+	roda.Position = UDim2.fromScale(0.5, 0.47)
+	roda.Size = UDim2.fromOffset(46, 46)
+	roda.BackgroundTransparency = 1
+	roda.Parent = escuro
+	Instance.new("UICorner", roda).CornerRadius = UDim.new(1, 0)
+	local traco = Instance.new("UIStroke")
+	traco.Thickness = 4
+	traco.Color = Color3.new(1, 1, 1)
+	traco.Transparency = 1
+	traco.Parent = roda
+	local grad = Instance.new("UIGradient")
+	grad.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(0.7, 1), NumberSequenceKeypoint.new(1, 1),
+	})
+	grad.Parent = traco
+
+	local texto = Instance.new("TextLabel")
+	texto.AnchorPoint = Vector2.new(0.5, 0)
+	texto.Position = UDim2.new(0.5, 0, 0.47, 40)
+	texto.Size = UDim2.fromOffset(300, 24)
+	texto.BackgroundTransparency = 1
+	texto.Text = "Reentrando..."
+	texto.TextColor3 = Color3.new(1, 1, 1)
+	texto.TextTransparency = 1
+	texto.Font = Enum.Font.GothamBold
+	texto.TextSize = 16
+	texto.Parent = escuro
+
+	local info = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+	TweenService:Create(escuro, info, { BackgroundTransparency = 0.2 }):Play()
+	TweenService:Create(traco, info, { Transparency = 0 }):Play()
+	TweenService:Create(texto, info, { TextTransparency = 0 }):Play()
+
+	local con = RunService.RenderStepped:Connect(function()
+		grad.Rotation = (os.clock() * 300) % 360
+	end)
+	telaRejoin = { gui = g, con = con, escuro = escuro, traco = traco, texto = texto }
+end
+
+local function esconderTelaRejoin()
+	local t = telaRejoin
+	telaRejoin = nil
+	if not t then return end
+	t.con:Disconnect()
+	local info = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+	pcall(function()
+		TweenService:Create(t.escuro, info, { BackgroundTransparency = 1 }):Play()
+		TweenService:Create(t.traco, info, { Transparency = 1 }):Play()
+		TweenService:Create(t.texto, info, { TextTransparency = 1 }):Play()
+	end)
+	task.delay(0.35, function() t.gui:Destroy() end)
+end
+
 local function fazerRejoin()
 	if reentrando then return end
 	reentrando = true
 	botaoRejoin.Text = "Reentrando..."
+	mostrarTelaRejoin()
 
 	local okFila, motivo = prepararReexecucao()
 	if not okFila then
@@ -4166,6 +4242,7 @@ local function fazerRejoin()
 	if not ok then
 		warn("Rejoin falhou: " .. tostring(erro))
 		botaoRejoin.Text = "Falhou (só funciona no jogo publicado)"
+		esconderTelaRejoin()
 		task.wait(2)
 		botaoRejoin.Text = "REENTRAR"
 		reentrando = false
@@ -4176,6 +4253,7 @@ botaoRejoin.MouseButton1Click:Connect(fazerRejoin)
 
 -- Se o teleporte falhar depois de iniciado, libera o botão de novo
 TeleportService.TeleportInitFailed:Connect(function()
+	esconderTelaRejoin()
 	botaoRejoin.Text = "REENTRAR"
 	reentrando = false
 end)
@@ -4505,6 +4583,25 @@ do -- bloco (libera variáveis locais)
 	avisoNotas.TextXAlignment = Enum.TextXAlignment.Left
 	avisoNotas.Parent = painelNotas
 
+	local tokenAviso = 0
+	local function mostrarAviso(texto, cor, apagar) -- "Salvo ✓" aparece e some sozinho
+		tokenAviso += 1
+		local meu = tokenAviso
+		avisoNotas.Text = texto
+		avisoNotas.TextColor3 = cor
+		avisoNotas.TextTransparency = 0
+		if apagar then
+			task.delay(1.4, function()
+				if tokenAviso == meu then
+					TweenService:Create(avisoNotas, TweenInfo.new(0.5), { TextTransparency = 1 }):Play()
+				end
+			end)
+		end
+	end
+	local COR_AVISO_CINZA = Color3.fromRGB(170, 170, 180)
+	local COR_AVISO_VERDE = Color3.fromRGB(120, 230, 150)
+	local COR_AVISO_VERMELHO = Color3.fromRGB(255, 130, 130)
+
 	local function temArquivos() -- (cópia local: a original fica dentro de outro bloco)
 		return typeof(writefile) == "function" and typeof(readfile) == "function" and typeof(isfile) == "function"
 	end
@@ -4517,7 +4614,7 @@ do -- bloco (libera variáveis locais)
 	local function salvarNotas()
 		if carregando then return end
 		if not podeSalvar then
-			avisoNotas.Text = "Sem salvar: o executor não tem writefile"
+			mostrarAviso("Sem salvar: o executor não tem writefile", COR_AVISO_CINZA, false)
 			return
 		end
 		local ordenados = {}
@@ -4526,12 +4623,16 @@ do -- bloco (libera variáveis locais)
 		local textos = {}
 		for _, c in ipairs(ordenados) do textos[#textos + 1] = c.caixa.Text end
 		local ok = pcall(function() writefile(ARQUIVO_NOTAS, HttpService:JSONEncode(textos)) end)
-		avisoNotas.Text = ok and "Salvo" or "Não foi possível salvar"
+		if ok then
+			mostrarAviso("Salvo ✓", COR_AVISO_VERDE, true)
+		else
+			mostrarAviso("Não foi possível salvar", COR_AVISO_VERMELHO, false)
+		end
 	end
 
 	local function agendarSalvar()
 		if carregando then return end
-		if podeSalvar then avisoNotas.Text = "Salvando..." end
+		if podeSalvar then mostrarAviso("Salvando...", COR_AVISO_CINZA, false) end
 		versaoSalvar += 1
 		local minha = versaoSalvar
 		task.delay(ATRASO_SALVAR, function()
@@ -4539,51 +4640,109 @@ do -- bloco (libera variáveis locais)
 		end)
 	end
 
-	-- Cria um quadrado branco (a nota mais nova fica em cima)
+	-- Cria uma folha de caderno (a nota mais nova fica em cima): papel claro, pauta, margem vermelha,
+	-- espiral na lateral e um espaço de data (só decoração)
+	local ESPACO_LINHA, TOPO_TEXTO, TAM_FONTE = 24, 28, 18
+	local LINHAS_MAX, ESPIRAIS_MAX = 40, 56
+	local alturaBase = TAM_FONTE
+	pcall(function() -- mede a altura de uma linha da fonte para a pauta ficar embaixo de cada linha escrita
+		alturaBase = game:GetService("TextService"):GetTextSize("Ag", TAM_FONTE, Enum.Font.PatrickHand, Vector2.new(10000, 10000)).Y
+	end)
+	local alturaLinhaTexto = math.clamp(ESPACO_LINHA / math.max(alturaBase, 1), 1, 3)
+
+	local function bloco(pai, pos, tam, cor, transp)
+		local f = Instance.new("Frame")
+		f.BorderSizePixel = 0
+		f.Position = pos
+		f.Size = tam
+		f.BackgroundColor3 = cor
+		f.BackgroundTransparency = transp or 0
+		f.Parent = pai
+		return f
+	end
+
 	local function criarCartao(texto)
 		contador += 1
 		local cartao = Instance.new("Frame")
 		cartao.LayoutOrder = -contador
 		cartao.Size = UDim2.new(1, -6, 0, 0)
 		cartao.AutomaticSize = Enum.AutomaticSize.Y
-		cartao.BackgroundColor3 = Color3.new(1, 1, 1)
+		cartao.BackgroundColor3 = Color3.fromRGB(253, 252, 246) -- papel
 		cartao.Parent = listaNotas
-		Instance.new("UICorner", cartao).CornerRadius = UDim.new(0, 8)
+		Instance.new("UICorner", cartao).CornerRadius = UDim.new(0, 6)
+
+		-- fundo decorativo: tamanho em escala (não interfere na altura automática) e corta o que passar da folha
+		local fundo = Instance.new("CanvasGroup")
+		fundo.Size = UDim2.fromScale(1, 1)
+		fundo.BackgroundTransparency = 1
+		fundo.ZIndex = 1
+		fundo.Parent = cartao
+		Instance.new("UICorner", fundo).CornerRadius = UDim.new(0, 6)
+
+		bloco(fundo, UDim2.fromOffset(0, 0), UDim2.new(0, 22, 1, 0), Color3.fromRGB(236, 233, 222)) -- faixa da espiral
+		bloco(fundo, UDim2.fromOffset(34, 0), UDim2.new(0, 1, 1, 0), Color3.fromRGB(235, 120, 120), 0.35) -- margem vermelha
+		bloco(fundo, UDim2.fromOffset(22, 25), UDim2.new(1, -22, 0, 1), Color3.fromRGB(150, 170, 215), 0.2) -- linha da data
+		for k = 1, LINHAS_MAX do -- pauta
+			bloco(fundo, UDim2.fromOffset(22, TOPO_TEXTO + 6 + k * ESPACO_LINHA - 4), UDim2.new(1, -22, 0, 1),
+				Color3.fromRGB(165, 190, 235), 0.4)
+		end
+		for i = 1, ESPIRAIS_MAX do -- espiral: furo escuro + argola de metal passando por ele
+			local y = 8 + (i - 1) * 16
+			local furo = bloco(fundo, UDim2.fromOffset(4, y), UDim2.fromOffset(7, 7), Color3.fromRGB(60, 62, 72))
+			Instance.new("UICorner", furo).CornerRadius = UDim.new(1, 0)
+			local argola = bloco(fundo, UDim2.fromOffset(2, y + 2), UDim2.fromOffset(17, 4), Color3.fromRGB(120, 125, 142))
+			Instance.new("UICorner", argola).CornerRadius = UDim.new(1, 0)
+		end
+
+		local data = Instance.new("TextLabel") -- espaço de data (decoração)
+		data.Position = UDim2.fromOffset(40, 5)
+		data.Size = UDim2.new(1, -76, 0, 18)
+		data.BackgroundTransparency = 1
+		data.Text = "Data:  ____ / ____ / ________"
+		data.TextColor3 = Color3.fromRGB(140, 145, 160)
+		data.Font = Enum.Font.PatrickHand
+		data.TextSize = 14
+		data.TextXAlignment = Enum.TextXAlignment.Left
+		data.ZIndex = 2
+		data.Parent = cartao
 
 		local caixa = Instance.new("TextBox")
-		caixa.Position = UDim2.fromOffset(0, 0)
-		caixa.Size = UDim2.new(1, -34, 0, 70)
+		caixa.Position = UDim2.fromOffset(40, TOPO_TEXTO)
+		caixa.Size = UDim2.new(1, -76, 0, 84)
 		caixa.AutomaticSize = Enum.AutomaticSize.Y
 		caixa.BackgroundTransparency = 1
 		caixa.Text = texto or ""
 		caixa.PlaceholderText = "Escreva aqui..."
-		caixa.PlaceholderColor3 = Color3.fromRGB(140, 140, 140)
-		caixa.TextColor3 = Color3.new(0, 0, 0)
-		caixa.Font = Enum.Font.Gotham
-		caixa.TextSize = 14
+		caixa.PlaceholderColor3 = Color3.fromRGB(160, 165, 180)
+		caixa.TextColor3 = Color3.fromRGB(35, 40, 70) -- tinta de caneta
+		caixa.Font = Enum.Font.PatrickHand
+		caixa.TextSize = TAM_FONTE
+		caixa.LineHeight = alturaLinhaTexto
 		caixa.MultiLine = true
 		caixa.TextWrapped = true
 		caixa.ClearTextOnFocus = false
 		caixa.TextXAlignment = Enum.TextXAlignment.Left
 		caixa.TextYAlignment = Enum.TextYAlignment.Top
+		caixa.ZIndex = 2
 		caixa.Parent = cartao
 		do
 			local pad = Instance.new("UIPadding")
-			pad.PaddingLeft = UDim.new(0, 8)
-			pad.PaddingTop = UDim.new(0, 8)
-			pad.PaddingBottom = UDim.new(0, 8)
+			pad.PaddingLeft = UDim.new(0, 2)
+			pad.PaddingTop = UDim.new(0, 6)
+			pad.PaddingBottom = UDim.new(0, 6)
 			pad.Parent = caixa
 		end
 
 		local excluir = Instance.new("TextButton")
 		excluir.AnchorPoint = Vector2.new(1, 0)
 		excluir.Position = UDim2.new(1, -4, 0, 4)
-		excluir.Size = UDim2.fromOffset(26, 26)
+		excluir.Size = UDim2.fromOffset(24, 24)
 		excluir.BackgroundColor3 = COR_OFF
 		excluir.Text = "✕"
 		excluir.TextColor3 = Color3.new(1, 1, 1)
 		excluir.Font = Enum.Font.GothamBold
-		excluir.TextSize = 14
+		excluir.TextSize = 13
+		excluir.ZIndex = 5
 		excluir.Parent = cartao
 		Instance.new("UICorner", excluir).CornerRadius = UDim.new(0, 6)
 
@@ -4617,7 +4776,7 @@ do -- bloco (libera variáveis locais)
 			end
 		end)
 	else
-		avisoNotas.Text = "Sem salvar: o executor não tem writefile"
+		mostrarAviso("Sem salvar: o executor não tem writefile", COR_AVISO_CINZA, false)
 	end
 	carregando = false
 
@@ -4627,10 +4786,34 @@ do -- bloco (libera variáveis locais)
 		caixa:CaptureFocus()
 	end)
 
+	-- abre/fecha o painel deslizando de leve
+	local aberto, posFinal, tAbriu, tokenAnim = false, painelNotas.Position, 0, 0
 	function MENU.notas()
-		painelNotas.Visible = not painelNotas.Visible
-		if painelNotas.Visible then posicionarAoLado(painelNotas) end
-		return painelNotas.Visible
+		aberto = not aberto
+		tokenAnim += 1
+		local meu = tokenAnim
+		if aberto then
+			if not painelNotas.Visible then
+				painelNotas.Visible = true
+				posicionarAoLado(painelNotas)
+				posFinal = painelNotas.Position
+				painelNotas.Position = posFinal + UDim2.fromOffset(-36, 0)
+			end
+			tAbriu = os.clock()
+			TweenService:Create(painelNotas, TweenInfo.new(0.28, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+				{ Position = posFinal }):Play()
+		else
+			if os.clock() - tAbriu > 0.35 then posFinal = painelNotas.Position end -- guarda onde você arrastou o painel
+			TweenService:Create(painelNotas, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+				{ Position = posFinal + UDim2.fromOffset(-36, 0) }):Play()
+			task.delay(0.2, function()
+				if tokenAnim == meu then
+					painelNotas.Visible = false
+					painelNotas.Position = posFinal
+				end
+			end)
+		end
+		return aberto
 	end
 	botaoNotas.MouseButton1Click:Connect(MENU.notas)
 end -- fim do bloco (libera variáveis locais)
@@ -4705,13 +4888,14 @@ end -- fim do bloco (libera variáveis locais)
 -- A "gravidade" passa a puxar o personagem para a superfície em que ele está.
 -- A câmera continua normal (não gira junto). Usa a mesma ideia do GRUDAR: se a peça se mexe, você vai junto.
 do -- bloco (libera variáveis locais)
+	local W = {} -- guarda as coisas novas do WALL numa tabela só (limite de 200 variáveis locais do Lua)
 	local ALCANCE_EXTRA = 2.2 -- folga abaixo dos pés para achar a superfície
 	local ALCANCE_FRENTE = 3.4 -- distância para ver uma parede à frente (quina de dentro)
-	local ALCANCE_QUINA = 2.6 -- quanto olha para frente (do lado de fora da quina) para achar a face que dobra
-	local ANTECIPA_QUINA = 0.6 -- começa a contornar a quina de fora quando falta isso para o chão acabar
-	local DEGRAU_MAX = 2.8 -- saliências/degraus de até essa altura (studs) são PASSADOS POR CIMA em vez de virar parede
-	local ALCANCE_DEGRAU = 1.6 -- quanto olha para frente para subir num degrau antes de bater nele
-	local TEMPO_CURVA = 0.25 -- duração da volta em torno de uma quina de fora
+	W.ALCANCE_QUINA = 2.6 -- quanto olha para frente (do lado de fora da quina) para achar a face que dobra
+	W.ANTECIPA_QUINA = 0.6 -- começa a contornar a quina de fora quando falta isso para o chão acabar
+	W.DEGRAU_MAX = 2.8 -- saliências/degraus de até essa altura (studs) são PASSADOS POR CIMA em vez de virar parede
+	W.ALCANCE_DEGRAU = 1.6 -- quanto olha para frente para subir num degrau antes de bater nele
+	W.TEMPO_CURVA = 0.25 -- duração da volta em torno de uma quina de fora
 	local SUAVIDADE = 12 -- quão rápido o corpo gira para acompanhar a superfície
 	local PULO_FORCA, PULO_TEMPO = 45, 0.2
 
@@ -4725,10 +4909,10 @@ do -- bloco (libera variáveis locais)
 	local pecaAntes, cfAntes = nil, nil
 	local solto = true -- true = jogo normal (nenhuma superfície por perto ainda)
 	local pulo = 0
-	local trava = nil -- direção "reta" guardada ao trocar de superfície: { dir, ix, iz, yaw }
-	local transicao = nil -- volta em torno de uma quina de fora: { alvo, t }
-	local normalAnterior, tTroca = nil, 0 -- última superfície que deixou (evita vai-e-volta na quina)
-	local elevacao, ultimaDist = 0, nil -- quanto está levantado por cima de um degrau / distância até a superfície
+	W.trava = nil -- direção "reta" guardada ao trocar de superfície: { dir, ix, iz, yaw }
+	W.transicao = nil -- volta em torno de uma quina de fora: { alvo, t }
+	W.normalAnterior, W.tTroca = nil, 0 -- última superfície que deixou (evita vai-e-volta na quina)
+	W.elevacao, W.ultimaDist = 0, nil -- quanto está levantado por cima de um degrau / distância até a superfície
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
 	params.RespectCanCollide = true
@@ -4742,20 +4926,24 @@ do -- bloco (libera variáveis locais)
 	end
 
 	-- Gira a direção v do plano da superfície A para o plano da superfície B (continua "reto" na quina)
-	local function transportar(v, nA, nB)
+	function W.transportar(v, nA, nB)
 		local eixo = nA:Cross(nB)
 		if eixo.Magnitude < 1e-3 then return v end
 		local ang = math.atan2(eixo.Magnitude, nA:Dot(nB))
 		return CFrame.fromAxisAngle(eixo.Unit, ang):VectorToWorldSpace(v)
 	end
 
-	-- Analógico -> direção na superfície. Usa só o lado para onde a câmera aponta no mapa (não a inclinação dela),
-	-- então de cabeça pra baixo "frente" continua sendo "para onde a câmera olha" e nunca inverte.
-	-- Em parede de frente para a câmera, "frente" = subir.
-	local function mapearEntrada(n, rFlat, fFlat, ix, iz, reserva)
-		local fSup = projetar(fFlat, n) + projetar(Vector3.yAxis, n) * math.clamp(-fFlat:Dot(n), 0, 1)
-		if fSup.Magnitude < 0.05 then fSup = projetar(Vector3.yAxis, n) end
-		if fSup.Magnitude < 0.05 then fSup = reserva end
+	-- Analógico -> direção na superfície, seguindo PARA ONDE A CÂMERA OLHA (olhou pra baixo na parede = desce;
+	-- olhou pra frente no teto = vai pra frente, sem inverter). Só quando a câmera olha de frente para a superfície
+	-- (sem direção clara) usa a regra de rosto: parede = subir, chão/teto = lado da câmera.
+	function W.mapearEntrada(n, rFlat, fFlat, look, ix, iz, reserva)
+		local rosto = projetar(fFlat, n) + projetar(Vector3.yAxis, n) * math.clamp(-fFlat:Dot(n), 0, 1)
+		if rosto.Magnitude < 0.05 then rosto = projetar(Vector3.yAxis, n) end
+		if rosto.Magnitude < 0.05 then rosto = reserva end
+		rosto = rosto.Unit
+		local pl = projetar(look, n)
+		local fSup = pl + rosto * (0.35 * math.clamp(1 - pl.Magnitude / 0.35, 0, 1))
+		if fSup.Magnitude < 0.05 then fSup = rosto end
 		fSup = fSup.Unit
 		local rSup = projetar(rFlat, n)
 		rSup = rSup.Magnitude > 0.05 and rSup.Unit or fSup:Cross(n)
@@ -4766,40 +4954,49 @@ do -- bloco (libera variáveis locais)
 
 	-- Enquanto você segura o analógico para o mesmo lado (e não gira a câmera demais), a direção guardada
 	-- ao passar por uma quina continua valendo: o personagem segue reto em vez de reinterpretar a câmera.
-	local function aplicarTrava(n, d, ix, iz, yawCam)
-		if not trava then return d end
+	function W.aplicarTrava(n, d, ix, iz, yawCam, pitchCam, agora)
+		local tr = W.trava
+		if not tr then return d end
 		local atual = Vector2.new(ix, iz)
-		local ref = Vector2.new(trava.ix, trava.iz)
-		local dy = yawCam - trava.yaw
+		local ref = Vector2.new(tr.ix, tr.iz)
+		local dy = yawCam - tr.yaw
 		dy = math.atan2(math.sin(dy), math.cos(dy))
-		if atual.Magnitude < 0.2 or ref.Magnitude < 0.01 or atual.Unit:Dot(ref.Unit) < 0.8 or math.abs(dy) > 0.7 then
-			trava = nil
+		if atual.Magnitude < 0.2 or ref.Magnitude < 0.01 or atual.Unit:Dot(ref.Unit) < 0.85
+			or math.abs(dy) > 0.45 or math.abs(pitchCam - tr.pit) > 0.4 then
+			W.trava = nil
 			return d
 		end
-		local p = projetar(trava.dir, n)
-		if p.Magnitude < 0.05 then
-			trava = nil
+		local p = projetar(tr.dir, n)
+		-- dura só um instante (o tempo de contornar a quina) e passa para a direção da câmera aos poucos
+		local b = math.clamp((agora - tr.t0 - 0.3) / 0.5, 0, 1)
+		if p.Magnitude < 0.05 or b >= 1 then
+			W.trava = nil
 			return d
 		end
-		return p.Unit * math.min(1, atual.Magnitude)
+		local mix = p.Unit * (1 - b) + (d.Magnitude > 0.01 and d.Unit or p.Unit) * b
+		if mix.Magnitude < 0.05 then
+			W.trava = nil
+			return d
+		end
+		return mix.Unit * math.min(1, atual.Magnitude)
 	end
 
 	-- A peça à frente é só um degrau/saliência pequena (dá para pisar por cima)? Mede o topo dela.
-	local function eDegrau(r, n, dirMov, pos, dist)
+	function W.eDegrau(r, n, dirMov, pos, dist)
 		local plano = pos:Dot(n) - dist -- nível da superfície em que está, ao longo de n
 		local p = r.Position + dirMov * 0.2
-		local topo = DEGRAU_MAX + 0.8
+		local topo = W.DEGRAU_MAX + 0.8
 		local origem = p + n * (plano + topo - p:Dot(n))
 		local rr = workspace:Raycast(origem, -n * (topo + 0.4), params)
 		if rr and rr.Instance == r.Instance and rr.Normal:Dot(n) > 0.6 then
-			return (rr.Position:Dot(n) - plano) <= DEGRAU_MAX
+			return (rr.Position:Dot(n) - plano) <= W.DEGRAU_MAX
 		end
 		return false -- sem topo por perto: é uma parede alta
 	end
 
 	-- Quina de fora: acha a face que dobra "para baixo" logo depois do fim da superfície
-	local function acharQuina(pos, n, dirMov, dist)
-		for _, alcance in ipairs({ ALCANCE_QUINA, ALCANCE_QUINA * 0.5 }) do
+	function W.acharQuina(pos, n, dirMov, dist)
+		for _, alcance in ipairs({ W.ALCANCE_QUINA, W.ALCANCE_QUINA * 0.5 }) do
 			for _, prof in ipairs({ 0.3, 0.9, 1.8 }) do -- fundo (abaixo do plano) de onde o raio parte: serve p/ lajes finas e grossas
 				local origem = pos + dirMov * alcance - n * (dist + prof)
 				local r = workspace:Raycast(origem, -dirMov * (alcance + 1), params)
@@ -4874,7 +5071,7 @@ do -- bloco (libera variáveis locais)
 		end
 		pecaAntes, cfAntes = nil, nil
 		normalAlvo, normalSuave = Vector3.yAxis, Vector3.yAxis
-		trava, transicao, normalAnterior, elevacao, ultimaDist = nil, nil, nil, 0, nil
+		W.trava, W.transicao, W.normalAnterior, W.elevacao, W.ultimaDist = nil, nil, nil, 0, nil
 		solto = true
 	end
 
@@ -4897,7 +5094,7 @@ do -- bloco (libera variáveis locais)
 		local l = workspace.CurrentCamera.CFrame.LookVector
 		frente = planoOuPadrao(l, normal, raiz.CFrame.LookVector)
 		pecaAntes, cfAntes = nil, nil
-		trava, transicao, normalAnterior, elevacao, ultimaDist = nil, nil, nil, 0, nil
+		W.trava, W.transicao, W.normalAnterior, W.elevacao, W.ultimaDist = nil, nil, nil, 0, nil
 		solto = false
 	end
 
@@ -4938,7 +5135,7 @@ do -- bloco (libera variáveis locais)
 		local n = normalAlvo
 		local camCF = workspace.CurrentCamera.CFrame
 		local agora = os.clock()
-		local distAtual = ultimaDist or altura
+		local distAtual = W.ultimaDist or altura
 
 		-- Entrada: analógico/teclado relativo à câmera (só o "lado" horizontal dela, sem depender da inclinação)
 		local mover = hum.MoveDirection
@@ -4947,9 +5144,10 @@ do -- bloco (libera variáveis locais)
 		local fFlat = Vector3.yAxis:Cross(rFlat)
 		local ix, iz = mover:Dot(rFlat), mover:Dot(fFlat)
 		local yawCam = math.atan2(rFlat.X, rFlat.Z)
+		local pitchCam = math.asin(math.clamp(camCF.LookVector.Y, -1, 1))
 
-		local desejado, fSup = mapearEntrada(n, rFlat, fFlat, ix, iz, frente)
-		desejado = aplicarTrava(n, desejado, ix, iz, yawCam)
+		local desejado, fSup = W.mapearEntrada(n, rFlat, fFlat, camCF.LookVector, ix, iz, frente)
+		desejado = W.aplicarTrava(n, desejado, ix, iz, yawCam, pitchCam, agora)
 		local andando = desejado.Magnitude > 0.1
 		local dirMov = andando and desejado.Unit or nil
 
@@ -4957,13 +5155,13 @@ do -- bloco (libera variáveis locais)
 		-- Troca de superfície: guarda a direção "reta" levada para a nova superfície (continua reto na quina)
 		local function trocarPara(nNovo)
 			if dirMov then
-				trava = { dir = transportar(dirMov, n, nNovo), ix = ix, iz = iz, yaw = yawCam }
+				W.trava = { dir = W.transportar(dirMov, n, nNovo), ix = ix, iz = iz, yaw = yawCam, pit = pitchCam, t0 = agora }
 			end
-			normalAnterior, tTroca = n, agora
+			W.normalAnterior, W.tTroca = n, agora
 			normalAlvo, n = nNovo, nNovo
 			trocou = true
-			if trava then
-				local p = projetar(trava.dir, n)
+			if W.trava then
+				local p = projetar(W.trava.dir, n)
 				if p.Magnitude > 0.05 then
 					desejado = p.Unit * math.min(1, desejado.Magnitude)
 					dirMov = p.Unit
@@ -4973,11 +5171,11 @@ do -- bloco (libera variáveis locais)
 
 		-- Dando a volta numa quina de fora: leva o corpo até o ponto certo da nova face, sem checar chão
 		local emCurva = false
-		if transicao then
-			transicao.t = transicao.t - dt
-			local para = transicao.alvo - pos
-			if transicao.t <= 0 or para.Magnitude < 0.3 then
-				transicao = nil
+		if W.transicao then
+			W.transicao.t = W.transicao.t - dt
+			local para = W.transicao.alvo - pos
+			if W.transicao.t <= 0 or para.Magnitude < 0.3 then
+				W.transicao = nil
 			else
 				emCurva = true
 				semChao = 0
@@ -4993,7 +5191,7 @@ do -- bloco (libera variáveis locais)
 			local chao, distF
 
 			-- 1) parede à frente (quina de dentro): passa a andar nela.
-			-- Saliências pequenas (até DEGRAU_MAX de altura) NÃO contam como parede: o personagem passa reto por cima.
+			-- Saliências pequenas (até W.DEGRAU_MAX de altura) NÃO contam como parede: o personagem passa reto por cima.
 			if dirMov then
 				-- três raios (cabeça, meio e junto à superfície): pega também sacadas e caixinhas que sobressaem pouco
 				local melhor
@@ -5001,8 +5199,8 @@ do -- bloco (libera variáveis locais)
 				for _, o in ipairs(origens) do
 					local r = workspace:Raycast(o, dirMov * ALCANCE_FRENTE, params)
 					if r and r.Normal:Dot(n) < 0.5 and (not melhor or r.Distance < melhor.Distance) then
-						local voltando = normalAnterior ~= nil and agora - tTroca < 0.5 and r.Normal:Dot(normalAnterior) > 0.9
-						if not voltando and not eDegrau(r, n, dirMov, pos, distAtual) then
+						local voltando = W.normalAnterior ~= nil and agora - W.tTroca < 0.5 and r.Normal:Dot(W.normalAnterior) > 0.9
+						if not voltando and not W.eDegrau(r, n, dirMov, pos, distAtual) then
 							melhor = r
 						end
 					end
@@ -5012,25 +5210,25 @@ do -- bloco (libera variáveis locais)
 
 			-- 2) chão sob os pés (segue rampas e curvas) + degraus à frente + quina de fora
 			if not trocou then
-				chao = workspace:Raycast(pos, -n * (alc + elevacao), params)
+				chao = workspace:Raycast(pos, -n * (alc + W.elevacao), params)
 				local precisaQuina = false
 				if chao then
 					local suave = 1 - math.exp(-dt * SUAVIDADE)
 					normalAlvo = normalAlvo:Lerp(chao.Normal, suave).Unit
 					n = normalAlvo
 					local distC = (pos - chao.Position):Dot(chao.Normal)
-					ultimaDist = math.clamp(distC, altura * 0.6, altura + DEGRAU_MAX)
-					elevacao = math.clamp(distC - altura, 0, DEGRAU_MAX)
+					W.ultimaDist = math.clamp(distC, altura * 0.6, altura + W.DEGRAU_MAX)
+					W.elevacao = math.clamp(distC - altura, 0, W.DEGRAU_MAX)
 					if dirMov then
 						-- degrau logo à frente: levanta o corpo antes de bater nele
 						local base = pos - n * distC
-						local rf = workspace:Raycast(base + dirMov * ALCANCE_DEGRAU + n * (DEGRAU_MAX + 0.3), -n * (DEGRAU_MAX + 0.9), params)
+						local rf = workspace:Raycast(base + dirMov * W.ALCANCE_DEGRAU + n * (W.DEGRAU_MAX + 0.3), -n * (W.DEGRAU_MAX + 0.9), params)
 						if rf and rf.Normal:Dot(n) > 0.95 then
 							local h = (rf.Position - base):Dot(n)
-							if h > 0.12 and h <= DEGRAU_MAX then distF = distC - h end
+							if h > 0.12 and h <= W.DEGRAU_MAX then distF = distC - h end
 						end
 						-- o chão vai acabar já já (quina de fora)?
-						local ra = workspace:Raycast(pos + dirMov * ANTECIPA_QUINA, -n * (alc + elevacao), params)
+						local ra = workspace:Raycast(pos + dirMov * W.ANTECIPA_QUINA, -n * (alc + W.elevacao), params)
 						if not ra then precisaQuina = true end
 					end
 				elseif dirMov then
@@ -5039,12 +5237,12 @@ do -- bloco (libera variáveis locais)
 
 				if precisaQuina then
 					-- 3) acabou o chão: procura a face que dobra para baixo e dá a volta nela, seguindo reto
-					local q = acharQuina(pos, n, dirMov, distAtual)
+					local q = W.acharQuina(pos, n, dirMov, distAtual)
 					if q then
 						trocarPara(q.Normal)
-						transicao = { alvo = q.Position + q.Normal * altura, t = TEMPO_CURVA }
+						W.transicao = { alvo = q.Position + q.Normal * altura, t = W.TEMPO_CURVA }
 						chao, distF = nil, nil
-						elevacao, ultimaDist = 0, altura
+						W.elevacao, W.ultimaDist = 0, altura
 					end
 				end
 			end
@@ -5138,7 +5336,7 @@ do -- bloco (libera variáveis locais)
 		tParado, esperaAgarrar, semChao = 0, 0, 0
 		pecaAntes, cfAntes = nil, nil
 		normalAlvo, normalSuave = Vector3.yAxis, Vector3.yAxis
-		trava, transicao, normalAnterior, elevacao, ultimaDist = nil, nil, nil, 0, nil
+		W.trava, W.transicao, W.normalAnterior, W.elevacao, W.ultimaDist = nil, nil, nil, 0, nil
 		solto = true
 		pulo = 0
 	end)
@@ -5530,11 +5728,11 @@ local function iniciarTeclado()
 		end)
 	end
 
-	comandoDeVoo({ "fly" }, "fly [vel] / unfly - voar (vel. 1 a 500)", "Fly", caixaFly, definirFly,
+	comandoDeVoo({ "fly", "voar" }, "fly ou voar [vel] / unfly ou unvoar - voar (vel. 1 a 500)", "Fly", caixaFly, definirFly,
 		function() return velocidadeFly end, function(v) velocidadeFly = v end)
 	comandoDeVoo({ "vf" }, "vf [vel] / unvf - voar sentado em veículo", "VFly", caixaVFly, definirVFly,
 		function() return velocidadeVFly end, function(v) velocidadeVFly = v end)
-	comandoDeVoo({ "swim", "sw" }, "swim [vel] / unswim - nadar no ar", "Swim", caixaSwim, definirSwim,
+	comandoDeVoo({ "swim", "sw", "nadar" }, "swim, sw ou nadar [vel] / unswim ou unnadar - nadar no ar", "Swim", caixaSwim, definirSwim,
 		function() return velocidadeSwim end, function(v) velocidadeSwim = v end)
 
 	alternavel({ "np", "noclip" }, "np ou noclip / unnp ou unnoclip - atravessar paredes", function(ligar)
@@ -5542,7 +5740,7 @@ local function iniciarTeclado()
 		return true, "Noclip " .. (ligar and "ligado" or "desligado")
 	end)
 
-	alternavel({ "xy" }, "xy [0 a 0.95] / unxy - mapa transparente", function(ligar, args)
+	alternavel({ "xy", "xray" }, "xy ou xray [0 a 0.95] / unxy ou unxray - mapa transparente", function(ligar, args)
 		if ligar and args[1] then
 			local n = tonumber(args[1])
 			if not n then return false, "Valor inválido: " .. args[1] end
@@ -5553,17 +5751,17 @@ local function iniciarTeclado()
 		return true, "Xray " .. (ligar and ("ligado (" .. transparenciaXray .. ")") or "desligado")
 	end)
 
-	alternavel({ "esp" }, "esp / unesp - nome e distância dos jogadores", function(ligar)
+	alternavel({ "esp", "espectar" }, "esp ou espectar / unesp ou unespectar - nome e distância dos jogadores", function(ligar)
 		definirESP(ligar)
 		return true, "ESP " .. (ligar and "ligado" or "desligado")
 	end)
 
-	alternavel({ "cm" }, "cm / uncm - contorno nos jogadores", function(ligar)
+	alternavel({ "cm", "contorno" }, "cm ou contorno / uncm ou uncontorno - contorno nos jogadores", function(ligar)
 		definirChams(ligar)
 		return true, "Chams " .. (ligar and "ligado" or "desligado")
 	end)
 
-	alternavel({ "aim" }, "aim [tamanho] / unaim - aimbot (bolinha verde = alcance)", function(ligar, args)
+	alternavel({ "aim", "aimbot", "mira" }, "aim, aimbot ou mira [tamanho] / unaim, unaimbot ou unmira - aimbot (bolinha verde = alcance)", function(ligar, args)
 		local tam
 		if ligar and args[1] then
 			tam = tonumber(args[1])
@@ -5573,7 +5771,7 @@ local function iniciarTeclado()
 		return true, "Aimbot " .. (ligar and "ligado" or "desligado")
 	end)
 
-	alternavel({ "sl" }, "sl / unsl - cadeado de shift lock na tela", function(ligar)
+	alternavel({ "sl", "shiftlock" }, "sl ou shiftlock / unsl ou unshiftlock - cadeado de shift lock na tela", function(ligar)
 		definirShiftLock(ligar)
 		return true, "ShiftLock " .. (ligar and "ligado" or "desligado")
 	end)
@@ -5598,7 +5796,7 @@ local function iniciarTeclado()
 		end
 	end
 
-	comando({ "tp" }, "tp <jogador> - ir até um jogador (nome parcial)", function(args)
+	comando({ "tp", "ir", "teleportar" }, "tp, ir ou teleportar <jogador> - ir até um jogador (nome parcial)", function(args)
 		if #args == 0 then return false, "Uso: tp <jogador>" end
 		local alvoJogador = acharJogador(table.concat(args, " "))
 		if not alvoJogador then return false, "Jogador não encontrado: " .. table.concat(args, " ") end
@@ -5671,7 +5869,7 @@ local function iniciarTeclado()
 		return true, "Reentrando... (o script volta sozinho)"
 	end)
 
-	comando({ "sit" }, "sit - sentar o personagem", function()
+	comando({ "sit", "sentar" }, "sit ou sentar - sentar o personagem", function()
 		local char = player.Character
 		local hum = char and char:FindFirstChildOfClass("Humanoid")
 		if not hum or hum.Health <= 0 then return false, "Sem personagem vivo" end
@@ -5686,13 +5884,13 @@ local function iniciarTeclado()
 	end)
 
 	-- GRUDAR: acompanha plataformas e carros que se mexem
-	alternavel({ "grudar", "gc" }, "grudar / ungrudar - ficar preso ao chão que se move", function(ligar)
+	alternavel({ "grudar", "gd" }, "grudar ou gd / ungrudar ou ungd - ficar preso ao chão que se move", function(ligar)
 		MENU.grudar(ligar)
 		return true, "Grudar " .. (ligar and "ligado" or "desligado")
 	end)
 
 	-- WALL: andar nas paredes e no teto
-	alternavel({ "wall" }, "wall / unwall - andar nas paredes e no teto", function(ligar)
+	alternavel({ "wall", "parede" }, "wall ou parede / unwall ou unparede - andar nas paredes e no teto", function(ligar)
 		MENU.wall(ligar)
 		return true, "Wall " .. (ligar and "ligado" or "desligado")
 	end)
@@ -5725,7 +5923,7 @@ local function iniciarTeclado()
 		end
 	end
 
-	alternavel({ "speed" }, "speed [1 a 500] / unspeed - velocidade de andar", function(ligar, args)
+	alternavel({ "speed", "velocidade" }, "speed ou velocidade [1 a 500] / unspeed ou unvelocidade - velocidade de andar", function(ligar, args)
 		local hum = meuHumanoid()
 		if ligar then
 			local n = args[1] and tonumber(args[1]) or 50
@@ -5740,7 +5938,7 @@ local function iniciarTeclado()
 		return true
 	end)
 
-	alternavel({ "jump" }, "jump [1 a 500] / unjump - força do pulo", function(ligar, args)
+	alternavel({ "jump", "pulo" }, "jump ou pulo [1 a 500] / unjump ou unpulo - força do pulo", function(ligar, args)
 		local hum = meuHumanoid()
 		if ligar then
 			local n = args[1] and tonumber(args[1]) or 100
@@ -5754,6 +5952,342 @@ local function iniciarTeclado()
 		atualizarMov()
 		return true
 	end)
+
+	-- EFEITOS DISCRETOS: velocidade (modo Flash), pulo forte, grudar no chão e andar nas paredes (chakra).
+	-- Tudo só aparece para você, é pequeno e fraco de propósito (não atrapalha a jogatina).
+	-- "fx" liga/desliga; "fx 0.3" muda a intensidade (0.1 = quase invisível, 1 = mais forte).
+	do
+		local DISCRETO = 0.6      -- 0.1 a 1: multiplica a força de tudo
+		local FLASH_VEL = 150     -- speed a partir de quanto liga o modo Flash
+		local PULO_FORTE = 150    -- jump a partir de quanto tem onda de impacto
+		local QUEDA_MIN = 14      -- altura mínima da queda para a onda e as rachaduras ao cair
+		local COR_CHAKRA = Color3.fromRGB(90, 170, 255)
+		local COR_FLASH = Color3.fromRGB(255, 240, 170)
+		local COR_POEIRA = Color3.fromRGB(190, 185, 175)
+		local COR_ONDA = Color3.fromRGB(215, 228, 255)
+		local fxLigado = true
+
+		local rp = RaycastParams.new()
+		rp.FilterType = Enum.RaycastFilterType.Exclude
+		rp.RespectCanCollide = true
+
+		local function peca(tam, cf, cor, transp, forma)
+			local p = Instance.new("Part")
+			p.Anchored, p.CanCollide, p.CanQuery, p.CanTouch, p.CastShadow = true, false, false, false, false
+			p.Material = Enum.Material.Neon
+			p.Color = cor
+			p.Transparency = transp
+			if forma then p.Shape = forma end
+			p.Size = tam
+			p.CFrame = cf
+			p.Parent = workspace
+			return p
+		end
+
+		-- some devagar e se apaga sozinha
+		local function desvanecer(p, dur, props, espera)
+			props = props or {}
+			props.Transparency = 1
+			local function ir()
+				if not p.Parent then return end
+				TweenService:Create(p, TweenInfo.new(dur, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), props):Play()
+				task.delay(dur + 0.05, function() p:Destroy() end)
+			end
+			if espera and espera > 0 then task.delay(espera, ir) else ir() end
+		end
+
+		local function chaoAbaixo(raiz)
+			rp.FilterDescendantsInstances = { player.Character }
+			local r = workspace:Raycast(raiz.Position, Vector3.new(0, -14, 0), rp)
+			if r then return r.Position, r.Normal end
+			return nil, nil
+		end
+
+		-- anel de luz que abre no chão
+		local function onda(pos, normal, raio, dur, cor)
+			local n = normal or Vector3.yAxis
+			local ref = math.abs(n.Y) > 0.9 and Vector3.zAxis or Vector3.yAxis
+			local cf = CFrame.fromMatrix(pos + n * 0.1, n, n:Cross(ref).Unit) -- eixo do cilindro = normal da superfície
+			local p = peca(Vector3.new(0.1, 1, 1), cf, cor, 0.5 + 0.3 * (1 - DISCRETO), Enum.PartType.Cylinder)
+			desvanecer(p, dur, { Size = Vector3.new(0.1, raio * 2, raio * 2) })
+		end
+
+		-- poeira/fumaça: uma rajada curta
+		local function poeira(pos, qtd, cor, tam, vel)
+			local base = Instance.new("Part")
+			base.Anchored, base.CanCollide, base.CanQuery, base.CanTouch = true, false, false, false
+			base.Transparency = 1
+			base.Size = Vector3.one * 0.2
+			base.CFrame = CFrame.new(pos)
+			base.Parent = workspace
+			local e = Instance.new("ParticleEmitter")
+			e.Rate = 0
+			e.Lifetime = NumberRange.new(0.5, 0.9)
+			e.Speed = NumberRange.new(vel * 0.5, vel)
+			e.SpreadAngle = Vector2.new(75, 75)
+			e.Color = ColorSequence.new(cor)
+			e.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, tam * 0.5), NumberSequenceKeypoint.new(1, tam) })
+			e.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.6), NumberSequenceKeypoint.new(1, 1) })
+			e.Drag = 3
+			e.Parent = base
+			e:Emit(math.max(2, math.floor(qtd * DISCRETO * 1.3)))
+			task.delay(1.3, function() base:Destroy() end)
+		end
+
+		-- rachaduras finas no chão, saindo do ponto da queda
+		local function rachaduras(pos, normal)
+			local n = normal or Vector3.yAxis
+			local ref = math.abs(n.Y) > 0.9 and Vector3.xAxis or Vector3.yAxis
+			local u = n:Cross(ref).Unit
+			local v = n:Cross(u)
+			local qtd = 4 + math.floor(3 * DISCRETO)
+			for i = 1, qtd do
+				local ang = (i / qtd) * math.pi * 2 + math.random() * 0.6
+				local dir = u * math.cos(ang) + v * math.sin(ang)
+				local ponto = pos + n * 0.06
+				for _ = 1, 2 do
+					local lado = u * math.cos(ang + 1.57) + v * math.sin(ang + 1.57)
+					local d = (dir + lado * (math.random() - 0.5) * 0.7).Unit
+					local len = 1.1 + math.random() * 1.5
+					local meio = ponto + d * len / 2
+					local p = peca(Vector3.new(0.09, 0.03, len), CFrame.lookAt(meio, meio + d, n), Color3.fromRGB(35, 32, 30), 0.15)
+					p.Material = Enum.Material.SmoothPlastic
+					desvanecer(p, 1.0, nil, 0.7)
+					ponto = ponto + d * len
+					dir = d
+				end
+			end
+		end
+
+		-- raio curtinho em zigue-zague perto do corpo (modo Flash)
+		local function relampago(centro)
+			local function aleatorio() return Vector3.new(math.random() - 0.5, math.random() - 0.5, math.random() - 0.5) end
+			local p = centro + Vector3.new((math.random() - 0.5) * 3, (math.random() - 0.5) * 4, (math.random() - 0.5) * 3)
+			local dir = aleatorio().Unit
+			for _ = 1, 3 do
+				local len = 0.7 + math.random() * 0.6
+				local d = (dir + aleatorio() * 1.2).Unit
+				local meio = p + d * len / 2
+				local s = peca(Vector3.new(0.06, 0.06, len), CFrame.lookAt(meio, meio + d), COR_FLASH, 0.3)
+				desvanecer(s, 0.14)
+				p = p + d * len
+				dir = d
+			end
+		end
+
+		local function forte(hum)
+			return (hum.UseJumpPower and hum.JumpPower or 50) >= PULO_FORTE
+		end
+
+		-- objetos presos ao personagem atual (recriados ao renascer)
+		local o
+		local nivel, modoAntes, tUltFlash, tRaio = 0, 0, 0, 0
+		local topo, noArAntes = 0, false
+		local upRef = Vector3.yAxis
+		local tTroca = 0
+		local inclAlvoR, inclAlvoP, inclR, inclP = 0, 0, 0, 0 -- inclinação suave da câmera ao trocar de superfície
+
+		local function limpar()
+			if not o then return end
+			for _, c in ipairs(o.con) do c:Disconnect() end
+			for _, i in ipairs(o.lixo) do pcall(function() i:Destroy() end) end
+			o = nil
+		end
+
+		local function emissor(pai, cor1, cor2, tam, vida, vel, abertura, direcao)
+			local e = Instance.new("ParticleEmitter")
+			e.Rate = 0
+			e.Lifetime = NumberRange.new(vida * 0.6, vida)
+			e.Speed = NumberRange.new(vel * 0.5, vel)
+			e.SpreadAngle = Vector2.new(abertura, abertura)
+			e.LightEmission = 1
+			e.Color = ColorSequence.new(cor1, cor2)
+			e.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, tam), NumberSequenceKeypoint.new(1, 0) })
+			e.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.3), NumberSequenceKeypoint.new(1, 1) })
+			if direcao then e.EmissionDirection = direcao end
+			e.Parent = pai
+			return e
+		end
+
+		local function montar(raiz, hum)
+			o = { raiz = raiz, con = {}, lixo = {} }
+			local pe = -(hum.HipHeight + raiz.Size.Y / 2)
+
+			-- Flash: rastro de luz + faíscas atrás
+			local a0 = Instance.new("Attachment")
+			a0.Position = Vector3.new(0, 1.2, 0)
+			a0.Parent = raiz
+			local a1 = Instance.new("Attachment")
+			a1.Position = Vector3.new(0, -1.2, 0)
+			a1.Parent = raiz
+			local tr = Instance.new("Trail")
+			tr.Attachment0, tr.Attachment1 = a0, a1
+			tr.Lifetime = 0.25
+			tr.LightEmission = 1
+			tr.Color = ColorSequence.new(COR_FLASH, Color3.fromRGB(120, 200, 255))
+			tr.Transparency = NumberSequence.new({
+				NumberSequenceKeypoint.new(0, 0.55 + 0.3 * (1 - DISCRETO)),
+				NumberSequenceKeypoint.new(1, 1),
+			})
+			tr.Enabled = false
+			tr.Parent = raiz
+			local aTras = Instance.new("Attachment")
+			aTras.Position = Vector3.new(0, pe + 0.6, 0.6)
+			aTras.Parent = raiz
+			local faiscas = emissor(aTras, COR_FLASH, Color3.fromRGB(255, 190, 80), 0.25, 0.4, 5, 35, Enum.NormalId.Back)
+
+			-- Chakra nos pés: anel fino + partículas subindo (grudar = fraco, paredes = mais forte, com faíscas)
+			local aPe = Instance.new("Attachment")
+			aPe.Position = Vector3.new(0, pe + 0.2, 0)
+			aPe.Parent = raiz
+			local chakra = emissor(aPe, COR_CHAKRA, Color3.fromRGB(170, 220, 255), 0.22, 0.9, 2, 25)
+			local faiscaParede = emissor(aPe, Color3.fromRGB(255, 245, 190), COR_CHAKRA, 0.18, 0.35, 6, 70)
+			local anel = peca(Vector3.new(0.1, 3.2, 3.2), raiz.CFrame, COR_CHAKRA, 1, Enum.PartType.Cylinder)
+
+			o.lixo = { a0, a1, tr, aTras, aPe, anel }
+			o.tr, o.faiscas, o.chakra, o.faiscaParede, o.anel, o.pe = tr, faiscas, chakra, faiscaParede, anel, pe
+
+			-- pulo forte: onda e poeira ao decolar
+			o.con[#o.con + 1] = hum.StateChanged:Connect(function(_, novo)
+				if novo ~= Enum.HumanoidStateType.Jumping or not fxLigado or not forte(hum) or estado.wall then return end
+				local pos, n = chaoAbaixo(raiz)
+				if pos then
+					onda(pos, n, 3.4, 0.35, COR_ONDA)
+					poeira(pos, 5, COR_POEIRA, 1.1, 7)
+				end
+			end)
+		end
+
+		local function aterrissar(raiz, queda)
+			local pos, n = chaoAbaixo(raiz)
+			if not pos then return end
+			onda(pos, n, math.clamp(queda / 5, 4, 8), 0.45, COR_ONDA)
+			poeira(pos, 8, COR_POEIRA, 1.7, 10)
+			rachaduras(pos, n)
+		end
+
+		local function quadro(dt)
+			local raiz, hum = pegarPersonagem()
+			if not fxLigado or not raiz then
+				limpar()
+				inclAlvoR, inclAlvoP = 0, 0
+				return
+			end
+			if not o or o.raiz ~= raiz or not raiz.Parent then
+				limpar()
+				montar(raiz, hum)
+				topo, noArAntes, nivel, modoAntes = raiz.Position.Y, false, 0, 0
+				upRef = raiz.CFrame.UpVector
+			end
+			local agora = os.clock()
+			local up = raiz.CFrame.UpVector
+			local vel = raiz.AssemblyLinearVelocity
+			local semFisica = estado.fly or estado.vfly or estado.swim
+
+			-- ===== VELOCIDADE: modo Flash (só com valor muito alto) =====
+			local flash = velAndar and velAndar >= FLASH_VEL and not semFisica
+				and Vector3.new(vel.X, 0, vel.Z).Magnitude > 30
+			o.tr.Enabled = flash and true or false
+			o.faiscas.Rate = flash and 14 * DISCRETO or 0
+			if flash and agora - tRaio > 0.35 / math.max(DISCRETO, 0.3) then
+				tRaio = agora
+				relampago(raiz.Position)
+			end
+
+			-- ===== PULO: onda ao cair (a de decolar fica no StateChanged) =====
+			local y = raiz.Position.Y
+			if semFisica or estado.wall or hum.Sit then
+				topo, noArAntes = y, false
+			elseif hum.FloorMaterial == Enum.Material.Air then
+				topo = math.max(topo, y)
+				noArAntes = true
+			else
+				if noArAntes then
+					noArAntes = false
+					local queda = topo - y
+					if queda >= QUEDA_MIN and forte(hum) then aterrissar(raiz, queda) end
+				end
+				topo = y
+			end
+
+			-- ===== CHAKRA: grudar (fraco) e andar nas paredes (mais forte) =====
+			local modo = 0
+			if estado.wall and raiz:FindFirstChildOfClass("BodyGyro") then
+				modo = 2 -- está agarrado a uma superfície
+			elseif estado.grudar and not estado.wall and not semFisica and not hum.Sit
+				and hum.FloorMaterial ~= Enum.Material.Air then
+				modo = 1
+			end
+			local alvo = modo == 2 and 1 or (modo == 1 and 0.7 or 0)
+			nivel = nivel + (alvo - nivel) * (1 - math.exp(-dt * 8))
+			local pos = raiz.Position + up * (o.pe + 0.1)
+
+			if modo > 0 and modoAntes == 0 and agora - tUltFlash > 1.5 then -- flash azul ao grudar
+				tUltFlash = agora
+				onda(pos, up, modo == 2 and 4 or 3.2, 0.3, COR_CHAKRA)
+				o.chakra:Emit(math.max(2, math.floor(8 * DISCRETO)))
+			end
+			modoAntes = modo
+
+			local opac = nivel * 0.5 * DISCRETO * (modo == 2 and 1.2 or 1) * (1 + 0.2 * math.sin(agora * 3.2))
+			o.anel.Transparency = 1 - math.clamp(opac, 0, 1)
+			local d = modo == 2 and 4.2 or 3.2
+			o.anel.Size = Vector3.new(0.1, d, d)
+			o.anel.CFrame = CFrame.fromMatrix(pos, up, raiz.CFrame.LookVector)
+			o.chakra.Rate = nivel * 12 * DISCRETO * (modo == 2 and 1.4 or 1)
+			o.faiscaParede.Rate = (modo == 2 and vel.Magnitude > 4) and 9 * DISCRETO or 0
+
+			-- troca de superfície (chão -> parede -> teto): faísca + câmera inclina de leve e volta
+			if modo == 2 then
+				upRef = upRef:Lerp(up, 1 - math.exp(-dt * 3))
+				upRef = upRef.Magnitude > 0.05 and upRef.Unit or up
+				if upRef:Dot(up) < 0.85 and agora - tTroca > 0.7 then
+					tTroca = agora
+					local eixo = upRef:Cross(up)
+					if eixo.Magnitude > 0.05 then
+						eixo = eixo.Unit
+						local cam = workspace.CurrentCamera
+						if cam then
+							inclAlvoR = -eixo:Dot(cam.CFrame.LookVector) * 0.10 * DISCRETO / 0.6
+							inclAlvoP = eixo:Dot(cam.CFrame.RightVector) * 0.06 * DISCRETO / 0.6
+						end
+					end
+					onda(pos, up, 4.4, 0.35, COR_CHAKRA)
+					o.faiscaParede:Emit(math.max(3, math.floor(12 * DISCRETO)))
+				end
+			else
+				upRef = up
+			end
+			inclAlvoR = inclAlvoR * math.exp(-dt * 3.2)
+			inclAlvoP = inclAlvoP * math.exp(-dt * 3.2)
+		end
+
+		RunService.RenderStepped:Connect(function(dt)
+			local ok, erro = pcall(quadro, dt)
+			if not ok then warn("Erro nos efeitos: " .. tostring(erro)) end
+		end)
+
+		-- aplica a inclinação depois do script de câmera do jogo
+		RunService:BindToRenderStep("EfeitoInclinaCamera", Enum.RenderPriority.Camera.Value + 4, function(dt)
+			inclR = inclR + (inclAlvoR - inclR) * (1 - math.exp(-dt * 9))
+			inclP = inclP + (inclAlvoP - inclP) * (1 - math.exp(-dt * 9))
+			if math.abs(inclR) < 1e-3 and math.abs(inclP) < 1e-3 then return end
+			local cam = workspace.CurrentCamera
+			if not cam or cam.CameraType ~= Enum.CameraType.Custom then return end
+			cam.CFrame = cam.CFrame * CFrame.Angles(inclP, 0, inclR)
+		end)
+
+		alternavel({ "fx", "efeitos" }, "fx ou efeitos [0.1 a 1] / unfx - efeitos discretos de velocidade, pulo, grudar e paredes (o número muda a intensidade)", function(ligar, args)
+			fxLigado = ligar
+			if ligar and args[1] then
+				local n = tonumber(args[1])
+				if not n or n < 0.1 or n > 1 then return false, "fx: use um número de 0.1 a 1" end
+				DISCRETO = n
+				limpar() -- recria com a intensidade nova
+			end
+			return true, "Efeitos " .. (ligar and ("ligados (" .. DISCRETO .. ")") or "desligados")
+		end)
+	end
 
 	-- ANTI-AFK: evita ser expulso por ficar parado (começa ligado)
 	local antiAfkLigado = true
@@ -5775,17 +6309,36 @@ local function iniciarTeclado()
 		return true
 	end)
 
+	-- ANTI-AFK (visual): "Anti-AFK" pulsando no canto de baixo à esquerda, com brilho leve, enquanto estiver ligado
+	do
+		local g = novo("ScreenGui", { Name = "AntiAfkFx", ResetOnSpawn = false, IgnoreGuiInset = true, DisplayOrder = 3 }, playerGui)
+		local verde = Color3.fromRGB(130, 240, 160)
+		local texto = novo("TextLabel", {
+			AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 10, 1, -8), Size = UDim2.fromOffset(80, 16),
+			BackgroundTransparency = 1, Text = "Anti-AFK", Font = Enum.Font.GothamBold, TextSize = 11,
+			TextColor3 = verde, TextTransparency = 1, TextStrokeColor3 = verde, TextStrokeTransparency = 1,
+			TextXAlignment = Enum.TextXAlignment.Left, Active = false,
+		}, g)
+		local nivel = 0
+		RunService.RenderStepped:Connect(function(dt)
+			nivel = nivel + ((antiAfkLigado and 1 or 0) - nivel) * (1 - math.exp(-dt * 6)) -- aparece/some suave
+			local pulso = 0.5 + 0.5 * math.sin(os.clock() * 2.2)
+			texto.TextTransparency = 1 - nivel * (0.45 + 0.4 * pulso)
+			texto.TextStrokeTransparency = 1 - nivel * (0.15 + 0.2 * pulso) -- brilho leve em volta do texto
+		end)
+	end
+
 	-- ZOOM (luneta de pirata): aproxima a imagem como uma luneta, com a lente redonda e o escuro em volta
 	-- zoom [x] liga (x = aumento, de 1.5 a 40; padrão 6) | unzoom desliga | com ela ligada, a roda do mouse ajusta
-	local LUNETA_PADRAO, LUNETA_MIN, LUNETA_MAX = 6, 1.5, 40
+	local LUNETA_PADRAO, LUNETA_MIN, LUNETA_MAX = 6, 1.5, 100
 	local lunetaLigada = false   -- o que a pessoa pediu
 	local lunetaAtiva = false    -- true enquanto o efeito existe (inclui o fade de saída)
 	local lunetaFator = LUNETA_PADRAO
-	local lunetaFovBase, lunetaSensBase
+	local lunetaFovBase, lunetaSensBase, lunetaModoAntes
 	local lunetaProgresso = 0    -- 0 = câmera normal, 1 = luneta completa
 	local lunetaConexoes = {}
 	local LUNETA_CAMADAS, LUNETA_ESCURO = 10, 0.6 -- camadas do degradê e o quanto escurece no canto (0 a 1)
-	local lunetaGui, lunetaAneis, lunetaMiraH, lunetaMiraV
+	local lunetaGui, lunetaAneis, lunetaMiraH, lunetaMiraV, lunetaAro
 
 	local function lunetaEncerrar()
 		for _, c in ipairs(lunetaConexoes) do c:Disconnect() end
@@ -5793,7 +6346,12 @@ local function iniciarTeclado()
 		local cam = workspace.CurrentCamera
 		if cam and lunetaFovBase then cam.FieldOfView = lunetaFovBase end
 		if lunetaSensBase then pcall(function() UserInputService.MouseDeltaSensitivity = lunetaSensBase end) end
+		pcall(function() RunService:UnbindFromRenderStep("LunetaTremida") end)
 		if lunetaGui then lunetaGui:Destroy() lunetaGui = nil end
+		if lunetaModoAntes then
+			pcall(function() player.CameraMode = lunetaModoAntes end) -- volta para 3ª pessoa se estava nela
+			lunetaModoAntes = nil
+		end
 		lunetaAtiva = false
 		lunetaProgresso = 0
 	end
@@ -5819,6 +6377,13 @@ local function iniciarTeclado()
 		lunetaMiraV = novo("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
 			Size = UDim2.new(0, 1, 0.5, 0), BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.5,
 			BorderSizePixel = 0, Active = false }, lunetaGui)
+		-- aro fino de latão na borda da lente (o "metal" da luneta de pirata)
+		local aro = novo("Frame", {
+			AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
+			BackgroundTransparency = 1, BorderSizePixel = 0, Active = false,
+		}, lunetaGui)
+		novo("UICorner", { CornerRadius = UDim.new(1, 0) }, aro)
+		lunetaAro = { f = aro, st = novo("UIStroke", { Color = Color3.fromRGB(150, 105, 45), Thickness = 3, Transparency = 1 }, aro) }
 	end
 
 	local function lunetaIniciar()
@@ -5827,7 +6392,22 @@ local function iniciarTeclado()
 		lunetaAtiva = true
 		lunetaFovBase = cam.FieldOfView
 		lunetaSensBase = UserInputService.MouseDeltaSensitivity
+		lunetaModoAntes = player.CameraMode
+		pcall(function() player.CameraMode = Enum.CameraMode.LockFirstPerson end) -- o zoom é sempre em 1ª pessoa
 		lunetaMontar()
+
+		-- tremidinha de mão: movimento bem pequeno e lento (maior com mais aumento), aplicado depois da câmera do jogo
+		RunService:BindToRenderStep("LunetaTremida", Enum.RenderPriority.Camera.Value + 5, function()
+			local c = workspace.CurrentCamera
+			if not c or not lunetaAtiva or c.CameraType ~= Enum.CameraType.Custom then return end
+			local p = lunetaProgresso
+			if p < 0.02 then return end
+			local t = os.clock()
+			local amp = 0.0012 * p * math.sqrt(math.min(lunetaFator, 10))
+			local giro = (math.noise(t * 1.7, 0.31) + 0.5 * math.noise(t * 4.1, 7.7)) * amp
+			local sobe = (math.noise(0.57, t * 1.5) + 0.5 * math.noise(9.3, t * 3.9)) * amp
+			c.CFrame = c.CFrame * CFrame.Angles(sobe, giro, 0)
+		end)
 
 		lunetaConexoes[#lunetaConexoes + 1] = RunService.RenderStepped:Connect(function(dt)
 			local c = workspace.CurrentCamera
@@ -5839,6 +6419,9 @@ local function iniciarTeclado()
 				return
 			end
 			local p = lunetaProgresso
+			if lunetaLigada and player.CameraMode ~= Enum.CameraMode.LockFirstPerson then
+				pcall(function() player.CameraMode = Enum.CameraMode.LockFirstPerson end)
+			end
 
 			-- campo de visão: mais fechado = mais perto (aumento real = tan(fov/2) dividido pelo fator)
 			local fovZoom = 2 * math.deg(math.atan(math.tan(math.rad(lunetaFovBase / 2)) / lunetaFator))
@@ -5861,6 +6444,11 @@ local function iniciarTeclado()
 			end
 			lunetaMiraH.BackgroundTransparency = 1 - p * 0.5
 			lunetaMiraV.BackgroundTransparency = 1 - p * 0.5
+			if lunetaAro then -- aro na borda da área limpa da lente
+				local dLente = diametro * 0.5
+				lunetaAro.f.Size = UDim2.fromOffset(dLente, dLente)
+				lunetaAro.st.Transparency = 1 - 0.7 * p
+			end
 		end)
 
 		-- roda do mouse muda o aumento enquanto a luneta está ligada
@@ -5871,7 +6459,7 @@ local function iniciarTeclado()
 		end)
 	end
 
-	alternavel({ "zoom" }, "zoom [x] / unzoom - luneta de pirata (x = aumento de 1.5 a 40, padrão 6; roda do mouse ajusta)", function(ligar, args)
+	alternavel({ "zoom" }, "zoom [x] / unzoom - luneta de pirata (x = aumento de 1.5 a 100, padrão 6; roda do mouse ajusta)", function(ligar, args)
 		if not ligar then
 			lunetaLigada = false -- o efeito some suave e se encerra sozinho
 			return true
@@ -5899,7 +6487,7 @@ local function iniciarTeclado()
 	local avisoLista = novo("Frame", {
 		BackgroundTransparency = 1,
 		Position = UDim2.new(0, 8, 0, 8),
-		Size = UDim2.fromOffset(240, 120),
+		Size = UDim2.fromOffset(250, 210),
 	}, avisoGui)
 	novo("UIListLayout", {
 		SortOrder = Enum.SortOrder.LayoutOrder,
@@ -5911,38 +6499,65 @@ local function iniciarTeclado()
 	local function avisarJogador(p, entrou)
 		if not avisosLigados then return end
 		avisoOrdem += 1
-		local nome = p.DisplayName
-		if p.DisplayName ~= p.Name then nome = nome .. " (@" .. p.Name .. ")" end
-		local rotulo = novo("TextLabel", {
-			LayoutOrder = avisoOrdem,
-			AutomaticSize = Enum.AutomaticSize.XY,
-			Size = UDim2.fromOffset(0, 0),
-			BackgroundColor3 = Color3.fromRGB(18, 18, 22),
-			BackgroundTransparency = 0.15,
-			Font = Enum.Font.GothamBold,
-			TextSize = 12,
-			TextXAlignment = Enum.TextXAlignment.Left,
-			TextColor3 = entrou and Color3.fromRGB(150, 255, 170) or Color3.fromRGB(255, 150, 150),
-			Text = (entrou and "+ " or "- ") .. nome .. (entrou and " entrou" or " saiu"),
+		local cor = entrou and Color3.fromRGB(110, 235, 150) or Color3.fromRGB(255, 120, 120)
+		local corHex = entrou and "#6EEB96" or "#FF7878"
+
+		-- caixa fixa (a lista empilha) + cartão que desliza e aparece dentro dela
+		local caixa = novo("Frame", {
+			LayoutOrder = avisoOrdem, Size = UDim2.fromOffset(240, 46),
+			BackgroundTransparency = 1, BorderSizePixel = 0,
 		}, avisoLista)
-		novo("UICorner", { CornerRadius = UDim.new(0, 6) }, rotulo)
-		novo("UIPadding", {
-			PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8),
-			PaddingTop = UDim.new(0, 4), PaddingBottom = UDim.new(0, 4),
-		}, rotulo)
+		local cartao = novo("CanvasGroup", {
+			Position = UDim2.fromOffset(-40, 0), Size = UDim2.fromScale(1, 1),
+			BackgroundColor3 = Color3.fromRGB(18, 18, 22), BackgroundTransparency = 0.12,
+			BorderSizePixel = 0, GroupTransparency = 1,
+		}, caixa)
+		novo("UICorner", { CornerRadius = UDim.new(0, 8) }, cartao)
+		novo("Frame", { Size = UDim2.new(0, 3, 1, 0), BackgroundColor3 = cor, BorderSizePixel = 0 }, cartao)
+
+		local foto = novo("ImageLabel", {
+			Position = UDim2.fromOffset(10, 6), Size = UDim2.fromOffset(34, 34),
+			BackgroundColor3 = Color3.fromRGB(40, 40, 48), BorderSizePixel = 0, Image = "",
+		}, cartao)
+		novo("UICorner", { CornerRadius = UDim.new(1, 0) }, foto)
+		task.spawn(function() -- a foto chega quando o Roblox responder
+			local ok, img = pcall(function()
+				return Players:GetUserThumbnailAsync(p.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size100x100)
+			end)
+			if ok and img and foto.Parent then foto.Image = img end
+		end)
+
+		novo("TextLabel", {
+			Position = UDim2.fromOffset(52, 5), Size = UDim2.fromOffset(180, 18), BackgroundTransparency = 1,
+			Font = Enum.Font.GothamBold, TextSize = 13, TextColor3 = Color3.new(1, 1, 1),
+			TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Text = p.DisplayName,
+		}, cartao)
+		novo("TextLabel", {
+			Position = UDim2.fromOffset(52, 24), Size = UDim2.fromOffset(180, 16), BackgroundTransparency = 1,
+			Font = Enum.Font.Gotham, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, RichText = true,
+			TextColor3 = Color3.fromRGB(154, 154, 168),
+			Text = "@" .. p.Name .. "  <font color='" .. corHex .. "'>" .. (entrou and "entrou" or "saiu") .. "</font>",
+		}, cartao)
+
+		TweenService:Create(cartao, TweenInfo.new(0.35, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+			{ Position = UDim2.fromOffset(0, 0), GroupTransparency = 0 }):Play()
 
 		-- no máximo MAX_AVISOS na tela: o mais antigo sai
 		local visiveis = {}
 		for _, f in ipairs(avisoLista:GetChildren()) do
-			if f:IsA("TextLabel") then visiveis[#visiveis + 1] = f end
+			if f:IsA("Frame") then visiveis[#visiveis + 1] = f end
 		end
 		table.sort(visiveis, function(a, b) return a.LayoutOrder < b.LayoutOrder end)
 		while #visiveis > MAX_AVISOS do
 			table.remove(visiveis, 1):Destroy()
 		end
 
+		-- some com fade
 		task.delay(4, function()
-			if rotulo.Parent then rotulo:Destroy() end
+			if not caixa.Parent then return end
+			TweenService:Create(cartao, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+				{ GroupTransparency = 1 }):Play()
+			task.delay(0.45, function() caixa:Destroy() end)
 		end)
 	end
 
@@ -6127,7 +6742,12 @@ local function iniciarTeclado()
 	local reguaToque -- { pos = Vector2, t = tempo } do toque que está em andamento
 	local COR_REGUA = Color3.fromRGB(255, 220, 80)
 
+	local reguaAnim = {} -- animações em andamento (brilho das pontas, linha crescendo, texto flutuando)
+	local reguaConexao
+
 	local function limparRegua()
+		if reguaConexao then reguaConexao:Disconnect() reguaConexao = nil end
+		table.clear(reguaAnim)
 		for _, o in ipairs(reguaObjetos) do o:Destroy() end
 		table.clear(reguaObjetos)
 		table.clear(reguaPontos)
@@ -6143,42 +6763,101 @@ local function iniciarTeclado()
 		return a
 	end
 
+	local function reguaIniciarAnim()
+		if reguaConexao then return end
+		reguaConexao = RunService.RenderStepped:Connect(function()
+			local agora = os.clock()
+			for _, a in ipairs(reguaAnim) do
+				if a.tipo == "glow" then
+					if a.frame.Parent then -- as pontas pulsam de leve
+						local d = a.base + 8 * math.sin(agora * 3 + a.fase)
+						a.frame.Size = UDim2.fromOffset(d, d)
+						a.frame.BackgroundTransparency = 0.72 + 0.12 * math.sin(agora * 3 + a.fase)
+					end
+				elseif a.tipo == "linha" then
+					local k = math.clamp((agora - a.t0) / 0.35, 0, 1)
+					k = 1 - (1 - k) ^ 3 -- a linha "corre" de uma ponta à outra
+					local len = math.max(0.01, a.dist * k)
+					local cf = CFrame.lookAt(a.p1, a.p2) * CFrame.new(0, 0, -len / 2)
+					for i, x in ipairs(a.partes) do
+						if x.p.Parent then
+							x.p.Size = Vector3.new(x.w, x.w, len)
+							x.p.CFrame = cf
+							if i == 2 then x.p.Transparency = 0.8 + 0.08 * math.sin(agora * 3) end -- halo respira
+						end
+					end
+				elseif a.tipo == "rotulo" then
+					if a.b.Parent then
+						a.b.StudsOffset = Vector3.new(0, 1.5 + 0.12 * math.sin(agora * 2), 0) -- flutua
+						local k = math.clamp((agora - a.t0 - 0.25) / 0.3, 0, 1) -- aparece depois da linha
+						a.rotulo.BackgroundTransparency = 1 - 0.85 * k
+						a.rotulo.TextTransparency = 1 - k
+						a.contorno.Transparency = 1 - 0.5 * k
+					end
+				end
+			end
+		end)
+	end
+
 	local function reguaMarca(posicao)
 		local a = reguaAncora(posicao)
-		local b = novo("BillboardGui", { Size = UDim2.fromOffset(12, 12), AlwaysOnTop = true }, a)
+		local luz = novo("PointLight", { Color = COR_REGUA, Brightness = 0.6, Range = 6 }, a) -- ilumina em volta da ponta
+		local b = novo("BillboardGui", { Size = UDim2.fromOffset(44, 44), AlwaysOnTop = true }, a)
+		local brilho = novo("Frame", {
+			AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(24, 24),
+			BackgroundColor3 = COR_REGUA, BackgroundTransparency = 0.75, BorderSizePixel = 0,
+		}, b)
+		novo("UICorner", { CornerRadius = UDim.new(1, 0) }, brilho)
 		local ponto = novo("Frame", {
-			Size = UDim2.fromScale(1, 1), BackgroundColor3 = COR_REGUA,
+			AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(0, 0),
+			BackgroundColor3 = COR_REGUA, BorderSizePixel = 0,
 		}, b)
 		novo("UICorner", { CornerRadius = UDim.new(1, 0) }, ponto)
 		novo("UIStroke", { Color = Color3.new(0, 0, 0), Thickness = 1.5 }, ponto)
+		TweenService:Create(ponto, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+			{ Size = UDim2.fromOffset(12, 12) }):Play() -- a ponta "pula" ao aparecer
+		reguaAnim[#reguaAnim + 1] = { tipo = "glow", frame = brilho, base = 24, fase = math.random() * 6 }
+		reguaIniciarAnim()
 	end
 
 	local function reguaLinha(p1, p2)
 		local dist = (p2 - p1).Magnitude
 		if dist > 0.01 then
-			local linha = novo("Part", {
-				Anchored = true, CanCollide = false, CanQuery = false, CanTouch = false, CastShadow = false,
-				Material = Enum.Material.Neon, Color = COR_REGUA,
-				Size = Vector3.new(0.12, 0.12, dist),
-				CFrame = CFrame.lookAt(p1, p2) * CFrame.new(0, 0, -dist / 2),
-			}, workspace.CurrentCamera)
-			reguaObjetos[#reguaObjetos + 1] = linha
+			local partes = {}
+			local function neon(w, transp)
+				local l = novo("Part", {
+					Anchored = true, CanCollide = false, CanQuery = false, CanTouch = false, CastShadow = false,
+					Material = Enum.Material.Neon, Color = COR_REGUA, Transparency = transp,
+					Size = Vector3.new(w, w, 0.01), CFrame = CFrame.lookAt(p1, p2),
+				}, workspace.CurrentCamera)
+				reguaObjetos[#reguaObjetos + 1] = l
+				partes[#partes + 1] = { p = l, w = w }
+			end
+			neon(0.12, 0) -- linha
+			neon(0.4, 0.82) -- halo suave em volta
+			reguaAnim[#reguaAnim + 1] = { tipo = "linha", partes = partes, p1 = p1, p2 = p2, dist = dist, t0 = os.clock() }
 		end
 
 		local meio = reguaAncora((p1 + p2) / 2)
 		local b = novo("BillboardGui", {
 			Size = UDim2.fromOffset(110, 24), StudsOffset = Vector3.new(0, 1.5, 0), AlwaysOnTop = true,
 		}, meio)
-		novo("TextLabel", {
+		local rotulo = novo("TextLabel", {
 			Size = UDim2.fromScale(1, 1),
 			BackgroundColor3 = Color3.fromRGB(18, 18, 22),
-			BackgroundTransparency = 0.15,
+			BackgroundTransparency = 1,
 			Text = string.format("%.1f studs", dist),
 			TextColor3 = COR_REGUA,
+			TextTransparency = 1,
 			Font = Enum.Font.GothamBold,
 			TextSize = 13,
 		}, b)
-		novo("UICorner", { CornerRadius = UDim.new(0, 6) }, b:FindFirstChildOfClass("TextLabel"))
+		novo("UICorner", { CornerRadius = UDim.new(0, 6) }, rotulo)
+		local contorno = novo("UIStroke", {
+			Color = COR_REGUA, Thickness = 1, Transparency = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+		}, rotulo)
+		reguaAnim[#reguaAnim + 1] = { tipo = "rotulo", b = b, rotulo = rotulo, contorno = contorno, t0 = os.clock() }
+		reguaIniciarAnim()
 	end
 
 	-- Onde o toque bateu no mapa (ignora o seu personagem)
@@ -6240,9 +6919,113 @@ local function iniciarTeclado()
 	local fcConexoes = {}
 	local FC_NOME_LOOP = "FreecamScript"
 
+	-- Interface de filmadora: bolinha REC piscando, tempo correndo, cantos de enquadramento e bateria.
+	-- Entra e sai com fade; tudo branco fraquinho para não atrapalhar a imagem.
+	local fcUi -- { gui = ScreenGui, grupo = CanvasGroup }
+
+	local function fcUiFim()
+		local ui = fcUi
+		fcUi = nil
+		if not ui then return end
+		pcall(function()
+			TweenService:Create(ui.grupo, TweenInfo.new(0.2), { GroupTransparency = 1 }):Play()
+		end)
+		task.delay(0.25, function() ui.gui:Destroy() end)
+	end
+
+	local function fcUiIniciar()
+		if fcUi then fcUi.gui:Destroy() fcUi = nil end
+		local gui = novo("ScreenGui", { Name = "FreecamFilmadora", ResetOnSpawn = false, IgnoreGuiInset = false, DisplayOrder = 5 }, playerGui)
+		local g = novo("CanvasGroup", {
+			Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, BorderSizePixel = 0,
+			GroupTransparency = 1, Active = false,
+		}, gui)
+		fcUi = { gui = gui, grupo = g }
+		TweenService:Create(g, TweenInfo.new(0.3), { GroupTransparency = 0 }):Play()
+
+		local BRANCO = Color3.new(1, 1, 1)
+
+		-- cantos do enquadramento
+		local function canto(ax, ay)
+			local f = novo("Frame", {
+				AnchorPoint = Vector2.new(ax, ay),
+				Position = UDim2.new(ax, ax == 0 and 14 or -14, ay, ay == 0 and 14 or -14),
+				Size = UDim2.fromOffset(26, 26), BackgroundTransparency = 1, BorderSizePixel = 0,
+			}, g)
+			novo("Frame", { AnchorPoint = Vector2.new(ax, ay), Position = UDim2.fromScale(ax, ay),
+				Size = UDim2.new(1, 0, 0, 2), BackgroundColor3 = BRANCO, BackgroundTransparency = 0.25, BorderSizePixel = 0 }, f)
+			novo("Frame", { AnchorPoint = Vector2.new(ax, ay), Position = UDim2.fromScale(ax, ay),
+				Size = UDim2.new(0, 2, 1, 0), BackgroundColor3 = BRANCO, BackgroundTransparency = 0.25, BorderSizePixel = 0 }, f)
+		end
+		canto(0, 0) canto(1, 0) canto(0, 1) canto(1, 1)
+
+		-- cruz pequena de foco no centro
+		novo("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
+			Size = UDim2.fromOffset(14, 1), BackgroundColor3 = BRANCO, BackgroundTransparency = 0.5, BorderSizePixel = 0 }, g)
+		novo("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
+			Size = UDim2.fromOffset(1, 14), BackgroundColor3 = BRANCO, BackgroundTransparency = 0.5, BorderSizePixel = 0 }, g)
+
+		-- REC + tempo (canto de cima, à esquerda)
+		local topo = novo("Frame", {
+			Position = UDim2.fromOffset(42, 26), Size = UDim2.fromOffset(0, 18), AutomaticSize = Enum.AutomaticSize.X,
+			BackgroundTransparency = 1, BorderSizePixel = 0,
+		}, g)
+		novo("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, VerticalAlignment = Enum.VerticalAlignment.Center,
+			Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }, topo)
+		local bolinha = novo("Frame", { Size = UDim2.fromOffset(11, 11), BackgroundColor3 = Color3.fromRGB(235, 40, 40),
+			BorderSizePixel = 0, LayoutOrder = 1 }, topo)
+		novo("UICorner", { CornerRadius = UDim.new(1, 0) }, bolinha)
+		local function texto(ordem, t)
+			return novo("TextLabel", { Size = UDim2.fromOffset(0, 18), AutomaticSize = Enum.AutomaticSize.X,
+				BackgroundTransparency = 1, Text = t, TextColor3 = BRANCO, TextTransparency = 0.1,
+				TextStrokeTransparency = 0.6, Font = Enum.Font.GothamBold, TextSize = 14, LayoutOrder = ordem }, topo)
+		end
+		texto(2, "REC")
+		local tempo = texto(3, "00:00:00")
+
+		-- bateria (canto de cima, à direita)
+		local bat = novo("Frame", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -42, 0, 26),
+			Size = UDim2.fromOffset(84, 16), BackgroundTransparency = 1, BorderSizePixel = 0 }, g)
+		local pctTxt = novo("TextLabel", { Size = UDim2.fromOffset(40, 16), BackgroundTransparency = 1, Text = "100%",
+			TextColor3 = BRANCO, TextTransparency = 0.1, TextStrokeTransparency = 0.6, Font = Enum.Font.GothamBold,
+			TextSize = 12, TextXAlignment = Enum.TextXAlignment.Right }, bat)
+		local corpo = novo("Frame", { Position = UDim2.fromOffset(46, 1), Size = UDim2.fromOffset(32, 14),
+			BackgroundTransparency = 1, BorderSizePixel = 0 }, bat)
+		novo("UICorner", { CornerRadius = UDim.new(0, 3) }, corpo)
+		novo("UIStroke", { Color = BRANCO, Thickness = 1.5, Transparency = 0.2 }, corpo)
+		novo("UIPadding", { PaddingLeft = UDim.new(0, 2), PaddingRight = UDim.new(0, 2),
+			PaddingTop = UDim.new(0, 2), PaddingBottom = UDim.new(0, 2) }, corpo)
+		local enchimento = novo("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = BRANCO,
+			BackgroundTransparency = 0.15, BorderSizePixel = 0 }, corpo)
+		novo("Frame", { Position = UDim2.fromOffset(79, 5), Size = UDim2.fromOffset(3, 6), BackgroundColor3 = BRANCO,
+			BackgroundTransparency = 0.2, BorderSizePixel = 0 }, bat)
+
+		-- relógio, piscada e bateria (cai 1% a cada 30 s, como enfeite; abaixo de 20% fica vermelha)
+		local t0 = os.clock()
+		local pctAntes = 100
+		fcConexoes[#fcConexoes + 1] = RunService.Heartbeat:Connect(function()
+			local t = os.clock() - t0
+			local s = math.floor(t)
+			tempo.Text = string.format("%02d:%02d:%02d", math.floor(s / 3600), math.floor(s / 60) % 60, s % 60)
+			bolinha.BackgroundTransparency = (t % 1) < 0.6 and 0 or 0.85
+			local pct = math.max(5, 100 - math.floor(t / 30))
+			if pct ~= pctAntes then
+				pctAntes = pct
+				pctTxt.Text = pct .. "%"
+				enchimento.Size = UDim2.fromScale(pct / 100, 1)
+			end
+			local baixa = pct <= 20
+			local cor = baixa and Color3.fromRGB(255, 90, 90) or BRANCO
+			enchimento.BackgroundColor3 = cor
+			pctTxt.TextColor3 = cor
+			bat.Visible = not (baixa and (t % 1) > 0.6) -- bateria baixa pisca
+		end)
+	end
+
 	local function pararFreecam()
 		if not fcLigada then return end
 		fcLigada = false
+		fcUiFim()
 		pcall(function() RunService:UnbindFromRenderStep(FC_NOME_LOOP) end)
 		for _, c in ipairs(fcConexoes) do c:Disconnect() end
 		table.clear(fcConexoes)
@@ -6275,6 +7058,8 @@ local function iniciarTeclado()
 		fcAncoradaAntes = raiz.Anchored
 		raiz.Anchored = true -- personagem parado
 		cam.CameraType = Enum.CameraType.Scriptable
+
+		fcUiIniciar()
 
 		-- Girar a câmera
 		fcConexoes[#fcConexoes + 1] = UserInputService.InputChanged:Connect(function(input, processado)
@@ -6310,7 +7095,7 @@ local function iniciarTeclado()
 		return true
 	end
 
-	alternavel({ "freecam", "fc" }, "freecam [velocidade] / unfreecam - câmera livre com o personagem parado", function(ligar, args)
+	alternavel({ "freecam", "fc", "camera", "câmera" }, "freecam, fc ou camera [velocidade] / unfreecam, unfc ou uncamera - câmera livre com o personagem parado", function(ligar, args)
 		if not ligar then
 			pararFreecam()
 			return true
@@ -6446,7 +7231,7 @@ local function iniciarTeclado()
 		return true
 	end
 
-	alternavel({ "orbitar", "orbit" }, "orbitar <jogador> [velocidade] [distância] / unorbitar - girar em volta de um jogador", function(ligar, args)
+	alternavel({ "orbitar", "orbit", "obt" }, "orbitar, orbit ou obt <jogador> [velocidade] [distância] / unorbitar - girar em volta de um jogador", function(ligar, args)
 		if not ligar then
 			pararOrbita()
 			return true
@@ -6588,14 +7373,224 @@ local function iniciarTeclado()
 		return iniciarSeguir(alvoJogador)
 	end)
 
-	-- SENTAR NA CABEÇA: senta na cabeça do jogador escolhido e vai junto com ele.
+	-- EFEITOS DE JOGADORES: órbita (linha neon + brilho nos dois + partículas) e seguir (feixe com pulsos).
+	-- Só olham o estado do ORBITAR e do SEGUIR (não mexem no movimento) e somem sozinhos quando eles param.
+	do
+		local ORB_SEGMENTOS = 40
+		local COR_ORB = Color3.fromRGB(110, 220, 255)
+		local COR_SEG = Color3.fromRGB(255, 220, 120)
+		local orbFx, segFx
+
+		local function parteNeon(pai, tam, cor, transp, forma)
+			local p = Instance.new("Part")
+			p.Anchored, p.CanCollide, p.CanQuery, p.CanTouch, p.CastShadow = true, false, false, false, false
+			p.Material = Enum.Material.Neon
+			p.Color = cor
+			p.Transparency = transp
+			if forma then p.Shape = forma end
+			p.Size = tam
+			p.Parent = pai
+			return p
+		end
+
+		local function destruir(o)
+			if not o then return end
+			for _, i in ipairs(o.lixo) do pcall(function() i:Destroy() end) end
+		end
+
+		-- ===== ORBITAR =====
+		local function criarOrb(minhaRaiz, alvoRaiz)
+			local o = { raizMinha = minhaRaiz, raizAlvo = alvoRaiz, segs = {}, nivel = 0 }
+			local pasta = Instance.new("Folder")
+			pasta.Name = "OrbitaFx"
+			pasta.Parent = workspace
+			for i = 1, ORB_SEGMENTOS do
+				o.segs[i] = parteNeon(pasta, Vector3.new(0.08, 0.08, 1), COR_ORB, 1)
+			end
+			-- brilho suave nos dois
+			local function luz(raiz)
+				local l = Instance.new("PointLight")
+				l.Color = COR_ORB
+				l.Brightness = 0.8
+				l.Range = 9
+				l.Parent = raiz
+				return l
+			end
+			local att = Instance.new("Attachment")
+			att.Parent = minhaRaiz
+			local em = Instance.new("ParticleEmitter") -- faíscas pequenas saindo de você enquanto gira
+			em.Rate = 10
+			em.Lifetime = NumberRange.new(0.5, 0.9)
+			em.Speed = NumberRange.new(0.5, 1.5)
+			em.SpreadAngle = Vector2.new(180, 180)
+			em.LightEmission = 1
+			em.Color = ColorSequence.new(COR_ORB, Color3.fromRGB(200, 240, 255))
+			em.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.2), NumberSequenceKeypoint.new(1, 0) })
+			em.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.3), NumberSequenceKeypoint.new(1, 1) })
+			em.Parent = att
+			o.lixo = { pasta, luz(minhaRaiz), luz(alvoRaiz), att }
+			return o
+		end
+
+		local function atualizarOrb(o, dt, dist)
+			o.nivel = math.min(1, o.nivel + dt * 3) -- aparece suave
+			local t = os.clock()
+			local centro = o.raizAlvo.Position + Vector3.new(0, ORB_ALTURA + 0.35 * math.sin(t * 1.6), 0) -- mesma altura em que você flutua
+			local transp = 1 - (1 - (0.38 + 0.1 * math.sin(t * 3))) * o.nivel
+			for i = 1, ORB_SEGMENTOS do
+				local a1 = (i - 1) / ORB_SEGMENTOS * math.pi * 2
+				local a2 = i / ORB_SEGMENTOS * math.pi * 2
+				local p1 = centro + Vector3.new(math.cos(a1), 0, math.sin(a1)) * dist
+				local p2 = centro + Vector3.new(math.cos(a2), 0, math.sin(a2)) * dist
+				local s = o.segs[i]
+				s.Size = Vector3.new(0.08, 0.08, (p2 - p1).Magnitude + 0.03)
+				s.CFrame = CFrame.lookAt((p1 + p2) / 2, p2)
+				s.Transparency = transp
+			end
+		end
+
+		-- ===== SEGUIR =====
+		local function criarSeg(minhaRaiz, alvoRaiz)
+			local o = { raizMinha = minhaRaiz, raizAlvo = alvoRaiz, pulsos = {}, nivel = 0 }
+			local pasta = Instance.new("Folder")
+			pasta.Name = "SeguirFx"
+			pasta.Parent = workspace
+			local a0 = Instance.new("Attachment")
+			a0.Parent = minhaRaiz
+			local a1 = Instance.new("Attachment")
+			a1.Parent = alvoRaiz
+			local feixe = Instance.new("Beam")
+			feixe.Attachment0, feixe.Attachment1 = a0, a1
+			feixe.Width0, feixe.Width1 = 0.1, 0.1
+			feixe.LightEmission = 1
+			feixe.FaceCamera = true
+			feixe.Segments = 1
+			feixe.Color = ColorSequence.new(COR_SEG)
+			feixe.Transparency = NumberSequence.new(0.6)
+			feixe.Parent = minhaRaiz
+			for i = 1, 3 do
+				o.pulsos[i] = parteNeon(pasta, Vector3.one * 0.5, COR_SEG, 1, Enum.PartType.Ball)
+			end
+			o.lixo = { pasta, a0, a1, feixe }
+			return o
+		end
+
+		local function atualizarSeg(o, dt)
+			o.nivel = math.min(1, o.nivel + dt * 3)
+			local de, para = o.raizMinha.Position, o.raizAlvo.Position
+			local t = os.clock()
+			for i, p in ipairs(o.pulsos) do
+				local k = (t * 0.7 + (i - 1) / #o.pulsos) % 1 -- corre de você até o jogador
+				p.Position = de:Lerp(para, k)
+				local pontas = math.abs(2 * k - 1) ^ 4 -- some perto das duas pontas
+				p.Transparency = 1 - (1 - (0.2 + 0.8 * pontas)) * o.nivel
+				p.Size = Vector3.one * (0.35 + 0.25 * math.sin(k * math.pi))
+			end
+		end
+
+		RunService.RenderStepped:Connect(function(dt)
+			local ok, erro = pcall(function()
+				local minhaRaiz = pegarPersonagem()
+
+				local alvoOrb = orbLigada and orbAlvo and orbAlvo.Character and orbAlvo.Character:FindFirstChild("HumanoidRootPart")
+				if minhaRaiz and alvoOrb then
+					if not orbFx or orbFx.raizMinha ~= minhaRaiz or orbFx.raizAlvo ~= alvoOrb then
+						destruir(orbFx)
+						orbFx = criarOrb(minhaRaiz, alvoOrb)
+					end
+					atualizarOrb(orbFx, dt, orbDist)
+				elseif orbFx then
+					destruir(orbFx)
+					orbFx = nil
+				end
+
+				local alvoSeg = segLigado and segAlvo and segAlvo.Character and segAlvo.Character:FindFirstChild("HumanoidRootPart")
+				if minhaRaiz and alvoSeg then
+					if not segFx or segFx.raizMinha ~= minhaRaiz or segFx.raizAlvo ~= alvoSeg then
+						destruir(segFx)
+						segFx = criarSeg(minhaRaiz, alvoSeg)
+					end
+					atualizarSeg(segFx, dt)
+				elseif segFx then
+					destruir(segFx)
+					segFx = nil
+				end
+			end)
+			if not ok then warn("Erro nos efeitos de jogadores: " .. tostring(erro)) end
+		end)
+	end
+
+	-- SENTAR EM JOGADOR (cabeça, costas, ombro, frente): você sobe flutuando, paira um instante no ar,
+	-- desce e senta com um "pop" (onda de luz + quicada). Depois vai junto com ele.
 	-- Só sai se ele reiniciar (ou morrer/sair do servidor) ou se você pular.
+	local SOM_POP_ID = "" -- opcional: cole aqui um "rbxassetid://..." de som curto para tocar no pop
+	local SENTAR_ALTURA = 7   -- altura do voo acima do ponto de sentar (studs)
+	local SENTAR_SOBE = 0.5   -- tempo subindo (s)
+	local SENTAR_PAIRA = 0.3  -- tempo pairando no ar (s)
+	local SENTAR_DESCE = 0.45 -- tempo descendo (s)
+	local SENTAR_POP = 0.22   -- tempo da quicada final (s)
+
+	-- ponto e rotação onde você fica, em relação ao jogador (usa a raiz do corpo: vale para R6 e R15)
+	local SENTAR_LUGARES = {
+		cabeca = {
+			nome = "cabeça",
+			ponto = function(ch, raiz)
+				local cabeca = ch:FindFirstChild("Head")
+				if not cabeca then return nil end
+				return CFrame.new(cabeca.Position + Vector3.new(0, cabeca.Size.Y / 2 + 1.1, 0)) * raiz.CFrame.Rotation
+			end,
+		},
+		costas = { -- carona nas costas, olhando para o mesmo lado
+			nome = "costas",
+			ponto = function(_, raiz) return raiz.CFrame * CFrame.new(0, 0.4, 1.1) end,
+		},
+		ombro = {
+			nome = "ombro",
+			ponto = function(_, raiz) return raiz.CFrame * CFrame.new(1.7, 1.9, 0.3) end,
+		},
+		frente = { -- de frente para ele, no colo
+			nome = "frente",
+			ponto = function(_, raiz) return raiz.CFrame * CFrame.new(0, 0.5, -1.4) * CFrame.Angles(0, math.pi, 0) end,
+		},
+	}
+
 	local cabLigada = false
 	local cabAlvo -- Player
 	local cabAlvoChar
 	local cabConexoes = {}
 	local cabColisoes = {}
 	local cabRaiz, cabHum
+	local aoPararSentar -- o menu preenche: apaga os botões de sentar quando para
+
+	local function suave(t) return t * t * (3 - 2 * t) end -- entra e sai devagar
+	local function saiRapido(t) return 1 - (1 - t) * (1 - t) end
+	local function entraRapido(t) return t * t end
+
+	-- onda de luz no chão do pop (só você vê)
+	local function efeitoPop(pos)
+		pcall(function()
+			local anel = Instance.new("Part")
+			anel.Anchored, anel.CanCollide, anel.CanQuery, anel.CanTouch = true, false, false, false
+			anel.Material = Enum.Material.Neon
+			anel.Color = Color3.fromRGB(120, 210, 255)
+			anel.Shape = Enum.PartType.Cylinder
+			anel.Size = Vector3.new(0.15, 1, 1)
+			anel.CFrame = CFrame.new(pos) * CFrame.Angles(0, 0, math.pi / 2)
+			anel.Parent = workspace
+			local info = TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+			TweenService:Create(anel, info, { Size = Vector3.new(0.15, 7, 7), Transparency = 1 }):Play()
+			task.delay(0.5, function() anel:Destroy() end)
+
+			if SOM_POP_ID ~= "" then
+				local som = Instance.new("Sound")
+				som.SoundId = SOM_POP_ID
+				som.Volume = 0.6
+				som.Parent = workspace
+				som:Play()
+				task.delay(2, function() som:Destroy() end)
+			end
+		end)
+	end
 
 	function pararCabeca()
 		if not cabLigada then return end
@@ -6611,14 +7606,16 @@ local function iniciarTeclado()
 		if cabHum and cabHum.Parent then cabHum.Sit = false end
 		if cabRaiz and cabRaiz.Parent then cabRaiz.AssemblyLinearVelocity = Vector3.zero end
 		cabAlvo, cabAlvoChar, cabRaiz, cabHum = nil, nil, nil, nil
+		if aoPararSentar then aoPararSentar() end
 	end
 
-	local function iniciarCabeca(alvoJogador)
+	local function iniciarSentar(alvoJogador, lugarChave)
+		local lugar = SENTAR_LUGARES[lugarChave] or SENTAR_LUGARES.cabeca
 		local raiz, hum = pegarPersonagem()
 		if not raiz then return false, "Sem personagem vivo" end
 		local alvoChar = alvoJogador.Character
 		local alvoHum = alvoChar and alvoChar:FindFirstChildOfClass("Humanoid")
-		if not (alvoChar and alvoChar:FindFirstChild("Head") and alvoHum and alvoHum.Health > 0) then
+		if not (alvoChar and alvoChar:FindFirstChild("Head") and alvoChar:FindFirstChild("HumanoidRootPart") and alvoHum and alvoHum.Health > 0) then
 			return false, alvoJogador.DisplayName .. " indisponível"
 		end
 
@@ -6632,6 +7629,14 @@ local function iniciarTeclado()
 		local char = raiz.Parent
 		hum.Sit = true
 
+		local inicio = raiz.CFrame
+		local pontoInicial = lugar.ponto(alvoChar, alvoChar.HumanoidRootPart)
+		local dist = pontoInicial and (pontoInicial.Position - inicio.Position).Magnitude or 0
+		local TEMPO_VOO = math.clamp(dist / 120, 0.4, 1.1) -- longe demora mais para deslizar até ele
+		local t0 = os.clock()
+		local fim = SENTAR_SOBE + TEMPO_VOO + SENTAR_PAIRA + SENTAR_DESCE + SENTAR_POP
+		local fezPop = false
+
 		local function acompanhar()
 			if not (cabRaiz and cabRaiz.Parent) or cabHum.Health <= 0 then
 				pararCabeca()
@@ -6644,13 +7649,45 @@ local function iniciarTeclado()
 				pararCabeca()
 				return
 			end
-			local cabeca = ch:FindFirstChild("Head")
 			local alvoRaiz = ch:FindFirstChild("HumanoidRootPart")
-			if not (cabeca and alvoRaiz) then return end
+			if not alvoRaiz then return end
+			local ponto = lugar.ponto(ch, alvoRaiz) -- recalculado todo quadro: ele pode estar andando
+			if not ponto then return end
 
 			if not cabHum.Sit then cabHum.Sit = true end
-			local pos = cabeca.Position + Vector3.new(0, cabeca.Size.Y / 2 + 1.1, 0)
-			cabRaiz.CFrame = CFrame.new(pos) * alvoRaiz.CFrame.Rotation
+			local t = os.clock() - t0
+			local cf
+			local alt = Vector3.new(0, SENTAR_ALTURA, 0)
+
+			if t < SENTAR_SOBE then
+				-- 1) sobe flutuando
+				local k = saiRapido(t / SENTAR_SOBE)
+				cf = inicio + alt * k
+			elseif t < SENTAR_SOBE + TEMPO_VOO then
+				-- 2) desliza no alto até ficar em cima do ponto
+				local k = suave((t - SENTAR_SOBE) / TEMPO_VOO)
+				local de = inicio + alt
+				local para = ponto + alt
+				cf = CFrame.new(de.Position:Lerp(para.Position, k)) * de.Rotation:Lerp(para.Rotation, k)
+			elseif t < SENTAR_SOBE + TEMPO_VOO + SENTAR_PAIRA then
+				-- 3) fica um instante no ar (balança de leve)
+				local balanco = math.sin((t - SENTAR_SOBE - TEMPO_VOO) * 10) * 0.12
+				cf = ponto + alt + Vector3.new(0, balanco, 0)
+			elseif t < SENTAR_SOBE + TEMPO_VOO + SENTAR_PAIRA + SENTAR_DESCE then
+				-- 4) desce
+				local k = entraRapido((t - SENTAR_SOBE - TEMPO_VOO - SENTAR_PAIRA) / SENTAR_DESCE)
+				cf = ponto + alt * (1 - k)
+			else
+				-- 5) pop: quica um pouco e assenta
+				local u = math.clamp((t - (fim - SENTAR_POP)) / SENTAR_POP, 0, 1)
+				if not fezPop then
+					fezPop = true
+					efeitoPop(ponto.Position - Vector3.new(0, 1.8, 0))
+				end
+				cf = ponto + Vector3.new(0, math.sin(u * math.pi) * 0.7, 0)
+			end
+
+			cabRaiz.CFrame = cf
 			cabRaiz.AssemblyLinearVelocity = Vector3.zero
 			cabRaiz.AssemblyAngularVelocity = Vector3.zero
 		end
@@ -6674,16 +7711,23 @@ local function iniciarTeclado()
 		return true
 	end
 
-	alternavel({ "hsit", "headsit", "sentarcabeca" }, "hsit <jogador> / unhsit - sentar na cabeça de um jogador (pular sai)", function(ligar, args)
-		if not ligar then
-			pararCabeca()
-			return true
-		end
-		if #args == 0 then return false, "Uso: hsit <jogador>" end
-		local alvoJogador = acharJogador(table.concat(args, " "))
-		if not alvoJogador then return false, "Jogador não encontrado: " .. table.concat(args, " ") end
-		return iniciarCabeca(alvoJogador)
-	end)
+	local function comandoSentar(chave, nomes, uso)
+		alternavel(nomes, uso, function(ligar, args)
+			if not ligar then
+				pararCabeca()
+				return true
+			end
+			if #args == 0 then return false, "Uso: " .. nomes[1] .. " <jogador>" end
+			local alvoJogador = acharJogador(table.concat(args, " "))
+			if not alvoJogador then return false, "Jogador não encontrado: " .. table.concat(args, " ") end
+			return iniciarSentar(alvoJogador, chave)
+		end)
+	end
+
+	comandoSentar("cabeca", { "hsit", "headsit", "sentarcabeca" }, "hsit <jogador> / unhsit - sentar na cabeça de um jogador (pular sai)")
+	comandoSentar("costas", { "bsit", "backsit", "sentarcostas" }, "bsit <jogador> / unbsit - sentar nas costas (carona) de um jogador (pular sai)")
+	comandoSentar("ombro", { "ssit", "shouldersit", "sentarombro" }, "ssit <jogador> / unssit - sentar no ombro de um jogador (pular sai)")
+	comandoSentar("frente", { "fsit", "frontsit", "sentarfrente" }, "fsit <jogador> / unfsit - sentar de frente para um jogador (pular sai)")
 
 	comando({ "menu", "m" }, "menu ou m - abrir/fechar o menu", function()
 		alternarPainel()
@@ -6861,6 +7905,9 @@ local function iniciarTeclado()
 		MENU.trad.SEGUIR = "SEGUIR JOGADOR"
 		MENU.trad.ORBITAR = "ORBITAR JOGADOR"
 		MENU.trad.HSIT = "SENTAR NA CABEÇA"
+		MENU.trad.BSIT = "SENTAR NAS COSTAS"
+		MENU.trad.SSIT = "SENTAR NO OMBRO"
+		MENU.trad.FSIT = "SENTAR DE FRENTE"
 		MENU.trad.AFK = "ANTI-AFK"
 		MENU.trad.AVISOS = "AVISOS DE ENTRADA"
 		MENU.trad.FPS1 = "FPS LEVE"
@@ -6877,6 +7924,9 @@ local function iniciarTeclado()
 		MENU.categoria.SEGUIR = "Jogadores"
 		MENU.categoria.ORBITAR = "Jogadores"
 		MENU.categoria.HSIT = "Jogadores"
+		MENU.categoria.BSIT = "Jogadores"
+		MENU.categoria.SSIT = "Jogadores"
+		MENU.categoria.FSIT = "Jogadores"
 		MENU.categoria.AFK = "Extras"
 		MENU.categoria.AVISOS = "Extras"
 		MENU.categoria.FPS1 = "Extras"
@@ -6908,15 +7958,18 @@ local function iniciarTeclado()
 
 		-- caixa: texto inicial da caixinha (nil = sem caixinha) | vivo: Enter na caixinha atualiza com o botão ligado
 		local lista = {
-			{ nome = "SPEED", ordem = 21, nomes = { "speed" }, caixa = "50", dica = "vel.", vivo = true },
-			{ nome = "JUMP", ordem = 22, nomes = { "jump" }, caixa = "100", dica = "força", vivo = true },
+			{ nome = "SPEED", ordem = 21, nomes = { "speed", "velocidade" }, caixa = "50", dica = "vel.", vivo = true },
+			{ nome = "JUMP", ordem = 22, nomes = { "jump", "pulo" }, caixa = "100", dica = "força", vivo = true },
 			{ nome = "FLYJUMP", ordem = 23, nomes = { "flyjump", "fj" } },
-			{ nome = "FREECAM", ordem = 24, nomes = { "freecam", "fc" }, caixa = "60", dica = "vel." },
+			{ nome = "FREECAM", ordem = 24, nomes = { "freecam", "fc", "camera", "câmera" }, caixa = "60", dica = "vel." },
 			{ nome = "ZOOM", ordem = 25, nomes = { "zoom" }, caixa = "", dica = "x (aumento)", vivo = true },
 			{ nome = "REGUA", ordem = 26, nomes = { "regua", "ruler" } },
 			{ nome = "SEGUIR", ordem = 27, nomes = { "seguir", "follow" }, caixa = "", dica = "jogador" },
-			{ nome = "ORBITAR", ordem = 28, nomes = { "orbitar", "orbit" }, caixa = "", dica = "jogador" },
-			{ nome = "HSIT", ordem = 29, nomes = { "hsit", "headsit", "sentarcabeca" }, caixa = "", dica = "jogador" },
+			{ nome = "ORBITAR", ordem = 28, nomes = { "orbitar", "orbit", "obt" }, caixa = "", dica = "jogador" },
+			{ nome = "HSIT", ordem = 29, nomes = { "hsit", "headsit", "sentarcabeca" }, caixa = "", dica = "jogador", grupo = "sentar" },
+			{ nome = "BSIT", ordem = 36, nomes = { "bsit", "backsit", "sentarcostas" }, caixa = "", dica = "jogador", grupo = "sentar" },
+			{ nome = "SSIT", ordem = 37, nomes = { "ssit", "shouldersit", "sentarombro" }, caixa = "", dica = "jogador", grupo = "sentar" },
+			{ nome = "FSIT", ordem = 38, nomes = { "fsit", "frontsit", "sentarfrente" }, caixa = "", dica = "jogador", grupo = "sentar" },
 			{ nome = "AFK", ordem = 30, nomes = { "afk" }, ligado = true }, -- o anti-AFK já começa ligado
 			{ nome = "AVISOS", ordem = 31, nomes = { "avisos" } },
 		}
@@ -6939,13 +7992,21 @@ local function iniciarTeclado()
 				it.ligado = v
 				pintarBotao(b, it.nome, v)
 			end
+			it.definir = definir
 
 			-- liga/desliga digitado também muda o botão
 			for _, n in ipairs(it.nomes) do
 				local origLigar, origDesligar = comandos[n], comandos["un" .. n]
 				comandos[n] = function(a)
 					local ok, msg = origLigar(a)
-					if ok ~= false then definir(true) end
+					if ok ~= false then
+						if it.grupo then -- só um modo de sentar por vez
+							for _, o in ipairs(lista) do
+								if o ~= it and o.grupo == it.grupo and o.definir then o.definir(false) end
+							end
+						end
+						definir(true)
+					end
 					return ok, msg
 				end
 				comandos["un" .. n] = function(a)
@@ -6967,6 +8028,12 @@ local function iniciarTeclado()
 				caixa.FocusLost:Connect(function(enter)
 					if enter and it.ligado then chamar(it.nomes[1], separar(caixa)) end
 				end)
+			end
+		end
+
+		aoPararSentar = function()
+			for _, o in ipairs(lista) do
+				if o.grupo == "sentar" and o.definir then o.definir(false) end
 			end
 		end
 
