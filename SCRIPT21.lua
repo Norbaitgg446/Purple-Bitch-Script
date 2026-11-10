@@ -3311,7 +3311,8 @@ local definirXray
 local aplicarCaixaXray
 
 do
-	local RAIO_ONDA = 450        -- studs: até onde a onda de revelação vai
+	local RAIO_XRAY = 150        -- studs: só o que estiver até aqui (ao redor de você) fica transparente
+	local RAIO_ONDA = RAIO_XRAY  -- studs: até onde a onda de revelação vai
 	local DURACAO_ONDA = 1.1     -- segundos que a onda leva para chegar lá (sai rápido e desacelera)
 	local SONAR = MENU.sonar     -- intervalo / alcance / duracao / ligado (ajustáveis na categoria Config)
 	local COR_SONAR = Color3.fromRGB(90, 220, 255)
@@ -3350,6 +3351,8 @@ do
 	local raioOnda = 0
 	local tOnda = 0       -- progresso da onda de entrada (0..1)
 	local baldeAtual = 0
+	local centroXray = nil     -- posição de quem usa o xray (atualiza todo frame)
+	local centroVarredura = nil -- onde foi feita a última varredura do mapa
 	local origemOnda = Vector3.zero
 	local proximoSonar = 0
 	local ultimoEco = 0
@@ -3488,6 +3491,7 @@ do
 		if obj.Transparency >= 1 or ehPersonagem(obj) then return end
 		local cam = workspace.CurrentCamera
 		if cam and obj:IsDescendantOf(cam) then return end -- não afeta os próprios efeitos
+		if centroXray and (obj.Position - centroXray).Magnitude > RAIO_XRAY then return end -- fora do alcance
 		partes[obj] = 0
 		if not ondaAtiva then
 			ativar(obj)
@@ -3644,6 +3648,8 @@ do
 
 		local raiz = pegarPersonagem()
 		origemOnda = raiz and raiz.Position or workspace.CurrentCamera.CFrame.Position
+		centroXray = origemOnda
+		centroVarredura = origemOnda
 		ondaAtiva = true
 		raioOnda = 0
 		tOnda = 0
@@ -3722,6 +3728,21 @@ do
 		end
 
 		local raiz = pegarPersonagem()
+		if raiz and estado.xray then
+			centroXray = raiz.Position
+			-- andou bastante: solta o que ficou longe e varre de novo ao redor da nova posição
+			if centroVarredura and nPilha == 0 and (centroXray - centroVarredura).Magnitude > 40 then
+				centroVarredura = centroXray
+				for parte in pairs(partes) do
+					if parte.Parent and (parte.Position - centroXray).Magnitude > RAIO_XRAY + 20 then
+						parte.LocalTransparencyModifier = 0
+						partes[parte] = nil
+						inicios[parte] = nil
+					end
+				end
+				pilha, nPilha = { workspace }, 1
+			end
+		end
 
 		-- onda de revelação: libera as partes por faixa de distância
 		if ondaAtiva then
@@ -3737,10 +3758,7 @@ do
 			end
 			baldeAtual = limite + 1
 			if tOnda >= 1 then
-				for _, lista in pairs(baldes) do -- o que sobrou (muito longe) entra junto no fim
-					for _, parte in ipairs(lista) do ativar(parte) end
-				end
-				baldes = {}
+				baldes = {} -- o que sobrou (fora do raio) fica normal
 				ondaAtiva = false
 			end
 		end
@@ -4482,6 +4500,9 @@ do -- bloco (libera variáveis locais)
 	avisoNotas.TextXAlignment = Enum.TextXAlignment.Left
 	avisoNotas.Parent = painelNotas
 
+	local function temArquivos() -- (cópia local: a original fica dentro de outro bloco)
+		return typeof(writefile) == "function" and typeof(readfile) == "function" and typeof(isfile) == "function"
+	end
 	local podeSalvar = temArquivos() and typeof(writefile) == "function"
 	local carregando = true
 	local versaoSalvar = 0
