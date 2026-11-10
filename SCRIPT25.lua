@@ -315,7 +315,7 @@ local MENU = { atual = "Movimento", abas = {}, mostrar = nil,
 	-- liga/desliga da categoria Config
 	cfg = { barraVida = true, alertaChams = true, swimEfeitos = true, noclipTransp = true, tpInstantaneo = false, tpToolInstantaneo = false } }
 do -- bloco (libera variáveis locais)
-local CATEGORIAS = { "Movimento", "Combate", "Visão", "Jogadores", "Spawns", "Extras", "Config", "Ajuda" }
+local CATEGORIAS = { "Movimento", "Combate", "Visão", "Jogadores", "Extras", "Config", "Ajuda" }
 local LARGURA_LATERAL = 104
 local COR_DESTAQUE = Color3.fromRGB(130, 60, 255)
 conteudo.Position = UDim2.new(0, LARGURA_LATERAL + 12, 0, 40)
@@ -472,9 +472,9 @@ MENU.trad = {
 MENU.categoria = {
 	FLY = "Movimento", VFLY = "Movimento", SWIM = "Movimento", NOCLIP = "Movimento", SHIFTLOCK = "Visão",
 	GRUDAR = "Movimento", WALL = "Movimento",
-	ESP = "Combate", CHAMS = "Combate", AIMBOT = "Combate", ALVO = "Combate", PAREDE = "Combate", TIME = "Combate",
+	ESP = "Combate", CHAMS = "Combate", AIMBOT = "Combate", ALVO = "Config", PAREDE = "Config", TIME = "Config",
 	XRAY = "Visão", VIEW = "Jogadores",
-	TP = "Jogadores", TPTOOL = "Extras", SPAWNS = "Spawns",
+	TP = "Jogadores", TPTOOL = "Extras", SPAWNS = "Extras",
 	REJOIN = "Extras", NOTAS = "Extras",
 }
 
@@ -1232,13 +1232,24 @@ do
 	local botaoAlvo = criarLinha(15, "ALVO", false)
 	local botaoParede = criarLinha(16, "PAREDE", false)
 	local botaoTime = criarLinha(17, "TIME", false)
+	-- célula vazia: completa a linha para as 3 opções do aimbot ficarem juntas e separadas das outras configurações
+	do
+		local vazio = Instance.new("Frame")
+		vazio.Name = "CelulaAimVazia"
+		vazio.LayoutOrder = 18
+		vazio.Size = UDim2.new(1, 0, 0, ALTURA_BOTAO)
+		vazio.BackgroundTransparency = 1
+		vazio:SetAttribute("Categoria", "Config")
+		vazio.Visible = (MENU.atual == "Config")
+		vazio.Parent = grade
+	end
 
 	local function pintarOpcoes()
-		botaoAlvo.Text = "ALVO: " .. (aim.parte == "Head" and "CABEÇA" or "TRONCO")
+		botaoAlvo.Text = "AIM ALVO: " .. (aim.parte == "Head" and "CABEÇA" or "TRONCO")
 		VIDRO.aplicar(botaoAlvo, false)
-		botaoParede.Text = "PAREDE: " .. (aim.ignorarParede and "IGNORA" or "RESPEITA")
+		botaoParede.Text = "AIM PAREDE: " .. (aim.ignorarParede and "IGNORA" or "RESPEITA")
 		VIDRO.aplicar(botaoParede, aim.ignorarParede)
-		botaoTime.Text = "TIME: " .. (aim.ignorarTime and "IGNORA" or "MIRA")
+		botaoTime.Text = "AIM TIME: " .. (aim.ignorarTime and "IGNORA" or "MIRA")
 		VIDRO.aplicar(botaoTime, aim.ignorarTime)
 	end
 	pintarOpcoes()
@@ -2482,16 +2493,6 @@ do
 		local raiz = char and char:FindFirstChild("HumanoidRootPart")
 		local ligado = estado.noclip and raiz ~= nil
 		local agora = os.clock()
-
-		-- 1) Personagem meio transparente
-		nivelPersonagem = nivelPersonagem + ((ligado and 1 or 0) - nivelPersonagem) * (1 - math.exp(-dt * 6))
-		if char and (nivelPersonagem > 0.005 or ligado) then
-			for _, d in ipairs(char:GetDescendants()) do
-				if d:IsA("BasePart") then
-					d.LocalTransparencyModifier = MENU.cfg.noclipTransp and nivelPersonagem * TRANSP_PERSONAGEM or 0
-				end
-			end
-		end
 
 		-- 2) Checa o que está encostando/atravessando o corpo (com o Xray ligado o mapa já está transparente)
 		if ligado and not estado.xray and MENU.cfg.noclipTransp then
@@ -4705,7 +4706,7 @@ end -- fim do bloco (libera variáveis locais)
 -- A câmera continua normal (não gira junto). Usa a mesma ideia do GRUDAR: se a peça se mexe, você vai junto.
 do -- bloco (libera variáveis locais)
 	local ALCANCE_EXTRA = 2.2 -- folga abaixo dos pés para achar a superfície
-	local ALCANCE_FRENTE = 2.8 -- distância para ver uma parede à frente (quina de dentro)
+	local ALCANCE_FRENTE = 3.4 -- distância para ver uma parede à frente (quina de dentro)
 	local ALCANCE_QUINA = 3 -- quanto olha para frente para contornar uma quina de fora
 	local SUAVIDADE = 12 -- quão rápido o corpo gira para acompanhar a superfície
 	local PULO_FORCA, PULO_TEMPO = 45, 0.2
@@ -4732,37 +4733,50 @@ do -- bloco (libera variáveis locais)
 		return p.Unit
 	end
 
-	local animCaminhar, animHum
-	local tParado, esperaAgarrar = 0, 0
+	local animCaminhar, animParado, animHum
+	local tParado, esperaAgarrar, semChao = 0, 0, 0
 
-	-- Com PlatformStand o jogo desliga as animações: toca a de andar na mão
+	-- Com PlatformStand o jogo desliga as animações (o corpo fica "reto"): toca andar e parado na mão
 	local function pararAnim()
 		if animCaminhar then pcall(function() animCaminhar:Stop(0.2) end) end
+		if animParado then pcall(function() animParado:Stop(0.2) end) end
+	end
+	local function carregarAnims(hum)
+		local animador = hum:FindFirstChildOfClass("Animator")
+		if not animador then return false end
+		local r15 = hum.RigType == Enum.HumanoidRigType.R15
+		local function criar(id)
+			local a = Instance.new("Animation")
+			a.AnimationId = id
+			local t = animador:LoadAnimation(a)
+			t.Priority = Enum.AnimationPriority.Action
+			t.Looped = true
+			return t
+		end
+		animCaminhar = criar(r15 and "rbxassetid://507777826" or "rbxassetid://180426354")
+		animParado = criar(r15 and "rbxassetid://507766388" or "rbxassetid://180435571")
+		animHum = hum
+		return true
 	end
 	local function atualizarAnim(hum, andando, ritmo)
 		pcall(function()
-			local animador = hum:FindFirstChildOfClass("Animator")
-			if not animador then return end
 			if animHum ~= hum or not animCaminhar then
-				local a = Instance.new("Animation")
-				a.AnimationId = hum.RigType == Enum.HumanoidRigType.R15 and "rbxassetid://507777826" or "rbxassetid://180426354"
-				animCaminhar = animador:LoadAnimation(a)
-				animCaminhar.Priority = Enum.AnimationPriority.Action
-				animCaminhar.Looped = true
-				animHum = hum
+				if not carregarAnims(hum) then return end
 			end
 			if andando then
+				if animParado.IsPlaying then animParado:Stop(0.2) end
 				if not animCaminhar.IsPlaying then animCaminhar:Play(0.15) end
 				animCaminhar:AdjustSpeed(math.clamp(ritmo, 0.4, 2))
-			elseif animCaminhar.IsPlaying then
-				animCaminhar:Stop(0.2)
+			else
+				if animCaminhar.IsPlaying then animCaminhar:Stop(0.2) end
+				if not animParado.IsPlaying then animParado:Play(0.2) end
 			end
 		end)
 	end
 
 	local function largar(raiz, hum)
 		pararAnim()
-		tParado = 0
+		tParado, semChao = 0, 0
 		if bv then bv:Destroy() bv = nil end
 		if bg then bg:Destroy() bg = nil end
 		if raiz and raiz.Parent then
@@ -4779,7 +4793,6 @@ do -- bloco (libera variáveis locais)
 		end
 		if hum and hum.Parent then
 			hum.PlatformStand = false
-			pcall(function() hum:ChangeState(Enum.HumanoidStateType.GettingUp) end) -- destrava o personagem
 		end
 		pecaAntes, cfAntes = nil, nil
 		normalAlvo, normalSuave = Vector3.yAxis, Vector3.yAxis
@@ -4787,6 +4800,7 @@ do -- bloco (libera variáveis locais)
 	end
 
 	local function agarrar(raiz, hum, normal)
+		semChao = 0
 		if bv then bv:Destroy() end
 		if bg then bg:Destroy() end
 		bv = Instance.new("BodyVelocity")
@@ -4833,7 +4847,7 @@ do -- bloco (libera variáveis locais)
 		-- Solto: só procura chão por perto (jogo normal) para agarrar
 		if solto then
 			if os.clock() < esperaAgarrar then return end -- acabou de se soltar: deixa o jogo normal agir um instante
-			local r = workspace:Raycast(pos, Vector3.new(0, -(alc + 3), 0), params)
+			local r = workspace:Raycast(pos, Vector3.new(0, -(alc - 0.4), 0), params) -- mesmo alcance do passo: sem pega-e-solta no ar
 			if r then agarrar(raiz, hum, r.Normal) end
 			return
 		end
@@ -4866,9 +4880,15 @@ do -- bloco (libera variáveis locais)
 		-- 1) parede à frente (quina de dentro): passa a andar nela
 		local trocou = false
 		if dirMov then
-			local r = workspace:Raycast(pos, dirMov * ALCANCE_FRENTE, params)
-			if r and r.Normal:Dot(n) < 0.5 then
-				normalAlvo = r.Normal
+			-- três raios (cabeça, meio e junto à superfície): pega também sacadas e caixinhas que sobressaem pouco
+			local melhor
+			local origens = { pos, pos + n * 1.2, pos - n * (altura - 0.7) }
+			for _, o in ipairs(origens) do
+				local r = workspace:Raycast(o, dirMov * ALCANCE_FRENTE, params)
+				if r and r.Normal:Dot(n) < 0.5 and (not melhor or r.Distance < melhor.Distance) then melhor = r end
+			end
+			if melhor then
+				normalAlvo = melhor.Normal
 				n = normalAlvo
 				trocou = true
 			end
@@ -4895,8 +4915,13 @@ do -- bloco (libera variáveis locais)
 		end
 
 		if not chao and not trocou then
-			largar(raiz, hum) -- nada por perto: volta ao jogo normal
-			return
+			semChao = semChao + dt
+			if semChao > 0.25 then
+				largar(raiz, hum) -- nada por perto: volta ao jogo normal
+				return
+			end
+		else
+			semChao = 0
 		end
 
 		-- Peça que se mexe (carro, plataforma): leva você junto, como o GRUDAR
@@ -4930,7 +4955,7 @@ do -- bloco (libera variáveis locais)
 		-- Preso (querendo andar e sem sair do lugar): solta e deixa o personagem normal por um instante
 		if andando and pulo <= 0 and raiz.AssemblyLinearVelocity.Magnitude < 1.5 then
 			tParado = tParado + dt
-			if tParado > 0.8 then
+			if tParado > 2 then
 				esperaAgarrar = os.clock() + 0.6
 				largar(raiz, hum)
 				return
@@ -4972,7 +4997,7 @@ do -- bloco (libera variáveis locais)
 	player.CharacterAdded:Connect(function()
 		bv, bg = nil, nil
 		animCaminhar, animHum = nil, nil
-		tParado, esperaAgarrar = 0, 0
+		tParado, esperaAgarrar, semChao = 0, 0, 0
 		pecaAntes, cfAntes = nil, nil
 		normalAlvo, normalSuave = Vector3.yAxis, Vector3.yAxis
 		solto = true
@@ -5620,7 +5645,8 @@ local function iniciarTeclado()
 	local lunetaFovBase, lunetaSensBase
 	local lunetaProgresso = 0    -- 0 = câmera normal, 1 = luneta completa
 	local lunetaConexoes = {}
-	local lunetaGui, lunetaLente, lunetaEscuro, lunetaAro, lunetaMiraH, lunetaMiraV
+	local LUNETA_CAMADAS, LUNETA_ESCURO = 10, 0.6 -- camadas do degradê e o quanto escurece no canto (0 a 1)
+	local lunetaGui, lunetaAneis, lunetaMiraH, lunetaMiraV
 
 	local function lunetaEncerrar()
 		for _, c in ipairs(lunetaConexoes) do c:Disconnect() end
@@ -5639,14 +5665,14 @@ local function iniciarTeclado()
 			AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
 			BackgroundTransparency = 1, BorderSizePixel = 0, Active = false,
 		}
-		-- lente: círculo vazio; o "escuro em volta" é a borda bem grossa dele
-		lunetaLente = novo("Frame", base, lunetaGui)
-		novo("UICorner", { CornerRadius = UDim.new(1, 0) }, lunetaLente)
-		lunetaEscuro = novo("UIStroke", { Color = Color3.new(0, 0, 0), Thickness = 100, Transparency = 1 }, lunetaLente)
-		-- aro de latão da luneta
-		lunetaAro = novo("Frame", base, lunetaGui)
-		novo("UICorner", { CornerRadius = UDim.new(1, 0) }, lunetaAro)
-		novo("UIStroke", { Color = Color3.fromRGB(150, 105, 45), Thickness = 6, Transparency = 0.1 }, lunetaAro)
+		-- escuro suave em volta: várias bordas redondas bem fraquinhas empilhadas (degradê, dá para ver através)
+		lunetaAneis = {}
+		for i = 1, LUNETA_CAMADAS do
+			local f = novo("Frame", base, lunetaGui)
+			novo("UICorner", { CornerRadius = UDim.new(1, 0) }, f)
+			local st = novo("UIStroke", { Color = Color3.new(0, 0, 0), Thickness = 100, Transparency = 1 }, f)
+			lunetaAneis[i] = { f = f, st = st }
+		end
 		-- mira fina no centro
 		lunetaMiraH = novo("Frame", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
 			Size = UDim2.new(0.5, 0, 0, 1), BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.5,
@@ -5682,16 +5708,18 @@ local function iniciarTeclado()
 				UserInputService.MouseDeltaSensitivity = lunetaSensBase / (1 + (lunetaFator - 1) * 0.6 * p)
 			end)
 
-			-- lente redonda: diâmetro = 88% do lado menor; a lente "abre" junto com o zoom
+			-- degradê escuro: cada camada escurece só um pouco; juntas chegam a LUNETA_ESCURO no canto
 			local tela = c.ViewportSize
-			local lado = math.min(tela.X, tela.Y) * 0.88
+			local lado = math.min(tela.X, tela.Y) * 0.95
 			local diametro = lado * (1.5 - 0.5 * p)
 			local meiaDiagonal = 0.5 * math.sqrt(tela.X * tela.X + tela.Y * tela.Y)
-			lunetaLente.Size = UDim2.fromOffset(diametro, diametro)
-			lunetaAro.Size = UDim2.fromOffset(diametro, diametro)
-			lunetaEscuro.Thickness = math.max(2, math.ceil(meiaDiagonal - diametro / 2 + 6))
-			lunetaEscuro.Transparency = 1 - p
-			lunetaAro.UIStroke.Transparency = 1 - p * 0.9
+			local alfaCamada = 1 - (1 - LUNETA_ESCURO) ^ (1 / LUNETA_CAMADAS)
+			for i, a in ipairs(lunetaAneis) do
+				local d = diametro * (1 - (i - 1) / (LUNETA_CAMADAS - 1) * 0.5)
+				a.f.Size = UDim2.fromOffset(d, d)
+				a.st.Thickness = math.max(2, math.ceil(meiaDiagonal - d / 2 + 6))
+				a.st.Transparency = 1 - alfaCamada * p
+			end
 			lunetaMiraH.BackgroundTransparency = 1 - p * 0.5
 			lunetaMiraV.BackgroundTransparency = 1 - p * 0.5
 		end)
