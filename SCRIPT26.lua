@@ -4707,7 +4707,11 @@ end -- fim do bloco (libera variáveis locais)
 do -- bloco (libera variáveis locais)
 	local ALCANCE_EXTRA = 2.2 -- folga abaixo dos pés para achar a superfície
 	local ALCANCE_FRENTE = 3.4 -- distância para ver uma parede à frente (quina de dentro)
-	local ALCANCE_QUINA = 3 -- quanto olha para frente para contornar uma quina de fora
+	local ALCANCE_QUINA = 2.6 -- quanto olha para frente (do lado de fora da quina) para achar a face que dobra
+	local ANTECIPA_QUINA = 0.6 -- começa a contornar a quina de fora quando falta isso para o chão acabar
+	local DEGRAU_MAX = 2.8 -- saliências/degraus de até essa altura (studs) são PASSADOS POR CIMA em vez de virar parede
+	local ALCANCE_DEGRAU = 1.6 -- quanto olha para frente para subir num degrau antes de bater nele
+	local TEMPO_CURVA = 0.25 -- duração da volta em torno de uma quina de fora
 	local SUAVIDADE = 12 -- quão rápido o corpo gira para acompanhar a superfície
 	local PULO_FORCA, PULO_TEMPO = 45, 0.2
 
@@ -4721,6 +4725,10 @@ do -- bloco (libera variáveis locais)
 	local pecaAntes, cfAntes = nil, nil
 	local solto = true -- true = jogo normal (nenhuma superfície por perto ainda)
 	local pulo = 0
+	local trava = nil -- direção "reta" guardada ao trocar de superfície: { dir, ix, iz, yaw }
+	local transicao = nil -- volta em torno de uma quina de fora: { alvo, t }
+	local normalAnterior, tTroca = nil, 0 -- última superfície que deixou (evita vai-e-volta na quina)
+	local elevacao, ultimaDist = 0, nil -- quanto está levantado por cima de um degrau / distância até a superfície
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
 	params.RespectCanCollide = true
@@ -4731,6 +4739,76 @@ do -- bloco (libera variáveis locais)
 		local p = projetar(v, n)
 		if p.Magnitude < 0.05 then p = padrao end
 		return p.Unit
+	end
+
+	-- Gira a direção v do plano da superfície A para o plano da superfície B (continua "reto" na quina)
+	local function transportar(v, nA, nB)
+		local eixo = nA:Cross(nB)
+		if eixo.Magnitude < 1e-3 then return v end
+		local ang = math.atan2(eixo.Magnitude, nA:Dot(nB))
+		return CFrame.fromAxisAngle(eixo.Unit, ang):VectorToWorldSpace(v)
+	end
+
+	-- Analógico -> direção na superfície. Usa só o lado para onde a câmera aponta no mapa (não a inclinação dela),
+	-- então de cabeça pra baixo "frente" continua sendo "para onde a câmera olha" e nunca inverte.
+	-- Em parede de frente para a câmera, "frente" = subir.
+	local function mapearEntrada(n, rFlat, fFlat, ix, iz, reserva)
+		local fSup = projetar(fFlat, n) + projetar(Vector3.yAxis, n) * math.clamp(-fFlat:Dot(n), 0, 1)
+		if fSup.Magnitude < 0.05 then fSup = projetar(Vector3.yAxis, n) end
+		if fSup.Magnitude < 0.05 then fSup = reserva end
+		fSup = fSup.Unit
+		local rSup = projetar(rFlat, n)
+		rSup = rSup.Magnitude > 0.05 and rSup.Unit or fSup:Cross(n)
+		local d = rSup * ix + fSup * iz
+		if d.Magnitude > 1 then d = d.Unit end
+		return d, fSup
+	end
+
+	-- Enquanto você segura o analógico para o mesmo lado (e não gira a câmera demais), a direção guardada
+	-- ao passar por uma quina continua valendo: o personagem segue reto em vez de reinterpretar a câmera.
+	local function aplicarTrava(n, d, ix, iz, yawCam)
+		if not trava then return d end
+		local atual = Vector2.new(ix, iz)
+		local ref = Vector2.new(trava.ix, trava.iz)
+		local dy = yawCam - trava.yaw
+		dy = math.atan2(math.sin(dy), math.cos(dy))
+		if atual.Magnitude < 0.2 or ref.Magnitude < 0.01 or atual.Unit:Dot(ref.Unit) < 0.8 or math.abs(dy) > 0.7 then
+			trava = nil
+			return d
+		end
+		local p = projetar(trava.dir, n)
+		if p.Magnitude < 0.05 then
+			trava = nil
+			return d
+		end
+		return p.Unit * math.min(1, atual.Magnitude)
+	end
+
+	-- A peça à frente é só um degrau/saliência pequena (dá para pisar por cima)? Mede o topo dela.
+	local function eDegrau(r, n, dirMov, pos, dist)
+		local plano = pos:Dot(n) - dist -- nível da superfície em que está, ao longo de n
+		local p = r.Position + dirMov * 0.2
+		local topo = DEGRAU_MAX + 0.8
+		local origem = p + n * (plano + topo - p:Dot(n))
+		local rr = workspace:Raycast(origem, -n * (topo + 0.4), params)
+		if rr and rr.Instance == r.Instance and rr.Normal:Dot(n) > 0.6 then
+			return (rr.Position:Dot(n) - plano) <= DEGRAU_MAX
+		end
+		return false -- sem topo por perto: é uma parede alta
+	end
+
+	-- Quina de fora: acha a face que dobra "para baixo" logo depois do fim da superfície
+	local function acharQuina(pos, n, dirMov, dist)
+		for _, alcance in ipairs({ ALCANCE_QUINA, ALCANCE_QUINA * 0.5 }) do
+			for _, prof in ipairs({ 0.3, 0.9, 1.8 }) do -- fundo (abaixo do plano) de onde o raio parte: serve p/ lajes finas e grossas
+				local origem = pos + dirMov * alcance - n * (dist + prof)
+				local r = workspace:Raycast(origem, -dirMov * (alcance + 1), params)
+				if r and r.Normal:Dot(dirMov) > 0.4 and math.abs(r.Normal:Dot(n)) < 0.6 then
+					return r
+				end
+			end
+		end
+		return nil
 	end
 
 	local animCaminhar, animParado, animHum
@@ -4796,6 +4874,7 @@ do -- bloco (libera variáveis locais)
 		end
 		pecaAntes, cfAntes = nil, nil
 		normalAlvo, normalSuave = Vector3.yAxis, Vector3.yAxis
+		trava, transicao, normalAnterior, elevacao, ultimaDist = nil, nil, nil, 0, nil
 		solto = true
 	end
 
@@ -4818,6 +4897,7 @@ do -- bloco (libera variáveis locais)
 		local l = workspace.CurrentCamera.CFrame.LookVector
 		frente = planoOuPadrao(l, normal, raiz.CFrame.LookVector)
 		pecaAntes, cfAntes = nil, nil
+		trava, transicao, normalAnterior, elevacao, ultimaDist = nil, nil, nil, 0, nil
 		solto = false
 	end
 
@@ -4857,118 +4937,176 @@ do -- bloco (libera variáveis locais)
 
 		local n = normalAlvo
 		local camCF = workspace.CurrentCamera.CFrame
+		local agora = os.clock()
+		local distAtual = ultimaDist or altura
 
-		-- Entrada: analógico/teclado relativo à câmera, levado para o plano da superfície
+		-- Entrada: analógico/teclado relativo à câmera (só o "lado" horizontal dela, sem depender da inclinação)
 		local mover = hum.MoveDirection
 		local rFlat = Vector3.new(camCF.RightVector.X, 0, camCF.RightVector.Z)
 		rFlat = rFlat.Magnitude > 0.01 and rFlat.Unit or Vector3.xAxis
 		local fFlat = Vector3.yAxis:Cross(rFlat)
 		local ix, iz = mover:Dot(rFlat), mover:Dot(fFlat)
+		local yawCam = math.atan2(rFlat.X, rFlat.Z)
 
-		local look = camCF.LookVector
-		local fSup = projetar(look, n) + projetar(camCF.UpVector, n) * math.clamp(-look:Dot(n), 0, 1)
-		if fSup.Magnitude < 0.05 then fSup = projetar(camCF.UpVector, n) end
-		if fSup.Magnitude < 0.05 then fSup = frente end
-		fSup = fSup.Unit
-		local rSup = projetar(camCF.RightVector, n)
-		rSup = rSup.Magnitude > 0.05 and rSup.Unit or fSup:Cross(n)
-		local desejado = rSup * ix + fSup * iz
-		if desejado.Magnitude > 1 then desejado = desejado.Unit end
+		local desejado, fSup = mapearEntrada(n, rFlat, fFlat, ix, iz, frente)
+		desejado = aplicarTrava(n, desejado, ix, iz, yawCam)
 		local andando = desejado.Magnitude > 0.1
 		local dirMov = andando and desejado.Unit or nil
 
-		-- 1) parede à frente (quina de dentro): passa a andar nela
 		local trocou = false
-		if dirMov then
-			-- três raios (cabeça, meio e junto à superfície): pega também sacadas e caixinhas que sobressaem pouco
-			local melhor
-			local origens = { pos, pos + n * 1.2, pos - n * (altura - 0.7) }
-			for _, o in ipairs(origens) do
-				local r = workspace:Raycast(o, dirMov * ALCANCE_FRENTE, params)
-				if r and r.Normal:Dot(n) < 0.5 and (not melhor or r.Distance < melhor.Distance) then melhor = r end
+		-- Troca de superfície: guarda a direção "reta" levada para a nova superfície (continua reto na quina)
+		local function trocarPara(nNovo)
+			if dirMov then
+				trava = { dir = transportar(dirMov, n, nNovo), ix = ix, iz = iz, yaw = yawCam }
 			end
-			if melhor then
-				normalAlvo = melhor.Normal
-				n = normalAlvo
-				trocou = true
-			end
-		end
-
-		-- 2) chão sob os pés (segue rampas e curvas)
-		local chao
-		if not trocou then
-			chao = workspace:Raycast(pos, -n * alc, params)
-			if chao then
-				local suave = 1 - math.exp(-dt * SUAVIDADE)
-				normalAlvo = normalAlvo:Lerp(chao.Normal, suave).Unit
-				n = normalAlvo
-			elseif dirMov then
-				-- 3) acabou o chão (quina de fora): procura a superfície que dobra para baixo
-				local origem = pos + dirMov * ALCANCE_QUINA - n * (altura + 0.5)
-				local r = workspace:Raycast(origem, -dirMov * (ALCANCE_QUINA + 0.8), params)
-				if r then
-					normalAlvo = r.Normal
-					n = normalAlvo
-					trocou = true
+			normalAnterior, tTroca = n, agora
+			normalAlvo, n = nNovo, nNovo
+			trocou = true
+			if trava then
+				local p = projetar(trava.dir, n)
+				if p.Magnitude > 0.05 then
+					desejado = p.Unit * math.min(1, desejado.Magnitude)
+					dirMov = p.Unit
 				end
 			end
 		end
 
-		if not chao and not trocou then
-			semChao = semChao + dt
-			if semChao > 0.25 then
-				largar(raiz, hum) -- nada por perto: volta ao jogo normal
-				return
+		-- Dando a volta numa quina de fora: leva o corpo até o ponto certo da nova face, sem checar chão
+		local emCurva = false
+		if transicao then
+			transicao.t = transicao.t - dt
+			local para = transicao.alvo - pos
+			if transicao.t <= 0 or para.Magnitude < 0.3 then
+				transicao = nil
+			else
+				emCurva = true
+				semChao = 0
+				tParado = 0
+				local v = para * 14
+				if v.Magnitude > 70 then v = v.Unit * 70 end
+				bv.Velocity = v
+				atualizarAnim(hum, andando, hum.WalkSpeed / 14)
 			end
-		else
-			semChao = 0
 		end
 
-		-- Peça que se mexe (carro, plataforma): leva você junto, como o GRUDAR
-		if pulo <= 0 then
-			local peca = chao and chao.Instance or nil
-			if peca and peca == pecaAntes and cfAntes then
-				local delta = peca.CFrame * cfAntes:Inverse()
-				if delta.Position.Magnitude > 1e-4 or (delta.LookVector - Vector3.new(0, 0, -1)).Magnitude > 1e-5 then
-					if delta.Position.Magnitude < 60 then
-						raiz.CFrame = delta * raiz.CFrame
+		if not emCurva then
+			local chao, distF
+
+			-- 1) parede à frente (quina de dentro): passa a andar nela.
+			-- Saliências pequenas (até DEGRAU_MAX de altura) NÃO contam como parede: o personagem passa reto por cima.
+			if dirMov then
+				-- três raios (cabeça, meio e junto à superfície): pega também sacadas e caixinhas que sobressaem pouco
+				local melhor
+				local origens = { pos, pos + n * 1.2, pos - n * (distAtual - 0.7) }
+				for _, o in ipairs(origens) do
+					local r = workspace:Raycast(o, dirMov * ALCANCE_FRENTE, params)
+					if r and r.Normal:Dot(n) < 0.5 and (not melhor or r.Distance < melhor.Distance) then
+						local voltando = normalAnterior ~= nil and agora - tTroca < 0.5 and r.Normal:Dot(normalAnterior) > 0.9
+						if not voltando and not eDegrau(r, n, dirMov, pos, distAtual) then
+							melhor = r
+						end
+					end
+				end
+				if melhor then trocarPara(melhor.Normal) end
+			end
+
+			-- 2) chão sob os pés (segue rampas e curvas) + degraus à frente + quina de fora
+			if not trocou then
+				chao = workspace:Raycast(pos, -n * (alc + elevacao), params)
+				local precisaQuina = false
+				if chao then
+					local suave = 1 - math.exp(-dt * SUAVIDADE)
+					normalAlvo = normalAlvo:Lerp(chao.Normal, suave).Unit
+					n = normalAlvo
+					local distC = (pos - chao.Position):Dot(chao.Normal)
+					ultimaDist = math.clamp(distC, altura * 0.6, altura + DEGRAU_MAX)
+					elevacao = math.clamp(distC - altura, 0, DEGRAU_MAX)
+					if dirMov then
+						-- degrau logo à frente: levanta o corpo antes de bater nele
+						local base = pos - n * distC
+						local rf = workspace:Raycast(base + dirMov * ALCANCE_DEGRAU + n * (DEGRAU_MAX + 0.3), -n * (DEGRAU_MAX + 0.9), params)
+						if rf and rf.Normal:Dot(n) > 0.95 then
+							local h = (rf.Position - base):Dot(n)
+							if h > 0.12 and h <= DEGRAU_MAX then distF = distC - h end
+						end
+						-- o chão vai acabar já já (quina de fora)?
+						local ra = workspace:Raycast(pos + dirMov * ANTECIPA_QUINA, -n * (alc + elevacao), params)
+						if not ra then precisaQuina = true end
+					end
+				elseif dirMov then
+					precisaQuina = true
+				end
+
+				if precisaQuina then
+					-- 3) acabou o chão: procura a face que dobra para baixo e dá a volta nela, seguindo reto
+					local q = acharQuina(pos, n, dirMov, distAtual)
+					if q then
+						trocarPara(q.Normal)
+						transicao = { alvo = q.Position + q.Normal * altura, t = TEMPO_CURVA }
+						chao, distF = nil, nil
+						elevacao, ultimaDist = 0, altura
 					end
 				end
 			end
-			if peca then pecaAntes, cfAntes = peca, peca.CFrame else pecaAntes, cfAntes = nil, nil end
-		else
-			pecaAntes, cfAntes = nil, nil
-		end
 
-		-- Velocidade: anda no plano + cola na superfície mantendo a altura dos pés
-		local vNormal = 0
-		if pulo > 0 then
-			pulo = pulo - dt
-			vNormal = PULO_FORCA
-		elseif chao then
-			local dist = (pos - chao.Position):Dot(chao.Normal)
-			vNormal = math.clamp((altura - dist) * 12, -40, 40)
-		end
-		bv.Velocity = desejado * hum.WalkSpeed + n * vNormal
-		atualizarAnim(hum, andando, hum.WalkSpeed / 14)
-
-		-- Preso (querendo andar e sem sair do lugar): solta e deixa o personagem normal por um instante
-		if andando and pulo <= 0 and raiz.AssemblyLinearVelocity.Magnitude < 1.5 then
-			tParado = tParado + dt
-			if tParado > 2 then
-				esperaAgarrar = os.clock() + 0.6
-				largar(raiz, hum)
-				return
+			if not chao and not trocou then
+				semChao = semChao + dt
+				if semChao > 0.25 then
+					largar(raiz, hum) -- nada por perto: volta ao jogo normal
+					return
+				end
+			else
+				semChao = 0
 			end
-		else
-			tParado = 0
+
+			-- Peça que se mexe (carro, plataforma): leva você junto, como o GRUDAR
+			if pulo <= 0 then
+				local peca = chao and chao.Instance or nil
+				if peca and peca == pecaAntes and cfAntes then
+					local delta = peca.CFrame * cfAntes:Inverse()
+					if delta.Position.Magnitude > 1e-4 or (delta.LookVector - Vector3.new(0, 0, -1)).Magnitude > 1e-5 then
+						if delta.Position.Magnitude < 60 then
+							raiz.CFrame = delta * raiz.CFrame
+						end
+					end
+				end
+				if peca then pecaAntes, cfAntes = peca, peca.CFrame else pecaAntes, cfAntes = nil, nil end
+			else
+				pecaAntes, cfAntes = nil, nil
+			end
+
+			-- Velocidade: anda no plano + cola na superfície mantendo a altura dos pés (e sobe nos degraus)
+			local vNormal = 0
+			if pulo > 0 then
+				pulo = pulo - dt
+				vNormal = PULO_FORCA
+			elseif chao then
+				local dist = (pos - chao.Position):Dot(chao.Normal)
+				if distF then dist = math.min(dist, distF) end
+				vNormal = math.clamp((altura - dist) * 12, -40, 40)
+			end
+			bv.Velocity = desejado * hum.WalkSpeed + n * vNormal
+			atualizarAnim(hum, andando, hum.WalkSpeed / 14)
+
+			-- Preso (querendo andar e sem sair do lugar): solta e deixa o personagem normal por um instante
+			if andando and pulo <= 0 and raiz.AssemblyLinearVelocity.Magnitude < 1.5 then
+				tParado = tParado + dt
+				if tParado > 2 then
+					esperaAgarrar = os.clock() + 0.6
+					largar(raiz, hum)
+					return
+				end
+			else
+				tParado = 0
+			end
 		end
 
 		-- Corpo: de pé na superfície, virado para onde anda
 		if andando then
 			frente = frente:Lerp(dirMov, 1 - math.exp(-dt * 10))
 		end
-		normalSuave = normalSuave:Lerp(n, 1 - math.exp(-dt * SUAVIDADE)).Unit
+		local novaNormal = normalSuave:Lerp(n, 1 - math.exp(-dt * SUAVIDADE))
+		normalSuave = novaNormal.Magnitude > 0.05 and novaNormal.Unit or n
 		local alto = normalSuave
 		local olhar = planoOuPadrao(frente, alto, fSup)
 		frente = olhar
@@ -5000,6 +5138,7 @@ do -- bloco (libera variáveis locais)
 		tParado, esperaAgarrar, semChao = 0, 0, 0
 		pecaAntes, cfAntes = nil, nil
 		normalAlvo, normalSuave = Vector3.yAxis, Vector3.yAxis
+		trava, transicao, normalAnterior, elevacao, ultimaDist = nil, nil, nil, 0, nil
 		solto = true
 		pulo = 0
 	end)
