@@ -31,6 +31,7 @@ local EFEITO_QTD_RISCOS = 14 -- quantidade de riscos brancos (eles aparecem só 
 -- SUPER VOO: ao ficar na velocidade máxima, uma barrinha carrega e ativa o boost
 local SUPER = {
 	ativo = false,
+	habilitado = true, -- false = o super voo nunca carrega (ajustável na categoria Config)
 	tempoCarga = 7, -- segundos na velocidade máxima até ativar o super voo
 	mult = 3,         -- quantas vezes mais rápido fica no super voo
 	tremida = 2.5,    -- tremida extra da tela
@@ -174,12 +175,9 @@ Instance.new("UICorner", painel).CornerRadius = UDim.new(0, 14)
 local proximaFotoFundo -- chamada em alternarPainel; definida logo abaixo
 do
 	-- >>> COLE AQUI OS LINKS DIRETOS DAS FOTOS (terminam em .png ou .jpg) <<<
-	-- Deixe "" nas que não for usar. Pode usar de 1 a 4.
+	-- Só a foto purple, que é o fundo do painel (a foto do botão MENU é a LINK_BOTAO, mais abaixo).
 	local LINKS_FOTOS = {
-		"https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTjMDaLibyw_z3-75JPKtAxs7BIO66Fqutk0A_NLEZARoPFTCiNsN0-l5N7&s=10", -- foto 1
-		"https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRo72Vsot2aEMyHqbb1Nij43mYDpQUqGgGLHYvYOu84BD4Y-agSFZXu4U0&s=10", -- foto 2
-		"https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTdsojKLsiKD8WGLWCtDIQ5OHQJaT_35CgmRYYBYCt6sZKTzGT181tVR6Y&s=10", -- foto 3
-		"https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR3fzheHWw3pkVYtTMu1lK00H1X86EpBXBfg1FsQWxCsqWsxw_YgGjt9MQ&s=10", -- foto 4
+		"https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRo72Vsot2aEMyHqbb1Nij43mYDpQUqGgGLHYvYOu84BD4Y-agSFZXu4U0&s=10", -- foto purple (fundo do painel e botão MENU)
 	}
 	local TRANSPARENCIA_FOTO = 0.4 -- 0 = foto forte, 1 = invisível
 	local ID_FOTO_FUNDO = "rbxassetid://0" -- plano B (opcional): ID do Roblox
@@ -210,6 +208,46 @@ do
 		return getcustomasset(arquivo)
 	end
 
+	-- Foto do botão MENU: quadrada, mostrando só o meio da imagem (ScaleType.Crop corta as bordas)
+	local LINK_BOTAO = "https://pbs.twimg.com/amplify_video_thumb/1425387452521459712/img/rCnVIOKSPPEVchx9.jpg"
+	local function criarFotoBotao(imagem)
+		local fotoBotao = Instance.new("ImageLabel")
+		fotoBotao.Name = "FotoBotao"
+		fotoBotao.Size = UDim2.new(1, 0, 1, 0)
+		fotoBotao.BackgroundTransparency = 1
+		fotoBotao.Image = imagem
+		fotoBotao.ScaleType = Enum.ScaleType.Crop
+		fotoBotao.ZIndex = botao.ZIndex + 1
+		fotoBotao.Active = false
+		fotoBotao.Parent = botao
+		Instance.new("UICorner", fotoBotao).CornerRadius = UDim.new(0, 12)
+		local contornoFoto = Instance.new("UIStroke")
+		contornoFoto.Color = Color3.new(1, 1, 1)
+		contornoFoto.Thickness = 1.2
+		contornoFoto.Transparency = 0.45
+		contornoFoto.Parent = fotoBotao
+		botao.Text = ""
+		botao.AutoButtonColor = false
+
+		-- Foto do projeto no canto do título do menu (redonda, junto do nome)
+		local fotoProjeto = Instance.new("ImageLabel")
+		fotoProjeto.Name = "FotoProjeto"
+		fotoProjeto.Position = UDim2.fromOffset(8, 5)
+		fotoProjeto.Size = UDim2.fromOffset(30, 30)
+		fotoProjeto.BackgroundTransparency = 1
+		fotoProjeto.Image = imagem
+		fotoProjeto.ScaleType = Enum.ScaleType.Crop
+		fotoProjeto.ZIndex = 2
+		fotoProjeto.Active = false
+		fotoProjeto.Parent = painel
+		Instance.new("UICorner", fotoProjeto).CornerRadius = UDim.new(1, 0)
+		local contornoProjeto = Instance.new("UIStroke")
+		contornoProjeto.Color = Color3.new(1, 1, 1)
+		contornoProjeto.Thickness = 1.2
+		contornoProjeto.Transparency = 0.45
+		contornoProjeto.Parent = fotoProjeto
+	end
+
 	-- Baixa as fotos em segundo plano, sem travar o menu
 	task.spawn(function()
 		for i, link in ipairs(LINKS_FOTOS) do
@@ -220,6 +258,8 @@ do
 				end
 			end
 		end
+		local okB, imagemB = pcall(prepararFoto, "botao", LINK_BOTAO)
+		if okB and imagemB then criarFotoBotao(imagemB) end
 	end)
 
 	-- Mostra a próxima foto da fila (pula as vazias) e volta pra 1 depois da última
@@ -237,12 +277,21 @@ do
 end
 
 local titulo = Instance.new("TextLabel")
-titulo.Size = UDim2.new(1, 0, 0, 40)
+titulo.Position = UDim2.new(0, 46, 0, 0) -- deixa o canto esquerdo para a foto do projeto
+titulo.Size = UDim2.new(1, -54, 0, 40)
 titulo.BackgroundTransparency = 1
-titulo.Text = "Menu de Teste"
+titulo.Text = "Purple Bitch Script" -- nome do projeto
 titulo.TextColor3 = Color3.new(1, 1, 1)
 titulo.Font = Enum.Font.GothamBold
 titulo.TextSize = 20
+titulo.TextScaled = true
+titulo.TextXAlignment = Enum.TextXAlignment.Left
+do
+	local limiteTitulo = Instance.new("UITextSizeConstraint")
+	limiteTitulo.MaxTextSize = 20
+	limiteTitulo.MinTextSize = 10
+	limiteTitulo.Parent = titulo
+end
 titulo.Active = true
 titulo.Parent = painel
 
@@ -258,6 +307,63 @@ conteudo.ScrollingDirection = Enum.ScrollingDirection.Y
 conteudo.CanvasSize = UDim2.new()
 conteudo.AutomaticCanvasSize = Enum.AutomaticSize.Y
 conteudo.Parent = painel
+
+-- CATEGORIAS: lista na lateral esquerda (a categoria escolhida fica destacada em roxo)
+local MENU = { atual = "Movimento", abas = {}, mostrar = nil,
+	-- ajustes do sonar do Xray (mudam na categoria Config)
+	sonar = { ligado = true, intervalo = 4, alcance = 120, duracao = 1.8 },
+	-- liga/desliga da categoria Config
+	cfg = { barraVida = true, alertaChams = true, swimEfeitos = true, noclipTransp = true, tpInstantaneo = false, tpToolInstantaneo = false } }
+do -- bloco (libera variáveis locais)
+local CATEGORIAS = { "Movimento", "Combate", "Visão", "Teleporte", "Extras", "Config", "Ajuda" }
+local LARGURA_LATERAL = 104
+local COR_DESTAQUE = Color3.fromRGB(130, 60, 255)
+conteudo.Position = UDim2.new(0, LARGURA_LATERAL + 12, 0, 40)
+conteudo.Size = UDim2.new(1, -(LARGURA_LATERAL + 12), 1, -40)
+
+local lateral = Instance.new("ScrollingFrame")
+lateral.Name = "Categorias"
+lateral.Position = UDim2.new(0, 8, 0, 44)
+lateral.Size = UDim2.new(0, LARGURA_LATERAL, 1, -88)
+lateral.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
+lateral.BackgroundTransparency = 0.25
+lateral.BorderSizePixel = 0
+lateral.ScrollBarThickness = 2
+lateral.CanvasSize = UDim2.new()
+lateral.AutomaticCanvasSize = Enum.AutomaticSize.Y
+lateral.Parent = painel
+Instance.new("UICorner", lateral).CornerRadius = UDim.new(0, 10)
+do
+	local lay = Instance.new("UIListLayout")
+	lay.SortOrder = Enum.SortOrder.LayoutOrder
+	lay.Padding = UDim.new(0, 4)
+	lay.Parent = lateral
+	local pad = Instance.new("UIPadding")
+	pad.PaddingTop = UDim.new(0, 6)
+	pad.PaddingLeft = UDim.new(0, 4)
+	pad.PaddingRight = UDim.new(0, 4)
+	pad.Parent = lateral
+	for i, nome in ipairs(CATEGORIAS) do
+		local b = Instance.new("TextButton")
+		b.Name = "Aba" .. nome
+		b.LayoutOrder = i
+		b.Size = UDim2.new(1, 0, 0, 34)
+		b.BackgroundColor3 = COR_DESTAQUE
+		b.BackgroundTransparency = 1
+		b.Text = nome
+		b.TextColor3 = Color3.new(1, 1, 1)
+		b.Font = Enum.Font.GothamBold
+		b.TextSize = 14
+		b.AutoButtonColor = false
+		b.Parent = lateral
+		Instance.new("UICorner", b).CornerRadius = UDim.new(0, 8)
+		MENU.abas[nome] = b
+		b.MouseButton1Click:Connect(function()
+			if MENU.mostrar then MENU.mostrar(nome) end
+		end)
+	end
+end
+end -- fim do bloco (libera variáveis locais)
 
 -- Alça no canto inferior direito para redimensionar
 local alcaResize = Instance.new("TextButton")
@@ -345,25 +451,32 @@ grade.AutomaticSize = Enum.AutomaticSize.Y
 grade.BackgroundTransparency = 1
 grade.Parent = conteudo
 
--- Duas colunas lado a lado; cada coluna é uma lista de cima pra baixo.
--- Ordens 1 a ULTIMA_COLUNA_ESQ ficam na esquerda, o resto na direita.
-local ULTIMA_COLUNA_ESQ = 9
-local function criarColuna(nome, posX, lado)
-	local col = Instance.new("Frame")
-	col.Name = nome
-	col.Position = UDim2.new(posX, lado, 0, 0)
-	col.Size = UDim2.new(0.5, -ESPACO / 2, 0, 0)
-	col.AutomaticSize = Enum.AutomaticSize.Y
-	col.BackgroundTransparency = 1
-	col.Parent = grade
-	local lay = Instance.new("UIListLayout")
-	lay.SortOrder = Enum.SortOrder.LayoutOrder
-	lay.Padding = UDim.new(0, ESPACO)
-	lay.Parent = col
-	return col
+-- Os botões ficam numa grade de 2 colunas (só aparecem os da categoria escolhida; o resto some e a grade se reorganiza).
+do
+	local gl = Instance.new("UIGridLayout")
+	gl.CellSize = UDim2.new(0.5, -ESPACO / 2, 0, ALTURA_BOTAO)
+	gl.CellPadding = UDim2.fromOffset(ESPACO, ESPACO)
+	gl.SortOrder = Enum.SortOrder.LayoutOrder
+	gl.FillDirectionMaxCells = 2
+	gl.Parent = grade
 end
-local colunaEsq = criarColuna("ColunaEsquerda", 0, 0)
-local colunaDir = criarColuna("ColunaDireita", 0.5, ESPACO / 2)
+
+-- Nomes mostrados nos botões (em português). A chave é o nome interno usado no resto do script.
+MENU.trad = {
+	FLY = "VOAR", VFLY = "VOAR (VEÍCULO)", SWIM = "NADAR NO AR", NOCLIP = "ATRAVESSAR PAREDES",
+	SHIFTLOCK = "CÂMERA TRAVADA", TPTOOL = "FERRAMENTA TP", ESP = "VER JOGADORES", CHAMS = "CONTORNO",
+	XRAY = "MAPA TRANSPARENTE", AIMBOT = "MIRA AUTOMÁTICA", GRUDAR = "GRUDAR NO CHÃO",
+	WALL = "ANDAR NAS PAREDES", NOTAS = "ANOTAÇÕES",
+}
+-- Em que categoria cada botão fica (o que não está aqui vai para "Extras")
+MENU.categoria = {
+	FLY = "Movimento", VFLY = "Movimento", SWIM = "Movimento", NOCLIP = "Movimento", SHIFTLOCK = "Movimento",
+	GRUDAR = "Movimento", WALL = "Movimento",
+	ESP = "Combate", CHAMS = "Combate", AIMBOT = "Combate", ALVO = "Combate", PAREDE = "Combate", TIME = "Combate",
+	XRAY = "Visão", VIEW = "Visão",
+	TP = "Teleporte", TPTOOL = "Teleporte", SPAWNS = "Teleporte",
+	REJOIN = "Extras", NOTAS = "Extras",
+}
 
 -- Cria uma célula: botão liga/desliga (+ caixa de velocidade opcional, colada no botão)
 local function criarLinha(ordem, nome, comVelocidade, velocidadePadrao)
@@ -372,13 +485,16 @@ local function criarLinha(ordem, nome, comVelocidade, velocidadePadrao)
 	celulaFrame.LayoutOrder = ordem
 	celulaFrame.Size = UDim2.new(1, 0, 0, ALTURA_BOTAO)
 	celulaFrame.BackgroundTransparency = 1
-	celulaFrame.Parent = (ordem <= ULTIMA_COLUNA_ESQ) and colunaEsq or colunaDir
+	celulaFrame.Parent = grade
+	local categoria = MENU.categoria[nome] or "Extras"
+	celulaFrame:SetAttribute("Categoria", categoria)
+	celulaFrame.Visible = (categoria == MENU.atual)
 
 	local b = Instance.new("TextButton")
 	b.Name = "Botao" .. nome
 	b.Position = UDim2.new(0, 0, 0, 0)
 	b.Size = UDim2.new(0.68, 0, 1, 0) -- todos os botões têm o mesmo tamanho
-	b.Text = nome .. ": DESLIGADO"
+	b.Text = (MENU.trad[nome] or nome) .. ": DESLIGADO"
 	VIDRO.aplicar(b, false)
 	b.Font = Enum.Font.GothamBold
 	b.TextSize = 15
@@ -424,13 +540,13 @@ local botaoXray, caixaXray = criarLinha(9, "XRAY", true, 0.6)
 
 -- Grupo 3: teleporte e servidor
 local botaoTP = criarLinha(10, "TP", false)
-botaoTP.Text = "TP"
+botaoTP.Text = "TELEPORTAR"
 local botaoSpawns = criarLinha(11, "SPAWNS", false)
-botaoSpawns.Text = "SPAWNS"
+botaoSpawns.Text = "LOCAIS SALVOS"
 local botaoView = criarLinha(12, "VIEW", false)
-botaoView.Text = "VIEW"
+botaoView.Text = "ESPECTAR"
 local botaoRejoin = criarLinha(13, "REJOIN", false)
-botaoRejoin.Text = "REJOIN"
+botaoRejoin.Text = "REENTRAR"
 
 
 local dica = Instance.new("TextLabel")
@@ -446,7 +562,23 @@ dica.Text = "Mover: arraste o título do painel ou o botão MENU. Tamanho: arras
 dica.TextColor3 = Color3.fromRGB(170, 170, 180)
 dica.Font = Enum.Font.Gotham
 dica.TextSize = 12
+dica.Visible = false -- só aparece na categoria "Ajuda"
 dica.Parent = conteudo
+
+-- Troca de categoria: mostra só os botões dela e destaca a aba
+function MENU.mostrar(nome)
+	MENU.atual = nome
+	for _, c in ipairs(grade:GetChildren()) do
+		local cat = c:GetAttribute("Categoria")
+		if cat then c.Visible = (cat == nome) end
+	end
+	dica.Visible = (nome == "Ajuda")
+	for n, b in pairs(MENU.abas) do
+		b.BackgroundTransparency = (n == nome) and 0.1 or 1
+	end
+	conteudo.CanvasPosition = Vector2.new(0, 0)
+end
+MENU.mostrar(MENU.atual)
 
 -- (os botões ▲▼ foram removidos; subir/descer = inclinar a câmera, ou Espaço/E e Shift/Q no teclado)
 local function atualizarBotaoVertical()
@@ -456,7 +588,7 @@ local function atualizarBotaoVertical()
 end
 
 local function pintarBotao(b, nome, ligado)
-	b.Text = nome .. (ligado and ": LIGADO" or ": DESLIGADO")
+	b.Text = (MENU.trad[nome] or nome) .. (ligado and ": LIGADO" or ": DESLIGADO")
 	VIDRO.aplicar(b, ligado)
 end
 
@@ -465,7 +597,7 @@ end
 ------------------------------------------------------------
 task.wait(0.5)
 TweenService:Create(botao, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-	Size = UDim2.new(0, 120, 0, 40),
+	Size = UDim2.new(0, 52, 0, 52), -- quadrado (combina com a foto do botão)
 	BackgroundTransparency = 0,
 	TextTransparency = 0,
 }):Play()
@@ -729,6 +861,7 @@ function atualizarESP()
 			obj.vida = obj.vida + (alvoVida - obj.vida) * 0.2
 			obj.enche.Size = UDim2.fromScale(obj.vida, 1)
 			obj.enche.BackgroundColor3 = COR_VIDA_BAIXA:Lerp(COR_VIDA_CHEIA, obj.vida)
+			obj.enche.Parent.Visible = MENU.cfg.barraVida
 
 			-- alerta: "!" piscando + nome vermelho tremendo quando está muito perto
 			local perto = obj.dentro and dist <= DISTANCIA_ALERTA
@@ -820,16 +953,24 @@ do
 			local raiz = char and char:FindFirstChild("HumanoidRootPart")
 			if raiz and h.Parent then
 				local dist = (raiz.Position - minhaRaiz.Position).Magnitude
-				local cor = corPorDistancia(dist)
-				h.FillColor = cor
-				h.OutlineColor = cor
+				if MENU.cfg.alertaChams then
+					local cor = corPorDistancia(dist)
+					h.FillColor = cor
+					h.OutlineColor = cor
 
-				-- pulso suave: mais rápido de perto, mais lento de longe; cada jogador com fase própria
-				local fase = (p.UserId % 628) / 100
-				local velocidade = 1.6 + 1.6 * (1 - math.clamp(dist / DIST_LONGE, 0, 1))
-				local onda = math.sin(agora * velocidade + fase)
-				h.FillTransparency = math.clamp(TRANSPARENCIA_PREENCHIMENTO + onda * AMPLITUDE_PULSO, 0, 1)
-				h.OutlineTransparency = 0.08 + (onda * 0.5 + 0.5) * 0.17
+					-- pulso suave: mais rápido de perto, mais lento de longe; cada jogador com fase própria
+					local fase = (p.UserId % 628) / 100
+					local velocidade = 1.6 + 1.6 * (1 - math.clamp(dist / DIST_LONGE, 0, 1))
+					local onda = math.sin(agora * velocidade + fase)
+					h.FillTransparency = math.clamp(TRANSPARENCIA_PREENCHIMENTO + onda * AMPLITUDE_PULSO, 0, 1)
+					h.OutlineTransparency = 0.08 + (onda * 0.5 + 0.5) * 0.17
+				else
+					-- alerta desligado: cor fixa, sem mudar com a distância e sem pulsar
+					h.FillColor = COR_CHAMS_PREENCHIMENTO
+					h.OutlineColor = COR_CHAMS_CONTORNO
+					h.FillTransparency = TRANSPARENCIA_PREENCHIMENTO
+					h.OutlineTransparency = 0.15
+				end
 			end
 		end
 	end)
@@ -955,6 +1096,7 @@ local function limparPoseFly()
 		end
 	end
 	poseChar, poseJuntas, poseMov = nil, nil, 0
+	estado.poseW, estado.flyFrente, estado.flyOcioso = nil, 0, 0
 	if animateDesligado then
 		animateDesligado.Disabled = false
 		animateDesligado = nil
@@ -995,15 +1137,38 @@ function aplicarPoseFly(char, hum, inclinacao)
 	end
 
 	if r15 then
-		-- PARADO: mãos na cintura (braço abre um pouco, gira e o cotovelo dobra)
-		-- VOANDO: braço direito esticado à frente, esquerdo ao lado do corpo
-		pose(j.ombroD, CFrame.Angles(0, 0, R(35)) * CFrame.Angles(0, R(90), 0), CFrame.Angles(R(170), 0, 0))
-		pose(j.ombroE, CFrame.Angles(0, 0, -R(35)) * CFrame.Angles(0, -R(90), 0), CFrame.Angles(R(-15), 0, 0))
-		pose(j.cotoveloD, CFrame.Angles(R(105), 0, 0), CFrame.new())
-		pose(j.cotoveloE, CFrame.Angles(R(105), 0, 0), CFrame.Angles(R(25), 0, 0))
-		-- pernas: levemente abertas parado, esticadas para trás voando
-		pose(j.quadrilD, CFrame.Angles(0, 0, R(6)), CFrame.Angles(R(-10), 0, 0))
-		pose(j.quadrilE, CFrame.Angles(0, 0, -R(6)), CFrame.Angles(R(-25), 0, 0))
+		-- 5 poses, misturadas pelos pesos de estado.poseW (f = frente, t = trás, e = esquerda, d = direita):
+		-- PARADO: mãos na cintura (pose de herói flutuando).
+		-- FRENTE: deitado, braço direito esticado à frente. TRÁS: de costas, braços abertos e relaxados.
+		-- ESQUERDA/DIREITA: deitado de lado, o braço de cima esticado na direção do voo.
+		local w = estado.poseW or { f = 0, t = 0, e = 0, d = 0 }
+		local soma = w.f + w.t + w.e + w.d
+		local esc = soma > 1 and 1 / soma or 1
+		local pesos = { w.f * esc, w.t * esc, w.e * esc, w.d * esc }
+		local function pose4(junta, parado, f, t, e, d)
+			if not junta then return end
+			local total = 1 - math.min(1, soma * esc)
+			local acc = parado
+			local alvos = { f, t, e, d }
+			for i = 1, 4 do
+				local peso = pesos[i]
+				if peso > 0.0001 then
+					total = total + peso
+					acc = acc:Lerp(alvos[i], peso / total)
+				end
+			end
+			junta.Transform = acc
+		end
+		local A = CFrame.Angles
+		local id = CFrame.new()
+		--         junta        parado                                  frente           trás                  esquerda        direita
+		pose4(j.ombroD,    A(0, 0, R(35)) * A(0, R(90), 0),   A(R(170), 0, 0), A(R(-20), 0, R(20)),  A(R(170), 0, 0), A(R(-15), 0, 0))
+		pose4(j.ombroE,    A(0, 0, -R(35)) * A(0, -R(90), 0), A(R(-15), 0, 0), A(R(-20), 0, -R(20)), A(R(-15), 0, 0), A(R(170), 0, 0))
+		pose4(j.cotoveloD, A(R(105), 0, 0),                   id,              A(R(15), 0, 0),       id,              A(R(25), 0, 0))
+		pose4(j.cotoveloE, A(R(105), 0, 0),                   A(R(25), 0, 0),  A(R(15), 0, 0),       A(R(25), 0, 0),  id)
+		-- pernas: levemente abertas parado; esticadas para trás voando de frente ou de lado; à frente de costas
+		pose4(j.quadrilD,  A(0, 0, R(6)),                     A(R(-10), 0, 0), A(R(8), 0, R(3)),     A(R(-18), 0, 0), A(R(-18), 0, 0))
+		pose4(j.quadrilE,  A(0, 0, -R(6)),                    A(R(-25), 0, 0), A(R(8), 0, -R(3)),    A(R(-18), 0, 0), A(R(-18), 0, 0))
 	else
 		-- R6 não tem cotovelo: parado, os braços ficam levemente abertos
 		pose(j.ombroD, CFrame.Angles(-R(18), 0, 0), CFrame.Angles(0, 0, R(170)))
@@ -1542,12 +1707,13 @@ do
 		-- basta ficar >= SUPER_LIMIAR_MANTER. Se sair disso, a carga fica CONGELADA por SUPER_TOLERANCIA segundos
 		-- (mudar o ângulo, combinar teclas ou girar a câmera não zera); só depois desse tempo ela esvazia.
 		local voando = (estado.fly and flyBV) or (estado.vfly and vBV)
-		if not voando then
+		if not voando or SUPER.habilitado == false then
 			SUPER.ativo = false
 			carga = 0
 			semMax = 0
 		else
 			local razao = maxima > 0 and (vel / maxima) or 0
+			if estado.fly and flyBV and (estado.flyFrente or 0) < 0.5 then razao = 0 end -- super voo só para a frente
 			local limiar = (SUPER.ativo or carga > 0.02) and SUPER_LIMIAR_MANTER or SUPER_LIMIAR_CARGA
 			if razao >= limiar then
 				semMax = 0
@@ -1695,6 +1861,7 @@ local ultimoYawFly -- última direção horizontal válida
 local function atualizarFly()
 	if not estado.fly then
 		if flyBV then pararFly() end
+		estado.poseW, estado.flyFrente, estado.flyOcioso = nil, 0, 0
 		ultimoFly = nil
 		ultimoYawFly = nil
 		return
@@ -1720,12 +1887,39 @@ local function atualizarFly()
 	local dir, flat = direcaoDeVoo(hum)
 
 	-- Velocidade com aceleração suave (não arranca nem para de uma vez)
-	local alvoVel = dir * velocidadeFly * MULTIPLICADOR_FLY * (SUPER.ativo and SUPER.mult or 1)
+	-- o super voo só vale voando para a FRENTE
+	local alvoVel = dir * velocidadeFly * MULTIPLICADOR_FLY * ((SUPER.ativo and (estado.flyFrente or 0) > 0.5) and SUPER.mult or 1)
+	-- PARADO: flutua subindo e descendo bem de leve (só quando você não está se movendo)
+	local BOB_ALTURA, BOB_PERIODO = 0.7, 3 -- studs de sobe-e-desce e segundos de cada ida e volta
+	local freqBob = 2 * math.pi / BOB_PERIODO
+	alvoVel = alvoVel + Vector3.new(0, BOB_ALTURA * freqBob * math.cos(agora * freqBob) * (estado.flyOcioso or 0), 0)
 	flyBV.Velocity = flyBV.Velocity:Lerp(alvoVel, 1 - math.exp(-dt * (SUPER.ativo and 12 or 8)))
 
-	-- O personagem vira para onde a câmera aponta; em movimento deita como herói voando
-	local movendo = dir.Magnitude > 0.05
-	poseMov = poseMov + ((movendo and 1 or 0) - poseMov) * (1 - math.exp(-dt * 6))
+	-- Para que lado você está indo em relação ao corpo: frente, trás, esquerda ou direita.
+	-- Subir/descer sozinho conta como parado (pose de herói flutuando).
+	local w = estado.poseW
+	if not w then
+		w = { f = 0, t = 0, e = 0, d = 0 }
+		estado.poseW = w
+	end
+	local baseYaw = ultimoYawFly or (flat.Magnitude > 0.001 and flat.Unit or nil)
+	local aF, aT, aE, aD = 0, 0, 0, 0
+	local mover = hum.MoveDirection
+	if baseYaw and mover.Magnitude > 0.05 then
+		local fr = mover:Dot(baseYaw)
+		local la = mover:Dot(baseYaw:Cross(Vector3.yAxis))
+		local function zona(x) return math.clamp((math.abs(x) - 0.25) / 0.35, 0, 1) end
+		if fr > 0 then aF = zona(fr) else aT = zona(fr) end
+		if la < 0 then aE = zona(la) else aD = zona(la) end
+	end
+	local kPose = 1 - math.exp(-dt * 6)
+	w.f = w.f + (aF - w.f) * kPose
+	w.t = w.t + (aT - w.t) * kPose
+	w.e = w.e + (aE - w.e) * kPose
+	w.d = w.d + (aD - w.d) * kPose
+	estado.flyOcioso = (estado.flyOcioso or 0) + ((dir.Magnitude < 0.05 and 1 or 0) - (estado.flyOcioso or 0)) * kPose
+	poseMov = math.min(1, w.f + w.t + w.e + w.d) -- usado só pelo R6
+	estado.flyFrente = w.f
 
 	local look = workspace.CurrentCamera.CFrame.LookVector
 	local pitch = math.asin(math.clamp(look.Y, -1, 1))
@@ -1735,8 +1929,10 @@ local function atualizarFly()
 	local inclinacao = pitch * GANHO_INCLINACAO
 	if POSE_HEROI then
 		-- ao se mover, ainda "deita" mais (pose de herói), mantendo a liberdade de cima/baixo
-		inclinacao = math.clamp(inclinacao - math.rad(75) * poseMov, -math.rad(150), math.rad(100))
+		-- frente: deita de barriga pra baixo; trás: deita de costas; lados: rola (abaixo)
+		inclinacao = math.clamp(inclinacao - math.rad(75) * w.f + math.rad(70) * w.t, -math.rad(150), math.rad(110))
 	end
+	local rolagem = POSE_HEROI and math.rad(80) * (w.e - w.d) or 0 -- esquerda: cabeça pra esquerda
 
 	-- Direção horizontal (yaw): guarda a última boa, pois olhando reto pra baixo/cima ela some
 	local camCF = workspace.CurrentCamera.CFrame
@@ -1752,7 +1948,7 @@ local function atualizarFly()
 
 	if ultimoYawFly then
 		local yaw = CFrame.lookAt(Vector3.zero, ultimoYawFly)
-		local alvo = CFrame.new(raiz.Position) * yaw * CFrame.Angles(inclinacao, 0, 0)
+		local alvo = CFrame.new(raiz.Position) * yaw * CFrame.Angles(inclinacao, 0, 0) * CFrame.Angles(0, 0, rolagem)
 		flyBG.CFrame = flyBG.CFrame:Lerp(alvo, 1 - math.exp(-dt * 10))
 	end
 
@@ -2128,7 +2324,7 @@ do
 		local dt = math.min(agora - (ultimo or agora), 0.1)
 		ultimo = agora
 
-		local ligado = estado.swim and not estado.fly and swimBV ~= nil
+		local ligado = estado.swim and not estado.fly and swimBV ~= nil and MENU.cfg.swimEfeitos
 		if ligado and not antes then
 			-- acabou de entrar na água: splash + explosão de bolhas
 			entrada = 1
@@ -2292,13 +2488,13 @@ do
 		if char and (nivelPersonagem > 0.005 or ligado) then
 			for _, d in ipairs(char:GetDescendants()) do
 				if d:IsA("BasePart") then
-					d.LocalTransparencyModifier = nivelPersonagem * TRANSP_PERSONAGEM
+					d.LocalTransparencyModifier = MENU.cfg.noclipTransp and nivelPersonagem * TRANSP_PERSONAGEM or 0
 				end
 			end
 		end
 
 		-- 2) Checa o que está encostando/atravessando o corpo (com o Xray ligado o mapa já está transparente)
-		if ligado and not estado.xray then
+		if ligado and not estado.xray and MENU.cfg.noclipTransp then
 			if agora - ultimaBusca > INTERVALO_BUSCA then
 				ultimaBusca = agora
 				local cam = workspace.CurrentCamera
@@ -2317,7 +2513,7 @@ do
 					end
 				end
 			end
-		elseif not ligado then
+		else
 			perto = {}
 		end
 
@@ -2574,7 +2770,7 @@ function criarLinhaSpawn(cframeSalvo, nomeSalvo)
 
 	ir.MouseButton1Click:Connect(function()
 		if pegarPersonagem() then
-			iniciarDash(cframeSalvo.Position + Vector3.new(0, 3, 0), { velocidade = DASH_VELOCIDADE_TP, forte = true })
+			iniciarDash(cframeSalvo.Position + Vector3.new(0, 3, 0), { velocidade = DASH_VELOCIDADE_TP, forte = true, instantaneo = MENU.cfg.tpInstantaneo })
 		end
 	end)
 
@@ -2780,7 +2976,7 @@ local function teleportarTP(p, b)
 	local alvo = char and char:FindFirstChild("HumanoidRootPart")
 	if minhaRaiz and alvo then
 		-- voa até o jogador na "velocidade do som" (riscos, tremida, FOV e estrondo na chegada)
-		iniciarDash(alvo.Position + Vector3.new(0, 3, 0), { velocidade = DASH_VELOCIDADE_TP, forte = true })
+		iniciarDash(alvo.Position + Vector3.new(0, 3, 0), { velocidade = DASH_VELOCIDADE_TP, forte = true, instantaneo = MENU.cfg.tpInstantaneo })
 	else
 		avisosTP[p] = os.clock() + 1.5
 		b.Text = "Jogador indisponível"
@@ -3002,7 +3198,7 @@ do
 		local hum = meuHumanoid()
 		if cam and hum then cam.CameraSubject = hum end
 		barra.Visible = false
-		botaoView.Text = "VIEW"
+		botaoView.Text = "ESPECTAR"
 		VIDRO.aplicar(botaoView, false)
 		pintarLista()
 	end
@@ -3013,7 +3209,7 @@ do
 		nomeView.Text = p.DisplayName
 		barra.Visible = true
 		painelView.Visible = false
-		botaoView.Text = "VIEW: " .. p.DisplayName
+		botaoView.Text = "ESPECTAR: " .. p.DisplayName
 		VIDRO.aplicar(botaoView, true)
 		pintarLista()
 		return true
@@ -3117,9 +3313,7 @@ local aplicarCaixaXray
 do
 	local RAIO_ONDA = 450        -- studs: até onde a onda de revelação vai
 	local DURACAO_ONDA = 1.1     -- segundos que a onda leva para chegar lá (sai rápido e desacelera)
-	local SONAR_INTERVALO = 4    -- segundos entre um sonar e outro
-	local SONAR_ALCANCE = 120    -- studs que cada sonar alcança
-	local SONAR_DURACAO = 1.8    -- segundos que o sonar leva para chegar no alcance
+	local SONAR = MENU.sonar     -- intervalo / alcance / duracao / ligado (ajustáveis na categoria Config)
 	local COR_SONAR = Color3.fromRGB(90, 220, 255)
 	local TAMANHO_BALDE = 10     -- studs por faixa de distância (organiza as partes pela onda)
 	local RAIO_PERTO = 120       -- studs: o que está até aqui entra primeiro (uma busca só)
@@ -3237,7 +3431,7 @@ do
 		local anel = {
 			tipo = tipo, bloco = bloco, faixas = faixas,
 			origem = origem, raio = 0, alcance = alcance,
-			vel = alcance / SONAR_DURACAO,
+			vel = alcance / SONAR.duracao,
 		}
 		aneis[#aneis + 1] = anel
 		return anel
@@ -3557,9 +3751,9 @@ do
 		processarTrabalho(agora)
 
 		-- sonar periódico saindo de você
-		if not ondaAtiva and raiz and agora >= proximoSonar then
-			proximoSonar = agora + SONAR_INTERVALO
-			criarAnel(raiz.Position, "sonar", SONAR_ALCANCE)
+		if not ondaAtiva and raiz and SONAR.ligado and agora >= proximoSonar then
+			proximoSonar = agora + SONAR.intervalo
+			criarAnel(raiz.Position, "sonar", SONAR.alcance)
 		end
 
 		-- anéis crescendo; o sonar "acende" as paredes por onde passa
@@ -3624,10 +3818,10 @@ do -- bloco (libera variáveis locais)
 local DASH_VELOCIDADE = 220 -- studs por segundo (aumente para ir mais rápido)
 -- TPTOOL (o item): false = voa até lá ultra rápido (uns 0.35s) com riscos de vento, tremida, FOV e estrondo na chegada
 --                  true = teleporte instantâneo, sem animação nenhuma
-local TPTOOL_INSTANTANEO = false
+-- (o liga/desliga fica em MENU.cfg.tpToolInstantaneo, categoria Config)
 local TPTOOL_VELOCIDADE = 3000 -- studs/s (a duração mínima do voo forte é 0.35s)
 do
-	local conexao, terminarAtual
+	local conexao, terminarAtual, conColisao
 
 	-- Efeito de "estrondo sonoro" na chegada do TP (só visual, no seu cliente)
 	local ESTRONDO_BLUR = 22 -- força do embaçado na chegada (0 = sem blur)
@@ -3686,7 +3880,53 @@ do
 		end)
 	end
 
-	-- opcoes (opcional): { velocidade = studs/s, forte = true (efeito de velocidade do som + estrondo na chegada) }
+	-- SAÍDA SEGURA: se o corpo termina dentro de uma parede/chão, vai para o ponto livre mais
+	-- próximo (antes de a colisão voltar), para nunca ficar preso nem ser arremessado.
+	local paramsLivre = OverlapParams.new()
+	paramsLivre.FilterType = Enum.RaycastFilterType.Exclude
+
+	local function ocupado(cf, tam, char)
+		paramsLivre.FilterDescendantsInstances = { char }
+		for _, parte in ipairs(workspace:GetPartBoundsInBox(cf, tam, paramsLivre)) do
+			if parte.CanCollide then
+				local m = parte:FindFirstAncestorOfClass("Model")
+				if not (m and m:FindFirstChildOfClass("Humanoid")) then -- outros jogadores não contam
+					return true
+				end
+			end
+		end
+		return false
+	end
+
+	-- Retorna true se já estava livre ou foi movido para um lugar livre
+	local function livrarCorpo(raiz)
+		local char = raiz.Parent
+		if not char then return true end
+		local cf0, tam = char:GetBoundingBox()
+		tam = Vector3.new(math.max(tam.X - 1, 1), math.max(tam.Y - 0.8, 1), math.max(tam.Z - 1, 1))
+		if not ocupado(cf0, tam, char) then return true end
+		local dirs = {
+			Vector3.new(1, 0, 0), Vector3.new(-1, 0, 0), Vector3.new(0, 0, 1), Vector3.new(0, 0, -1),
+			Vector3.new(0.7, 0, 0.7), Vector3.new(-0.7, 0, 0.7), Vector3.new(0.7, 0, -0.7), Vector3.new(-0.7, 0, -0.7),
+		}
+		for dist = 2, 120, 2 do
+			local candidatos = { Vector3.new(0, dist, 0) } -- para cima primeiro (sai do chão/teto)
+			for _, d in ipairs(dirs) do
+				table.insert(candidatos, d * dist)
+			end
+			for _, delta in ipairs(candidatos) do
+				if not ocupado(cf0 + delta, tam, char) then
+					raiz.CFrame = raiz.CFrame + delta
+					raiz.AssemblyLinearVelocity = Vector3.zero
+					return true
+				end
+			end
+		end
+		return false
+	end
+
+	-- opcoes (opcional): { velocidade = studs/s, forte = true (efeito de velocidade do som + estrondo na chegada),
+	--                      instantaneo = true (aparece lá na hora, já em um ponto livre) }
 	iniciarDash = function(destino, opcoes)
 		opcoes = opcoes or {}
 		local velocidade = opcoes.velocidade or DASH_VELOCIDADE
@@ -3695,6 +3935,13 @@ do
 		versaoFx += 1 -- cancela o tranco de câmera de um estrondo anterior
 		local raiz, hum = pegarPersonagem()
 		if not raiz then return end
+
+		if opcoes.instantaneo then
+			raiz.CFrame = CFrame.new(destino) * raiz.CFrame.Rotation
+			raiz.AssemblyLinearVelocity = Vector3.zero
+			livrarCorpo(raiz) -- se caiu dentro de uma parede, sai para o lado livre
+			return
+		end
 
 		local char = raiz.Parent
 		local origem = raiz.Position
@@ -3706,19 +3953,26 @@ do
 		local plano = Vector3.new(destino.X - origem.X, 0, destino.Z - origem.Z)
 		local rotacao = plano.Magnitude > 0.1 and CFrame.lookAt(Vector3.zero, plano.Unit) or raiz.CFrame.Rotation
 
-		-- atravessa o que estiver no caminho; guarda a colisão para devolver no fim
+		-- atravessa o que estiver no caminho; guarda a colisão para devolver no fim.
+		-- A colisão é desligada de novo a cada passo da física (o Humanoid religa sozinho em
+		-- algumas partes) e também nas partes novas (ferramenta equipada no meio do voo).
 		local colisoes = {}
-		for _, d in ipairs(char:GetDescendants()) do
-			if d:IsA("BasePart") and d.CanCollide then
-				colisoes[d] = true
-				d.CanCollide = false
+		local function desligarColisao()
+			for _, d in ipairs(char:GetDescendants()) do
+				if d:IsA("BasePart") and d.CanCollide then
+					colisoes[d] = true
+					d.CanCollide = false
+				end
 			end
 		end
+		desligarColisao()
+		conColisao = RunService.Stepped:Connect(desligarColisao)
 		local plataformaAntes = hum.PlatformStand
 		hum.PlatformStand = true
 
 		local function terminar(chegou)
 			if conexao then conexao:Disconnect() conexao = nil end
+			if conColisao then conColisao:Disconnect() conColisao = nil end
 			terminarAtual = nil
 			estado.dashEfeito = 0
 			if forte then
@@ -3729,8 +3983,12 @@ do
 					estado.dashFov = 0
 				end
 			end
-			for d in pairs(colisoes) do
-				if d.Parent then d.CanCollide = true end
+			-- antes de devolver a colisão, tira o corpo de dentro de qualquer parede
+			if raiz.Parent then livrarCorpo(raiz) end
+			if not estado.noclip then -- com o Noclip ligado, quem manda na colisão é ele
+				for d in pairs(colisoes) do
+					if d.Parent then d.CanCollide = true end
+				end
 			end
 			if hum.Parent then hum.PlatformStand = plataformaAntes end
 		end
@@ -3792,10 +4050,9 @@ local function criarTPTool()
 		local alvo = mouse.Hit
 		if alvo then
 			local destino = alvo.Position + Vector3.new(0, 3, 0)
-			if TPTOOL_INSTANTANEO then
-				-- teleporte na hora, mantendo para onde o personagem estava virado
-				raiz.CFrame = CFrame.new(destino) * raiz.CFrame.Rotation
-				raiz.AssemblyLinearVelocity = Vector3.zero
+			if MENU.cfg.tpToolInstantaneo then
+				-- teleporte na hora, mantendo para onde o personagem estava virado (e sem ficar preso)
+				iniciarDash(destino, { instantaneo = true })
 			else
 				iniciarDash(destino, { velocidade = TPTOOL_VELOCIDADE, forte = true })
 			end
@@ -3887,7 +4144,7 @@ local function fazerRejoin()
 		warn("Rejoin falhou: " .. tostring(erro))
 		botaoRejoin.Text = "Falhou (só funciona no jogo publicado)"
 		task.wait(2)
-		botaoRejoin.Text = "REJOIN"
+		botaoRejoin.Text = "REENTRAR"
 		reentrando = false
 	end
 	return okFila, motivo
@@ -3896,7 +4153,7 @@ botaoRejoin.MouseButton1Click:Connect(fazerRejoin)
 
 -- Se o teleporte falhar depois de iniciado, libera o botão de novo
 TeleportService.TeleportInitFailed:Connect(function()
-	botaoRejoin.Text = "REJOIN"
+	botaoRejoin.Text = "REENTRAR"
 	reentrando = false
 end)
 
@@ -4157,6 +4414,494 @@ do
 end
 
 ------------------------------------------------------------
+-- ANOTAÇÕES (quadrados brancos: + NOVA cria, toque para editar, ✕ exclui)
+------------------------------------------------------------
+-- Salva em "anotacoes.json" com o writefile do executor (vale para todos os jogos).
+-- Sem writefile/readfile, as notas ficam só até fechar o jogo.
+do -- bloco (libera variáveis locais)
+	local ARQUIVO_NOTAS = "anotacoes.json"
+	local ATRASO_SALVAR = 0.8 -- segundos parado de digitar até salvar sozinho
+
+	local botaoNotas = criarLinha(18, "NOTAS", false)
+	botaoNotas.Text = "ANOTAÇÕES"
+
+	local painelNotas = Instance.new("Frame")
+	painelNotas.Name = "PainelNotas"
+	painelNotas.AnchorPoint = Vector2.new(1, 0.5)
+	painelNotas.Position = UDim2.new(0.5, -160, 0.5, 0)
+	painelNotas.Size = UDim2.new(0, 290, 0, 380)
+	painelNotas.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+	painelNotas.Visible = false
+	painelNotas.Parent = gui
+	Instance.new("UICorner", painelNotas).CornerRadius = UDim.new(0, 14)
+
+	local tituloNotas = Instance.new("TextLabel")
+	tituloNotas.Size = UDim2.new(1, 0, 0, 40)
+	tituloNotas.BackgroundTransparency = 1
+	tituloNotas.Text = "Anotações"
+	tituloNotas.TextColor3 = Color3.new(1, 1, 1)
+	tituloNotas.Font = Enum.Font.GothamBold
+	tituloNotas.TextSize = 20
+	tituloNotas.Active = true
+	tituloNotas.Parent = painelNotas
+	tornarMovel(tituloNotas, painelNotas)
+
+	local botaoNova = Instance.new("TextButton")
+	botaoNova.Position = UDim2.new(0.05, 0, 0, 44)
+	botaoNova.Size = UDim2.new(0.9, 0, 0, 32)
+	botaoNova.BackgroundColor3 = Color3.fromRGB(40, 120, 70)
+	botaoNova.Text = "+ NOVA"
+	botaoNova.TextColor3 = Color3.new(1, 1, 1)
+	botaoNova.Font = Enum.Font.GothamBold
+	botaoNova.TextSize = 15
+	botaoNova.Parent = painelNotas
+	Instance.new("UICorner", botaoNova).CornerRadius = UDim.new(0, 8)
+
+	local listaNotas = Instance.new("ScrollingFrame")
+	listaNotas.Position = UDim2.new(0.05, 0, 0, 84)
+	listaNotas.Size = UDim2.new(0.9, 0, 1, -112)
+	listaNotas.BackgroundTransparency = 1
+	listaNotas.BorderSizePixel = 0
+	listaNotas.ScrollBarThickness = 4
+	listaNotas.CanvasSize = UDim2.new(0, 0, 0, 0)
+	listaNotas.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	listaNotas.Parent = painelNotas
+	local layoutNotas = Instance.new("UIListLayout")
+	layoutNotas.Padding = UDim.new(0, 8)
+	layoutNotas.SortOrder = Enum.SortOrder.LayoutOrder
+	layoutNotas.Parent = listaNotas
+
+	local avisoNotas = Instance.new("TextLabel")
+	avisoNotas.Position = UDim2.new(0.05, 0, 1, -24)
+	avisoNotas.Size = UDim2.new(0.9, 0, 0, 20)
+	avisoNotas.BackgroundTransparency = 1
+	avisoNotas.Text = ""
+	avisoNotas.TextColor3 = Color3.fromRGB(170, 170, 180)
+	avisoNotas.Font = Enum.Font.Gotham
+	avisoNotas.TextSize = 12
+	avisoNotas.TextXAlignment = Enum.TextXAlignment.Left
+	avisoNotas.Parent = painelNotas
+
+	local podeSalvar = temArquivos() and typeof(writefile) == "function"
+	local carregando = true
+	local versaoSalvar = 0
+	local contador = 0
+	local cartoes = {} -- cada item: { frame = Frame, caixa = TextBox }
+
+	local function salvarNotas()
+		if carregando then return end
+		if not podeSalvar then
+			avisoNotas.Text = "Sem salvar: o executor não tem writefile"
+			return
+		end
+		local ordenados = {}
+		for _, c in ipairs(cartoes) do ordenados[#ordenados + 1] = c end
+		table.sort(ordenados, function(a, b) return a.frame.LayoutOrder < b.frame.LayoutOrder end)
+		local textos = {}
+		for _, c in ipairs(ordenados) do textos[#textos + 1] = c.caixa.Text end
+		local ok = pcall(function() writefile(ARQUIVO_NOTAS, HttpService:JSONEncode(textos)) end)
+		avisoNotas.Text = ok and "Salvo" or "Não foi possível salvar"
+	end
+
+	local function agendarSalvar()
+		if carregando then return end
+		if podeSalvar then avisoNotas.Text = "Salvando..." end
+		versaoSalvar += 1
+		local minha = versaoSalvar
+		task.delay(ATRASO_SALVAR, function()
+			if minha == versaoSalvar then salvarNotas() end
+		end)
+	end
+
+	-- Cria um quadrado branco (a nota mais nova fica em cima)
+	local function criarCartao(texto)
+		contador += 1
+		local cartao = Instance.new("Frame")
+		cartao.LayoutOrder = -contador
+		cartao.Size = UDim2.new(1, -6, 0, 0)
+		cartao.AutomaticSize = Enum.AutomaticSize.Y
+		cartao.BackgroundColor3 = Color3.new(1, 1, 1)
+		cartao.Parent = listaNotas
+		Instance.new("UICorner", cartao).CornerRadius = UDim.new(0, 8)
+
+		local caixa = Instance.new("TextBox")
+		caixa.Position = UDim2.fromOffset(0, 0)
+		caixa.Size = UDim2.new(1, -34, 0, 70)
+		caixa.AutomaticSize = Enum.AutomaticSize.Y
+		caixa.BackgroundTransparency = 1
+		caixa.Text = texto or ""
+		caixa.PlaceholderText = "Escreva aqui..."
+		caixa.PlaceholderColor3 = Color3.fromRGB(140, 140, 140)
+		caixa.TextColor3 = Color3.new(0, 0, 0)
+		caixa.Font = Enum.Font.Gotham
+		caixa.TextSize = 14
+		caixa.MultiLine = true
+		caixa.TextWrapped = true
+		caixa.ClearTextOnFocus = false
+		caixa.TextXAlignment = Enum.TextXAlignment.Left
+		caixa.TextYAlignment = Enum.TextYAlignment.Top
+		caixa.Parent = cartao
+		do
+			local pad = Instance.new("UIPadding")
+			pad.PaddingLeft = UDim.new(0, 8)
+			pad.PaddingTop = UDim.new(0, 8)
+			pad.PaddingBottom = UDim.new(0, 8)
+			pad.Parent = caixa
+		end
+
+		local excluir = Instance.new("TextButton")
+		excluir.AnchorPoint = Vector2.new(1, 0)
+		excluir.Position = UDim2.new(1, -4, 0, 4)
+		excluir.Size = UDim2.fromOffset(26, 26)
+		excluir.BackgroundColor3 = COR_OFF
+		excluir.Text = "✕"
+		excluir.TextColor3 = Color3.new(1, 1, 1)
+		excluir.Font = Enum.Font.GothamBold
+		excluir.TextSize = 14
+		excluir.Parent = cartao
+		Instance.new("UICorner", excluir).CornerRadius = UDim.new(0, 6)
+
+		local item = { frame = cartao, caixa = caixa }
+		cartoes[#cartoes + 1] = item
+
+		caixa:GetPropertyChangedSignal("Text"):Connect(agendarSalvar)
+		caixa.FocusLost:Connect(function()
+			versaoSalvar += 1
+			salvarNotas()
+		end)
+		excluir.MouseButton1Click:Connect(function()
+			for i, c in ipairs(cartoes) do
+				if c == item then table.remove(cartoes, i) break end
+			end
+			cartao:Destroy()
+			versaoSalvar += 1
+			salvarNotas()
+		end)
+		return caixa
+	end
+
+	-- Carrega o que foi salvo antes (a primeira da lista fica por último = mais antiga)
+	if podeSalvar then
+		pcall(function()
+			if not isfile(ARQUIVO_NOTAS) then return end
+			local lista = HttpService:JSONDecode(readfile(ARQUIVO_NOTAS))
+			if type(lista) ~= "table" then return end
+			for i = #lista, 1, -1 do
+				if type(lista[i]) == "string" then criarCartao(lista[i]) end
+			end
+		end)
+	else
+		avisoNotas.Text = "Sem salvar: o executor não tem writefile"
+	end
+	carregando = false
+
+	botaoNova.MouseButton1Click:Connect(function()
+		local caixa = criarCartao("")
+		listaNotas.CanvasPosition = Vector2.new(0, 0)
+		caixa:CaptureFocus()
+	end)
+
+	function MENU.notas()
+		painelNotas.Visible = not painelNotas.Visible
+		if painelNotas.Visible then posicionarAoLado(painelNotas) end
+		return painelNotas.Visible
+	end
+	botaoNotas.MouseButton1Click:Connect(MENU.notas)
+end -- fim do bloco (libera variáveis locais)
+
+------------------------------------------------------------
+-- GRUDAR NO CHÃO (acompanha carros e plataformas que se mexem; você ainda anda)
+------------------------------------------------------------
+-- Todo frame: vê em que peça você está pisando e, se ela se mexeu, move você junto.
+do -- bloco (libera variáveis locais)
+	local FORCA_GRUDAR = 1 -- 1 = acompanha tudo; se ficar rápido demais num carro, tente 0.5
+	local ALCANCE_EXTRA = 3 -- studs de folga abaixo dos pés para achar o chão
+	local SALTO_MAXIMO = 60 -- se a peça "pular" mais que isso num frame (teleporte), ignora
+
+	local botaoGrudar = criarLinha(19, "GRUDAR", false)
+	estado.grudar = false
+
+	local pecaAntes, cfAntes = nil, nil
+	local conexao = nil
+	local parametros = RaycastParams.new()
+	parametros.FilterType = Enum.RaycastFilterType.Exclude
+	parametros.RespectCanCollide = true
+
+	local function zerar()
+		pecaAntes, cfAntes = nil, nil
+	end
+
+	local function passo()
+		local raiz, hum = pegarPersonagem()
+		if not raiz or estado.fly or estado.vfly or estado.swim or estado.wall or hum.Sit then
+			zerar()
+			return
+		end
+		parametros.FilterDescendantsInstances = { player.Character }
+		local alcance = hum.HipHeight + raiz.Size.Y / 2 + ALCANCE_EXTRA
+		local r = workspace:Raycast(raiz.Position, Vector3.new(0, -alcance, 0), parametros)
+		local peca = r and r.Instance
+		if not peca then
+			zerar()
+			return
+		end
+		if peca == pecaAntes and cfAntes then
+			local delta = peca.CFrame * cfAntes:Inverse()
+			local mexeu = delta.Position.Magnitude > 1e-4 or (delta.LookVector - Vector3.new(0, 0, -1)).Magnitude > 1e-5
+			if mexeu and delta.Position.Magnitude < SALTO_MAXIMO then
+				if FORCA_GRUDAR < 1 then
+					delta = CFrame.new().Lerp(delta, FORCA_GRUDAR)
+				end
+				raiz.CFrame = delta * raiz.CFrame
+			end
+		end
+		pecaAntes, cfAntes = peca, peca.CFrame
+	end
+
+	function MENU.grudar(v)
+		estado.grudar = v
+		pintarBotao(botaoGrudar, "GRUDAR", v)
+		zerar()
+		if conexao then conexao:Disconnect() conexao = nil end
+		if v then
+			conexao = RunService.Heartbeat:Connect(passo)
+		end
+	end
+	botaoGrudar.MouseButton1Click:Connect(function() MENU.grudar(not estado.grudar) end)
+	botaoGrudar.Text = "GRUDAR NO CHÃO"
+
+	player.CharacterAdded:Connect(zerar)
+end -- fim do bloco (libera variáveis locais)
+
+------------------------------------------------------------
+-- ANDAR NAS PAREDES (chão, parede e teto; contorna quinas e acompanha rampas)
+------------------------------------------------------------
+-- A "gravidade" passa a puxar o personagem para a superfície em que ele está.
+-- A câmera continua normal (não gira junto). Usa a mesma ideia do GRUDAR: se a peça se mexe, você vai junto.
+do -- bloco (libera variáveis locais)
+	local ALCANCE_EXTRA = 2.2 -- folga abaixo dos pés para achar a superfície
+	local ALCANCE_FRENTE = 2.8 -- distância para ver uma parede à frente (quina de dentro)
+	local ALCANCE_QUINA = 3 -- quanto olha para frente para contornar uma quina de fora
+	local SUAVIDADE = 12 -- quão rápido o corpo gira para acompanhar a superfície
+	local PULO_FORCA, PULO_TEMPO = 45, 0.2
+
+	local botaoWall = criarLinha(20, "WALL", false)
+	estado.wall = false
+
+	local conexao, bv, bg
+	local normalAlvo = Vector3.yAxis -- normal da superfície em que está (usada nos raios)
+	local normalSuave = Vector3.yAxis -- normal suavizada (usada para girar o corpo)
+	local frente = Vector3.new(0, 0, -1) -- para onde o corpo está virado (no plano da superfície)
+	local pecaAntes, cfAntes = nil, nil
+	local solto = true -- true = jogo normal (nenhuma superfície por perto ainda)
+	local pulo = 0
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.RespectCanCollide = true
+
+	local function projetar(v, n) return v - n * v:Dot(n) end
+
+	local function planoOuPadrao(v, n, padrao)
+		local p = projetar(v, n)
+		if p.Magnitude < 0.05 then p = padrao end
+		return p.Unit
+	end
+
+	local function largar(raiz, hum)
+		if bv then bv:Destroy() bv = nil end
+		if bg then bg:Destroy() bg = nil end
+		if raiz and raiz.Parent then
+			local plano = Vector3.new(frente.X, 0, frente.Z)
+			if plano.Magnitude < 0.05 then
+				local l = workspace.CurrentCamera.CFrame.LookVector
+				plano = Vector3.new(l.X, 0, l.Z)
+			end
+			if plano.Magnitude > 0.01 then
+				raiz.CFrame = CFrame.lookAt(raiz.Position, raiz.Position + plano.Unit)
+			end
+			raiz.AssemblyLinearVelocity = Vector3.zero
+			raiz.AssemblyAngularVelocity = Vector3.zero
+		end
+		if hum and hum.Parent then hum.PlatformStand = false end
+		pecaAntes, cfAntes = nil, nil
+		normalAlvo, normalSuave = Vector3.yAxis, Vector3.yAxis
+		solto = true
+	end
+
+	local function agarrar(raiz, hum, normal)
+		if bv then bv:Destroy() end
+		if bg then bg:Destroy() end
+		bv = Instance.new("BodyVelocity")
+		bv.MaxForce = Vector3.new(1e9, 1e9, 1e9)
+		bv.Velocity = Vector3.zero
+		bv.Parent = raiz
+		bg = Instance.new("BodyGyro")
+		bg.MaxTorque = Vector3.new(1e9, 1e9, 1e9)
+		bg.P = 9e4
+		bg.D = 1200
+		bg.CFrame = raiz.CFrame
+		bg.Parent = raiz
+		hum.PlatformStand = true
+		normalAlvo, normalSuave = normal, normal
+		local l = workspace.CurrentCamera.CFrame.LookVector
+		frente = planoOuPadrao(l, normal, raiz.CFrame.LookVector)
+		pecaAntes, cfAntes = nil, nil
+		solto = false
+	end
+
+	local function passo(dt)
+		local raiz, hum = pegarPersonagem()
+		if not raiz then
+			solto = true
+			bv, bg = nil, nil
+			return
+		end
+		-- Fly, VFly, Swim ou sentado: o WALL espera
+		if estado.fly or estado.vfly or estado.swim or hum.SeatPart then
+			if not solto then largar(raiz, hum) end
+			return
+		end
+
+		params.FilterDescendantsInstances = { player.Character }
+		local altura = hum.HipHeight + raiz.Size.Y / 2
+		local alc = altura + ALCANCE_EXTRA
+		local pos = raiz.Position
+
+		-- Solto: só procura chão por perto (jogo normal) para agarrar
+		if solto then
+			local r = workspace:Raycast(pos, Vector3.new(0, -(alc + 3), 0), params)
+			if r then agarrar(raiz, hum, r.Normal) end
+			return
+		end
+		if not bv or bv.Parent ~= raiz or not bg then
+			agarrar(raiz, hum, normalAlvo)
+		end
+
+		local n = normalAlvo
+		local camCF = workspace.CurrentCamera.CFrame
+
+		-- Entrada: analógico/teclado relativo à câmera, levado para o plano da superfície
+		local mover = hum.MoveDirection
+		local rFlat = Vector3.new(camCF.RightVector.X, 0, camCF.RightVector.Z)
+		rFlat = rFlat.Magnitude > 0.01 and rFlat.Unit or Vector3.xAxis
+		local fFlat = Vector3.yAxis:Cross(rFlat)
+		local ix, iz = mover:Dot(rFlat), mover:Dot(fFlat)
+
+		local look = camCF.LookVector
+		local fSup = projetar(look, n) + projetar(camCF.UpVector, n) * math.clamp(-look:Dot(n), 0, 1)
+		if fSup.Magnitude < 0.05 then fSup = projetar(camCF.UpVector, n) end
+		if fSup.Magnitude < 0.05 then fSup = frente end
+		fSup = fSup.Unit
+		local rSup = projetar(camCF.RightVector, n)
+		rSup = rSup.Magnitude > 0.05 and rSup.Unit or fSup:Cross(n)
+		local desejado = rSup * ix + fSup * iz
+		if desejado.Magnitude > 1 then desejado = desejado.Unit end
+		local andando = desejado.Magnitude > 0.1
+		local dirMov = andando and desejado.Unit or nil
+
+		-- 1) parede à frente (quina de dentro): passa a andar nela
+		local trocou = false
+		if dirMov then
+			local r = workspace:Raycast(pos, dirMov * ALCANCE_FRENTE, params)
+			if r and r.Normal:Dot(n) < 0.5 then
+				normalAlvo = r.Normal
+				n = normalAlvo
+				trocou = true
+			end
+		end
+
+		-- 2) chão sob os pés (segue rampas e curvas)
+		local chao
+		if not trocou then
+			chao = workspace:Raycast(pos, -n * alc, params)
+			if chao then
+				local suave = 1 - math.exp(-dt * SUAVIDADE)
+				normalAlvo = normalAlvo:Lerp(chao.Normal, suave).Unit
+				n = normalAlvo
+			elseif dirMov then
+				-- 3) acabou o chão (quina de fora): procura a superfície que dobra para baixo
+				local origem = pos + dirMov * ALCANCE_QUINA - n * (altura + 0.5)
+				local r = workspace:Raycast(origem, -dirMov * (ALCANCE_QUINA + 0.8), params)
+				if r then
+					normalAlvo = r.Normal
+					n = normalAlvo
+					trocou = true
+				end
+			end
+		end
+
+		if not chao and not trocou then
+			largar(raiz, hum) -- nada por perto: volta ao jogo normal
+			return
+		end
+
+		-- Peça que se mexe (carro, plataforma): leva você junto, como o GRUDAR
+		if pulo <= 0 then
+			local peca = chao and chao.Instance or nil
+			if peca and peca == pecaAntes and cfAntes then
+				local delta = peca.CFrame * cfAntes:Inverse()
+				if delta.Position.Magnitude > 1e-4 or (delta.LookVector - Vector3.new(0, 0, -1)).Magnitude > 1e-5 then
+					if delta.Position.Magnitude < 60 then
+						raiz.CFrame = delta * raiz.CFrame
+					end
+				end
+			end
+			if peca then pecaAntes, cfAntes = peca, peca.CFrame else pecaAntes, cfAntes = nil, nil end
+		else
+			pecaAntes, cfAntes = nil, nil
+		end
+
+		-- Velocidade: anda no plano + cola na superfície mantendo a altura dos pés
+		local vNormal = 0
+		if pulo > 0 then
+			pulo = pulo - dt
+			vNormal = PULO_FORCA
+		elseif chao then
+			local dist = (pos - chao.Position):Dot(chao.Normal)
+			vNormal = math.clamp((altura - dist) * 12, -40, 40)
+		end
+		bv.Velocity = desejado * hum.WalkSpeed + n * vNormal
+
+		-- Corpo: de pé na superfície, virado para onde anda
+		if andando then
+			frente = frente:Lerp(dirMov, 1 - math.exp(-dt * 10))
+		end
+		normalSuave = normalSuave:Lerp(n, 1 - math.exp(-dt * SUAVIDADE)).Unit
+		local alto = normalSuave
+		local olhar = planoOuPadrao(frente, alto, fSup)
+		frente = olhar
+		bg.CFrame = CFrame.fromMatrix(pos, olhar:Cross(alto), alto, -olhar)
+	end
+
+	function MENU.wall(v)
+		estado.wall = v
+		pintarBotao(botaoWall, "WALL", v)
+		if conexao then conexao:Disconnect() conexao = nil end
+		local raiz, hum = pegarPersonagem()
+		if not solto then largar(raiz, hum) end
+		solto = true
+		pulo = 0
+		if v then
+			conexao = RunService.Heartbeat:Connect(passo)
+		end
+	end
+	botaoWall.MouseButton1Click:Connect(function() MENU.wall(not estado.wall) end)
+	botaoWall.Text = "ANDAR NAS PAREDES"
+
+	UserInputService.JumpRequest:Connect(function()
+		if estado.wall and not solto and pulo <= 0 then pulo = PULO_TEMPO end
+	end)
+
+	player.CharacterAdded:Connect(function()
+		bv, bg = nil, nil
+		pecaAntes, cfAntes = nil, nil
+		normalAlvo, normalSuave = Vector3.yAxis, Vector3.yAxis
+		solto = true
+		pulo = 0
+	end)
+end -- fim do bloco (libera variáveis locais)
+
+------------------------------------------------------------
 -- TECLADO (barra de comandos digitados)
 ------------------------------------------------------------
 local function iniciarTeclado()
@@ -4392,25 +5137,28 @@ local function iniciarTeclado()
 		rolagem.CanvasPosition = Vector2.new(0, 0)
 	end
 
-	-- Painel de tamanho fixo (uns 7 comandos visíveis), logo acima do teclado da tela no celular
+	-- Painel (caixa em cima, lista logo abaixo) abre no lugar da tira, colado no canto de baixo da tela.
+	-- Só sobe se o teclado da tela estiver realmente cobrindo essa posição.
 	local function ajustarPainel()
 		local tela = tamanhoTela()
-		local fundo = tela.Y - 40 -- PC: um pouco acima da tira
-		if toque then
-			fundo = tela.Y * 0.52 -- palpite até o teclado aparecer
-			local okV, visivel = pcall(function() return UserInputService.OnScreenKeyboardVisible end)
-			if okV and visivel then
-				local okP, pos = pcall(function() return UserInputService.OnScreenKeyboardPosition end)
-				if okP and typeof(pos) == "Vector2" and pos.Y > 0 then
-					fundo = pos.Y - 6 -- topo do teclado
-				end
+		local fundo = cmdFrame.AbsolutePosition.Y + cmdFrame.AbsoluteSize.Y -- base da tira
+		local direita = cmdFrame.AbsolutePosition.X + cmdFrame.AbsoluteSize.X
+		direita = math.clamp(direita, LARGURA_PAINEL + 4, tela.X - 4)
+		fundo = math.min(fundo, tela.Y - 4)
+
+		local okV, visivel = pcall(function() return UserInputService.OnScreenKeyboardVisible end)
+		if okV and visivel then
+			local okP, pos = pcall(function() return UserInputService.OnScreenKeyboardPosition end)
+			if okP and typeof(pos) == "Vector2" and pos.Y > 0 and fundo > pos.Y - 6 then
+				fundo = pos.Y - 6 -- topo do teclado
 			end
 		end
+
 		-- em telas baixas, mostra menos linhas para o painel caber
 		local fixo = ALTURA_CAIXA + 16
 		local linhas = math.clamp(math.floor((fundo - 8 - fixo) / ALTURA_LINHA), 3, MAX_LINHAS)
 		painelCmd.Size = UDim2.fromOffset(LARGURA_PAINEL, fixo + linhas * ALTURA_LINHA)
-		painelCmd.Position = UDim2.fromOffset(tela.X - 10, fundo)
+		painelCmd.Position = UDim2.fromOffset(direita, fundo)
 	end
 
 	local function mostrarLista()
@@ -4615,7 +5363,7 @@ local function iniciarTeclado()
 		local minha = pegarPersonagem()
 		if not (alvo and minha) then return false, alvoJogador.DisplayName .. " indisponível" end
 		-- mesma animação do botão TP do menu (voo supersônico + efeitos)
-		iniciarDash(alvo.Position + Vector3.new(0, 3, 0), { velocidade = DASH_VELOCIDADE_TP, forte = true })
+		iniciarDash(alvo.Position + Vector3.new(0, 3, 0), { velocidade = DASH_VELOCIDADE_TP, forte = true, instantaneo = MENU.cfg.tpInstantaneo })
 		return true, "TP -> " .. alvoJogador.DisplayName
 	end)
 
@@ -4667,7 +5415,7 @@ local function iniciarTeclado()
 
 		local raiz = pegarPersonagem()
 		if not raiz then return false, "Personagem indisponível" end
-		iniciarDash(achado.cf.Position + Vector3.new(0, 3, 0), { velocidade = DASH_VELOCIDADE_TP, forte = true })
+		iniciarDash(achado.cf.Position + Vector3.new(0, 3, 0), { velocidade = DASH_VELOCIDADE_TP, forte = true, instantaneo = MENU.cfg.tpInstantaneo })
 		return true, "Indo para " .. achado.nome.Text
 	end)
 
@@ -4680,15 +5428,1095 @@ local function iniciarTeclado()
 		return true, "Reentrando... (o script volta sozinho)"
 	end)
 
-	comando({ "menu" }, "menu - abrir/fechar o menu", function()
+	comando({ "sit" }, "sit - sentar o personagem", function()
+		local char = player.Character
+		local hum = char and char:FindFirstChildOfClass("Humanoid")
+		if not hum or hum.Health <= 0 then return false, "Sem personagem vivo" end
+		hum.Sit = true
+		return true
+	end)
+
+	-- NOTAS: abre/fecha o bloco de anotações
+	comando({ "notas", "notes" }, "notas - abrir/fechar as anotações", function()
+		local aberto = MENU.notas()
+		return true, aberto and "Anotações abertas" or "Anotações fechadas"
+	end)
+
+	-- GRUDAR: acompanha plataformas e carros que se mexem
+	alternavel({ "grudar", "gc" }, "grudar / ungrudar - ficar preso ao chão que se move", function(ligar)
+		MENU.grudar(ligar)
+		return true, "Grudar " .. (ligar and "ligado" or "desligado")
+	end)
+
+	-- WALL: andar nas paredes e no teto
+	alternavel({ "wall" }, "wall / unwall - andar nas paredes e no teto", function(ligar)
+		MENU.wall(ligar)
+		return true, "Wall " .. (ligar and "ligado" or "desligado")
+	end)
+
+	-- SPEED e JUMP: velocidade de andar e força do pulo (valem de novo depois de renascer)
+	local velAndar, forcaPulo = nil, nil -- nil = padrão do jogo
+	local padraoVel, padraoPulo = 16, 50
+	local conMov
+
+	local function meuHumanoid()
+		local char = player.Character
+		return char and char:FindFirstChildOfClass("Humanoid")
+	end
+
+	local function atualizarMov()
+		if velAndar or forcaPulo then
+			if conMov then return end
+			conMov = RunService.Heartbeat:Connect(function()
+				local hum = meuHumanoid()
+				if not hum then return end
+				if velAndar and hum.WalkSpeed ~= velAndar then hum.WalkSpeed = velAndar end
+				if forcaPulo then
+					if not hum.UseJumpPower then hum.UseJumpPower = true end
+					if hum.JumpPower ~= forcaPulo then hum.JumpPower = forcaPulo end
+				end
+			end)
+		elseif conMov then
+			conMov:Disconnect()
+			conMov = nil
+		end
+	end
+
+	alternavel({ "speed" }, "speed [1 a 500] / unspeed - velocidade de andar", function(ligar, args)
+		local hum = meuHumanoid()
+		if ligar then
+			local n = args[1] and tonumber(args[1]) or 50
+			if not n or n < 1 or n > 500 then return false, "speed: use um número de 1 a 500" end
+			if not velAndar and hum then padraoVel = hum.WalkSpeed end
+			velAndar = n
+		else
+			velAndar = nil
+			if hum then hum.WalkSpeed = padraoVel end
+		end
+		atualizarMov()
+		return true
+	end)
+
+	alternavel({ "jump" }, "jump [1 a 500] / unjump - força do pulo", function(ligar, args)
+		local hum = meuHumanoid()
+		if ligar then
+			local n = args[1] and tonumber(args[1]) or 100
+			if not n or n < 1 or n > 500 then return false, "jump: use um número de 1 a 500" end
+			if not forcaPulo and hum then padraoPulo = hum.JumpPower end
+			forcaPulo = n
+		else
+			forcaPulo = nil
+			if hum then hum.JumpPower = padraoPulo end
+		end
+		atualizarMov()
+		return true
+	end)
+
+	-- ANTI-AFK: evita ser expulso por ficar parado (começa ligado)
+	local antiAfkLigado = true
+	do
+		local okVU, VirtualUser = pcall(function() return game:GetService("VirtualUser") end)
+		if okVU and VirtualUser then
+			player.Idled:Connect(function()
+				if not antiAfkLigado then return end
+				pcall(function()
+					VirtualUser:CaptureController()
+					VirtualUser:ClickButton2(Vector2.new())
+				end)
+			end)
+		end
+	end
+
+	alternavel({ "afk" }, "afk / unafk - anti-AFK (não ser expulso por ficar parado)", function(ligar)
+		antiAfkLigado = ligar
+		return true
+	end)
+
+	-- ZOOM: aproxima/afasta a câmera além do limite normal do jogo
+	local zoomOriginal -- { min, max } do jogo, guardado na primeira vez
+	local ZOOM_MIN_LIVRE, ZOOM_MAX_LIVRE = 0.5, 5000
+
+	alternavel({ "zoom" }, "zoom [distância] / unzoom - câmera mais perto ou mais longe (sem número = zoom livre)", function(ligar, args)
+		if not ligar then
+			if zoomOriginal then
+				player.CameraMinZoomDistance = zoomOriginal[1]
+				player.CameraMaxZoomDistance = zoomOriginal[2]
+				zoomOriginal = nil
+			end
+			return true
+		end
+
+		local n
+		if args[1] then
+			n = tonumber(args[1])
+			if not n or n < ZOOM_MIN_LIVRE or n > ZOOM_MAX_LIVRE then
+				return false, "zoom: use um número de " .. ZOOM_MIN_LIVRE .. " a " .. ZOOM_MAX_LIVRE
+			end
+		end
+
+		if not zoomOriginal then
+			zoomOriginal = { player.CameraMinZoomDistance, player.CameraMaxZoomDistance }
+		end
+
+		if n then
+			-- trava a distância por um instante para a câmera ir até ela, depois solta (dá para rolar/pinçar)
+			player.CameraMinZoomDistance = n
+			player.CameraMaxZoomDistance = n
+			task.spawn(function()
+				RunService.RenderStepped:Wait()
+				RunService.RenderStepped:Wait()
+				if not zoomOriginal then return end -- unzoom no meio
+				player.CameraMinZoomDistance = ZOOM_MIN_LIVRE
+				player.CameraMaxZoomDistance = ZOOM_MAX_LIVRE
+			end)
+		else
+			player.CameraMinZoomDistance = ZOOM_MIN_LIVRE
+			player.CameraMaxZoomDistance = ZOOM_MAX_LIVRE
+		end
+		return true
+	end)
+
+	-- AVISOS: mostra na tela quando um jogador entra ou sai do servidor (começa desligado)
+	local avisosLigados = false
+	local avisoGui = novo("ScreenGui", {
+		Name = "AvisosJogadores",
+		ResetOnSpawn = false,
+		IgnoreGuiInset = true,
+		DisplayOrder = 5,
+	}, playerGui)
+	local avisoLista = novo("Frame", {
+		BackgroundTransparency = 1,
+		Position = UDim2.new(0, 8, 0, 8),
+		Size = UDim2.fromOffset(240, 120),
+	}, avisoGui)
+	novo("UIListLayout", {
+		SortOrder = Enum.SortOrder.LayoutOrder,
+		Padding = UDim.new(0, 4),
+	}, avisoLista)
+	local avisoOrdem = 0
+	local MAX_AVISOS = 4
+
+	local function avisarJogador(p, entrou)
+		if not avisosLigados then return end
+		avisoOrdem += 1
+		local nome = p.DisplayName
+		if p.DisplayName ~= p.Name then nome = nome .. " (@" .. p.Name .. ")" end
+		local rotulo = novo("TextLabel", {
+			LayoutOrder = avisoOrdem,
+			AutomaticSize = Enum.AutomaticSize.XY,
+			Size = UDim2.fromOffset(0, 0),
+			BackgroundColor3 = Color3.fromRGB(18, 18, 22),
+			BackgroundTransparency = 0.15,
+			Font = Enum.Font.GothamBold,
+			TextSize = 12,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			TextColor3 = entrou and Color3.fromRGB(150, 255, 170) or Color3.fromRGB(255, 150, 150),
+			Text = (entrou and "+ " or "- ") .. nome .. (entrou and " entrou" or " saiu"),
+		}, avisoLista)
+		novo("UICorner", { CornerRadius = UDim.new(0, 6) }, rotulo)
+		novo("UIPadding", {
+			PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8),
+			PaddingTop = UDim.new(0, 4), PaddingBottom = UDim.new(0, 4),
+		}, rotulo)
+
+		-- no máximo MAX_AVISOS na tela: o mais antigo sai
+		local visiveis = {}
+		for _, f in ipairs(avisoLista:GetChildren()) do
+			if f:IsA("TextLabel") then visiveis[#visiveis + 1] = f end
+		end
+		table.sort(visiveis, function(a, b) return a.LayoutOrder < b.LayoutOrder end)
+		while #visiveis > MAX_AVISOS do
+			table.remove(visiveis, 1):Destroy()
+		end
+
+		task.delay(4, function()
+			if rotulo.Parent then rotulo:Destroy() end
+		end)
+	end
+
+	Players.PlayerAdded:Connect(function(p) avisarJogador(p, true) end)
+	Players.PlayerRemoving:Connect(function(p) avisarJogador(p, false) end)
+
+	alternavel({ "avisos" }, "avisos / unavisos - mostrar quando jogadores entram e saem", function(ligar)
+		avisosLigados = ligar
+		return true
+	end)
+
+	-- FLYJUMP: pulo infinito, cada toque no pular dá um novo pulo, mesmo no ar (começa desligado)
+	local flyJumpLigado = false
+
+	UserInputService.JumpRequest:Connect(function()
+		if not flyJumpLigado then return end
+		local hum = meuHumanoid()
+		if not hum or hum.Health <= 0 or hum.SeatPart then return end
+		hum:ChangeState(Enum.HumanoidStateType.Jumping)
+	end)
+
+	alternavel({ "flyjump", "fj" }, "flyjump ou fj / unflyjump ou unfj - pulo infinito (pula de novo no ar)", function(ligar)
+		flyJumpLigado = ligar
+		return true
+	end)
+
+	-- FPS 1, 2 e 3: deixa o jogo mais leve (só mexe no que o cliente controla; unfps desfaz tudo)
+	-- 1 = sem sombras e sem texturas simples | 2 = + sem efeitos, animações dos outros e menos distância
+	-- 3 = + tudo "lego" (plástico liso, sem malhas texturizadas)
+	local Lighting = game:GetService("Lighting")
+	local fpsNivel = 0
+	local fpsOrig = setmetatable({}, { __mode = "k" }) -- [objeto] = { propriedade = valor original }
+	local fpsRemovidos = {} -- [SurfaceAppearance] = pai original
+	local fpsAnimadores = {} -- [Animator] = conexão
+	local fpsConexoes = {}
+	local fpsQualidade -- QualityLevel original
+	local fpsVersao = 0
+
+	local function fpsGuardar(obj, prop, valor)
+		local t = fpsOrig[obj]
+		if not t then
+			t = {}
+			fpsOrig[obj] = t
+		end
+		if t[prop] == nil then t[prop] = obj[prop] end
+		obj[prop] = valor
+	end
+
+	local function fpsDoPersonagem(obj)
+		local a = obj.Parent
+		while a and a ~= workspace do
+			if Players:GetPlayerFromCharacter(a) then return true end
+			a = a.Parent
+		end
+		return false
+	end
+
+	local function fpsAplicarObjeto(obj, nivel)
+		if obj:IsA("BasePart") then
+			fpsGuardar(obj, "CastShadow", false)
+			if nivel >= 3 then
+				fpsGuardar(obj, "Material", Enum.Material.Plastic)
+				fpsGuardar(obj, "Reflectance", 0)
+				if obj:IsA("MeshPart") then
+					fpsGuardar(obj, "TextureID", "")
+					fpsGuardar(obj, "RenderFidelity", Enum.RenderFidelity.Performance)
+				elseif obj:IsA("UnionOperation") then
+					fpsGuardar(obj, "RenderFidelity", Enum.RenderFidelity.Performance)
+				end
+			end
+			return
+		end
+		if obj:IsA("Decal") then -- Decal e Texture (rostos dos personagens ficam)
+			if not fpsDoPersonagem(obj) then fpsGuardar(obj, "Transparency", 1) end
+			return
+		end
+		if nivel >= 3 and (obj:IsA("SurfaceAppearance") or obj:IsA("Clothing") or obj:IsA("ShirtGraphic")) then
+			fpsRemovidos[obj] = obj.Parent
+			obj.Parent = nil
+			return
+		end
+		if nivel >= 2 then
+			if obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Beam") or obj:IsA("Fire")
+				or obj:IsA("Smoke") or obj:IsA("Sparkles") or obj:IsA("Light") or obj:IsA("PostEffect") then
+				if obj.Enabled then fpsGuardar(obj, "Enabled", false) end -- os efeitos que já estão desligados (inclusive os do script) ficam como estão
+			elseif obj:IsA("Animator") and not fpsAnimadores[obj] then
+				local meu = player.Character
+				if not (meu and obj:IsDescendantOf(meu)) then
+					for _, t in ipairs(obj:GetPlayingAnimationTracks()) do t:Stop(0) end
+					fpsAnimadores[obj] = obj.AnimationPlayed:Connect(function(t) t:Stop(0) end)
+				end
+			end
+		end
+	end
+
+	local function fpsRestaurar()
+		for _, c in ipairs(fpsConexoes) do c:Disconnect() end
+		table.clear(fpsConexoes)
+		for an, c in pairs(fpsAnimadores) do c:Disconnect() end
+		table.clear(fpsAnimadores)
+		for obj, t in pairs(fpsOrig) do
+			for prop, valor in pairs(t) do
+				pcall(function() obj[prop] = valor end)
+			end
+		end
+		table.clear(fpsOrig)
+		for obj, pai in pairs(fpsRemovidos) do
+			if pai and pai.Parent then pcall(function() obj.Parent = pai end) end
+		end
+		table.clear(fpsRemovidos)
+		if fpsQualidade then
+			pcall(function() settings().Rendering.QualityLevel = fpsQualidade end)
+			fpsQualidade = nil
+		end
+	end
+
+	local function definirFps(nivel)
+		fpsVersao += 1
+		local minha = fpsVersao
+		fpsRestaurar()
+		fpsNivel = nivel
+		if nivel == 0 then return end
+
+		-- globais
+		pcall(fpsGuardar, Lighting, "GlobalShadows", false)
+		pcall(fpsGuardar, workspace.Terrain, "Decoration", false)
+		if nivel >= 3 then
+			pcall(function()
+				local t = workspace.Terrain
+				fpsGuardar(t, "WaterWaveSize", 0)
+				fpsGuardar(t, "WaterReflectance", 0)
+			end)
+		end
+		if nivel >= 2 then
+			pcall(function()
+				local r = settings().Rendering
+				fpsQualidade = r.QualityLevel
+				r.QualityLevel = Enum.QualityLevel.Level01
+			end)
+		end
+
+		-- o que for criado depois também entra
+		local function novoObjeto(obj) pcall(fpsAplicarObjeto, obj, fpsNivel) end
+		fpsConexoes[#fpsConexoes + 1] = workspace.DescendantAdded:Connect(novoObjeto)
+		fpsConexoes[#fpsConexoes + 1] = Lighting.DescendantAdded:Connect(novoObjeto)
+
+		-- o que já existe (em lotes, para não travar)
+		task.spawn(function()
+			local contador = 0
+			for _, raiz in ipairs({ Lighting, workspace }) do
+				for _, obj in ipairs(raiz:GetDescendants()) do
+					if fpsVersao ~= minha then return end
+					pcall(fpsAplicarObjeto, obj, nivel)
+					contador += 1
+					if contador % 400 == 0 then task.wait() end
+				end
+			end
+		end)
+	end
+
+	comando({ "fps1" }, "fps1 - leve: sem sombras e texturas simples", function()
+		definirFps(1)
+		return true
+	end)
+	comando({ "fps2" }, "fps2 - médio: fps1 + sem efeitos, animações dos outros e menos distância", function()
+		definirFps(2)
+		return true
+	end)
+	comando({ "fps3" }, "fps3 - máximo: fps2 + tudo lego (plástico liso, sem roupas e texturas)", function()
+		definirFps(3)
+		return true
+	end)
+	comando({ "unfps" }, "unfps - voltar o visual normal", function()
+		definirFps(0)
+		return true
+	end)
+
+	-- RÉGUA: com a régua ligada, toque em dois pontos do mapa e ela mostra a distância em studs
+	local reguaLigada = false
+	local reguaPontos = {} -- Vector3 (no máximo 2)
+	local reguaObjetos = {}
+	local reguaToque -- { pos = Vector2, t = tempo } do toque que está em andamento
+	local COR_REGUA = Color3.fromRGB(255, 220, 80)
+
+	local function limparRegua()
+		for _, o in ipairs(reguaObjetos) do o:Destroy() end
+		table.clear(reguaObjetos)
+		table.clear(reguaPontos)
+	end
+
+	-- Parte invisível com um desenho que acompanha a câmera (tamanho fixo na tela)
+	local function reguaAncora(posicao)
+		local a = novo("Part", {
+			Anchored = true, CanCollide = false, CanQuery = false, CanTouch = false, CastShadow = false,
+			Transparency = 1, Size = Vector3.new(0.2, 0.2, 0.2), Position = posicao,
+		}, workspace.CurrentCamera)
+		reguaObjetos[#reguaObjetos + 1] = a
+		return a
+	end
+
+	local function reguaMarca(posicao)
+		local a = reguaAncora(posicao)
+		local b = novo("BillboardGui", { Size = UDim2.fromOffset(12, 12), AlwaysOnTop = true }, a)
+		local ponto = novo("Frame", {
+			Size = UDim2.fromScale(1, 1), BackgroundColor3 = COR_REGUA,
+		}, b)
+		novo("UICorner", { CornerRadius = UDim.new(1, 0) }, ponto)
+		novo("UIStroke", { Color = Color3.new(0, 0, 0), Thickness = 1.5 }, ponto)
+	end
+
+	local function reguaLinha(p1, p2)
+		local dist = (p2 - p1).Magnitude
+		if dist > 0.01 then
+			local linha = novo("Part", {
+				Anchored = true, CanCollide = false, CanQuery = false, CanTouch = false, CastShadow = false,
+				Material = Enum.Material.Neon, Color = COR_REGUA,
+				Size = Vector3.new(0.12, 0.12, dist),
+				CFrame = CFrame.lookAt(p1, p2) * CFrame.new(0, 0, -dist / 2),
+			}, workspace.CurrentCamera)
+			reguaObjetos[#reguaObjetos + 1] = linha
+		end
+
+		local meio = reguaAncora((p1 + p2) / 2)
+		local b = novo("BillboardGui", {
+			Size = UDim2.fromOffset(110, 24), StudsOffset = Vector3.new(0, 1.5, 0), AlwaysOnTop = true,
+		}, meio)
+		novo("TextLabel", {
+			Size = UDim2.fromScale(1, 1),
+			BackgroundColor3 = Color3.fromRGB(18, 18, 22),
+			BackgroundTransparency = 0.15,
+			Text = string.format("%.1f studs", dist),
+			TextColor3 = COR_REGUA,
+			Font = Enum.Font.GothamBold,
+			TextSize = 13,
+		}, b)
+		novo("UICorner", { CornerRadius = UDim.new(0, 6) }, b:FindFirstChildOfClass("TextLabel"))
+	end
+
+	-- Onde o toque bateu no mapa (ignora o seu personagem)
+	local function reguaPontoDoToque(posTela)
+		local cam = workspace.CurrentCamera
+		local raio = cam:ScreenPointToRay(posTela.X, posTela.Y)
+		local params = RaycastParams.new()
+		params.FilterType = Enum.RaycastFilterType.Exclude
+		params.FilterDescendantsInstances = { player.Character, cam }
+		local res = workspace:Raycast(raio.Origin, raio.Direction * 5000, params)
+		return res and res.Position
+	end
+
+	local function reguaTocou(posTela)
+		local ponto = reguaPontoDoToque(posTela)
+		if not ponto then return end
+		if #reguaPontos >= 2 then limparRegua() end -- terceiro toque recomeça
+		reguaPontos[#reguaPontos + 1] = ponto
+		reguaMarca(ponto)
+		if #reguaPontos == 2 then reguaLinha(reguaPontos[1], reguaPontos[2]) end
+	end
+
+	UserInputService.InputBegan:Connect(function(input, processado)
+		if not reguaLigada or processado then return end
+		local t = input.UserInputType
+		if t == Enum.UserInputType.Touch or t == Enum.UserInputType.MouseButton1 then
+			reguaToque = { pos = Vector2.new(input.Position.X, input.Position.Y), t = os.clock() }
+		end
+	end)
+
+	UserInputService.InputEnded:Connect(function(input)
+		local ini = reguaToque
+		if not ini then return end
+		local t = input.UserInputType
+		if t ~= Enum.UserInputType.Touch and t ~= Enum.UserInputType.MouseButton1 then return end
+		reguaToque = nil
+		if not reguaLigada then return end
+		local fim = Vector2.new(input.Position.X, input.Position.Y)
+		-- só conta toque curto e parado (arrastar é mexer a câmera)
+		if (fim - ini.pos).Magnitude > 12 or os.clock() - ini.t > 0.45 then return end
+		reguaTocou(fim)
+	end)
+
+	alternavel({ "regua", "ruler" }, "regua / unregua - toque em 2 pontos e veja a distância em studs", function(ligar)
+		reguaLigada = ligar
+		reguaToque = nil
+		limparRegua()
+		return true
+	end)
+
+	-- FREECAM: câmera livre enquanto o personagem fica parado
+	-- Andar: analógico/WASD (vai para onde a câmera olha) | Subir/descer: Espaço/E e Shift/Q ou inclinar a câmera
+	-- Girar: arrastar o dedo na tela (celular) ou segurar o botão direito do mouse (PC)
+	local fcLigada = false
+	local fcVel = 60
+	local fcYaw, fcPitch, fcPos = 0, 0, Vector3.zero
+	local fcAncoradaAntes
+	local fcRaiz
+	local fcConexoes = {}
+	local FC_NOME_LOOP = "FreecamScript"
+
+	local function pararFreecam()
+		if not fcLigada then return end
+		fcLigada = false
+		pcall(function() RunService:UnbindFromRenderStep(FC_NOME_LOOP) end)
+		for _, c in ipairs(fcConexoes) do c:Disconnect() end
+		table.clear(fcConexoes)
+
+		if fcRaiz and fcRaiz.Parent and fcAncoradaAntes ~= nil then
+			fcRaiz.Anchored = fcAncoradaAntes
+		end
+		fcRaiz, fcAncoradaAntes = nil, nil
+
+		local cam = workspace.CurrentCamera
+		local hum = meuHumanoid()
+		cam.CameraType = Enum.CameraType.Custom
+		if hum then cam.CameraSubject = hum end
+	end
+
+	local function iniciarFreecam(vel)
+		fcVel = vel
+		if fcLigada then return true end
+		local raiz = pegarPersonagem()
+		if not raiz then return false, "Sem personagem vivo" end
+
+		local cam = workspace.CurrentCamera
+		local look = cam.CFrame.LookVector
+		fcYaw = math.atan2(-look.X, -look.Z)
+		fcPitch = math.asin(math.clamp(look.Y, -1, 1))
+		fcPos = cam.CFrame.Position
+
+		fcLigada = true
+		fcRaiz = raiz
+		fcAncoradaAntes = raiz.Anchored
+		raiz.Anchored = true -- personagem parado
+		cam.CameraType = Enum.CameraType.Scriptable
+
+		-- Girar a câmera
+		fcConexoes[#fcConexoes + 1] = UserInputService.InputChanged:Connect(function(input, processado)
+			local t = input.UserInputType
+			local girar = false
+			if t == Enum.UserInputType.MouseMovement then
+				girar = UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2)
+			elseif t == Enum.UserInputType.Touch then
+				girar = not processado -- o analógico e os botões já "consomem" o toque
+			end
+			if not girar then return end
+			fcYaw = fcYaw - input.Delta.X * 0.005
+			fcPitch = math.clamp(fcPitch - input.Delta.Y * 0.005, -math.rad(89), math.rad(89))
+		end)
+
+		-- Renascer/morrer sai da freecam
+		fcConexoes[#fcConexoes + 1] = player.CharacterAdded:Connect(pararFreecam)
+
+		RunService:BindToRenderStep(FC_NOME_LOOP, Enum.RenderPriority.Camera.Value + 1, function(dt)
+			local r, hum = pegarPersonagem()
+			if not r then
+				pararFreecam()
+				return
+			end
+			local c = workspace.CurrentCamera
+			if c.CameraType ~= Enum.CameraType.Scriptable then c.CameraType = Enum.CameraType.Scriptable end
+			r.Anchored = true -- o jogo pode ter soltado
+
+			local dir = direcaoDeVoo(hum)
+			fcPos = fcPos + dir * fcVel * math.min(dt, 0.1)
+			c.CFrame = CFrame.new(fcPos) * CFrame.Angles(0, fcYaw, 0) * CFrame.Angles(fcPitch, 0, 0)
+		end)
+		return true
+	end
+
+	alternavel({ "freecam", "fc" }, "freecam [velocidade] / unfreecam - câmera livre com o personagem parado", function(ligar, args)
+		if not ligar then
+			pararFreecam()
+			return true
+		end
+		local n = args[1] and tonumber(args[1]) or fcVel
+		if not n or n < 1 or n > 500 then return false, "freecam: use uma velocidade de 1 a 500" end
+		return iniciarFreecam(n)
+	end)
+
+	-- ORBITAR: gira em volta de um jogador, atravessando paredes. Velocidade em graus por segundo, distância em studs
+	local pararSeguir -- definido no SEGUIR, mais abaixo
+	local pararCabeca -- definido no SENTAR NA CABEÇA, mais abaixo
+	local orbLigada = false
+	local orbAlvo -- Player
+	local orbVel, orbDist = 90, 12
+	local orbAngulo = 0
+	local orbConexoes = {}
+	local orbColisoes = {}
+	local orbPlataformaAntes = false
+	local orbHum, orbRaiz
+
+	-- Tira o corpo de dentro de uma parede (sobe até achar espaço livre)
+	local function orbLivrar(raiz)
+		local char = raiz.Parent
+		if not char then return end
+		local params = OverlapParams.new()
+		params.FilterType = Enum.RaycastFilterType.Exclude
+		params.FilterDescendantsInstances = { char }
+		local tam = char:GetExtentsSize()
+		local cf = raiz.CFrame
+		for i = 0, 40 do
+			local c = cf + Vector3.new(0, i * 3, 0)
+			local livre = true
+			for _, parte in ipairs(workspace:GetPartBoundsInBox(c, tam, params)) do
+				if parte.CanCollide then livre = false break end
+			end
+			if livre then
+				raiz.CFrame = c
+				raiz.AssemblyLinearVelocity = Vector3.zero
+				return
+			end
+		end
+	end
+
+	local function pararOrbita()
+		if not orbLigada then return end
+		orbLigada = false
+		for _, c in ipairs(orbConexoes) do c:Disconnect() end
+		table.clear(orbConexoes)
+		if orbRaiz and orbRaiz.Parent then orbLivrar(orbRaiz) end
+		if not estado.noclip then -- com o Noclip ligado, quem manda na colisão é ele
+			for d in pairs(orbColisoes) do
+				if d.Parent then d.CanCollide = true end
+			end
+		end
+		table.clear(orbColisoes)
+		if orbHum and orbHum.Parent then orbHum.PlatformStand = orbPlataformaAntes end
+		orbAlvo, orbRaiz, orbHum = nil, nil, nil
+	end
+
+	local function iniciarOrbita(alvoJogador)
+		local raiz, hum = pegarPersonagem()
+		if not raiz then return false, "Sem personagem vivo" end
+		local char = raiz.Parent
+		pararOrbita()
+		if pararSeguir then pararSeguir() end
+		if pararCabeca then pararCabeca() end
+		if estado.fly then definirFly(false) end -- o Fly brigaria com o movimento
+
+		orbLigada = true
+		orbAlvo, orbRaiz, orbHum = alvoJogador, raiz, hum
+		orbAngulo = 0
+		orbPlataformaAntes = hum.PlatformStand
+		hum.PlatformStand = true
+
+		-- começa do lado em que você já está
+		local alvoRaiz = alvoJogador.Character and alvoJogador.Character:FindFirstChild("HumanoidRootPart")
+		if alvoRaiz then
+			local d = raiz.Position - alvoRaiz.Position
+			if Vector3.new(d.X, 0, d.Z).Magnitude > 0.1 then orbAngulo = math.atan2(d.Z, d.X) end
+		end
+
+		-- colisão desligada a cada passo da física (o Humanoid religa sozinho em algumas partes)
+		orbConexoes[#orbConexoes + 1] = RunService.Stepped:Connect(function()
+			if not (orbRaiz and orbRaiz.Parent) then return end
+			for _, d in ipairs(char:GetDescendants()) do
+				if d:IsA("BasePart") and d.CanCollide then
+					orbColisoes[d] = true
+					d.CanCollide = false
+				end
+			end
+		end)
+
+		orbConexoes[#orbConexoes + 1] = RunService.RenderStepped:Connect(function(dt)
+			if not (orbRaiz and orbRaiz.Parent) or orbHum.Health <= 0 then
+				pararOrbita()
+				return
+			end
+			if not (orbAlvo and orbAlvo.Parent) then -- o jogador saiu do servidor
+				pararOrbita()
+				return
+			end
+			local centroRaiz = orbAlvo.Character and orbAlvo.Character:FindFirstChild("HumanoidRootPart")
+			if not centroRaiz then return end -- renascendo: espera
+
+			orbAngulo = orbAngulo + math.rad(orbVel) * math.min(dt, 0.1)
+			local centro = centroRaiz.Position
+			local pos = centro + Vector3.new(math.cos(orbAngulo), 0, math.sin(orbAngulo)) * orbDist
+			local olhar = Vector3.new(centro.X, pos.Y, centro.Z) -- de frente para o jogador, sem inclinar
+			orbRaiz.CFrame = CFrame.lookAt(pos, olhar)
+			orbRaiz.AssemblyLinearVelocity = Vector3.zero
+			orbRaiz.AssemblyAngularVelocity = Vector3.zero
+		end)
+
+		-- renascer sai da órbita
+		orbConexoes[#orbConexoes + 1] = player.CharacterAdded:Connect(pararOrbita)
+		return true
+	end
+
+	alternavel({ "orbitar", "orbit" }, "orbitar <jogador> [velocidade] [distância] / unorbitar - girar em volta de um jogador", function(ligar, args)
+		if not ligar then
+			pararOrbita()
+			return true
+		end
+		if not args[1] then return false, "Uso: orbitar <jogador> [velocidade] [distância]" end
+
+		-- só números com a órbita ligada = muda velocidade e distância ao vivo
+		local soNumero = tonumber(args[1]) ~= nil
+		local velTexto, distTexto = args[2], args[3]
+		if soNumero then velTexto, distTexto = args[1], args[2] end
+
+		local vel, dist = orbVel, orbDist
+		if velTexto then
+			vel = tonumber(velTexto)
+			if not vel or vel == 0 or math.abs(vel) > 1440 then return false, "velocidade: de 1 a 1440 (negativo gira ao contrário)" end
+		end
+		if distTexto then
+			dist = tonumber(distTexto)
+			if not dist or dist < 2 or dist > 500 then return false, "distância: de 2 a 500 studs" end
+		end
+
+		if soNumero then
+			if not orbLigada then return false, "Uso: orbitar <jogador> [velocidade] [distância]" end
+			orbVel, orbDist = vel, dist
+			return true
+		end
+
+		local alvoJogador = acharJogador(args[1])
+		if not alvoJogador then return false, "Jogador não encontrado: " .. args[1] end
+		orbVel, orbDist = vel, dist
+		return iniciarOrbita(alvoJogador)
+	end)
+
+	-- SEGUIR: longe (mais de SEGUIR_LONGE studs) vai em dash; perto anda até SEGUIR_ATRAS studs atrás do jogador e pula se travar
+	local SEGUIR_LONGE, SEGUIR_ATRAS = 80, 5
+	local SEGUIR_VEL_DASH = 400 -- studs por segundo no dash do seguir
+	local segLigado = false
+	local segAlvo -- Player
+	local segConexoes = {}
+	local segProximoDash = 0
+	local segParadoDesde -- quando começou a ficar travado
+	local segUltimoPulo = 0
+	local segUltimoMover = 0
+	local segHum
+
+	function pararSeguir()
+		if not segLigado then return end
+		segLigado = false
+		for _, c in ipairs(segConexoes) do c:Disconnect() end
+		table.clear(segConexoes)
+		if segHum and segHum.Parent then
+			segHum:Move(Vector3.zero)
+			segHum:MoveTo(segHum.Parent:GetPivot().Position) -- para onde está
+		end
+		segAlvo, segHum = nil, nil
+	end
+
+	local function iniciarSeguir(alvoJogador)
+		local raiz, hum = pegarPersonagem()
+		if not raiz then return false, "Sem personagem vivo" end
+		pararSeguir()
+		pararOrbita()
+		if pararCabeca then pararCabeca() end
+		if estado.fly then definirFly(false) end -- seguir anda no chão
+
+		segLigado = true
+		segAlvo, segHum = alvoJogador, hum
+		segProximoDash, segParadoDesde, segUltimoPulo, segUltimoMover = 0, nil, 0, 0
+
+		segConexoes[#segConexoes + 1] = RunService.Heartbeat:Connect(function()
+			local minhaRaiz, meuHum = pegarPersonagem()
+			if not minhaRaiz then
+				pararSeguir()
+				return
+			end
+			if not (segAlvo and segAlvo.Parent) then -- o jogador saiu do servidor
+				pararSeguir()
+				return
+			end
+			local alvoRaiz = segAlvo.Character and segAlvo.Character:FindFirstChild("HumanoidRootPart")
+			if not alvoRaiz then return end -- renascendo: espera
+
+			local agora = os.clock()
+			local ponto = alvoRaiz.Position - alvoRaiz.CFrame.LookVector * SEGUIR_ATRAS
+			local dist = (alvoRaiz.Position - minhaRaiz.Position).Magnitude
+
+			-- LONGE: dash até ficar atrás do jogador
+			if dist > SEGUIR_LONGE then
+				segParadoDesde = nil
+				if agora >= segProximoDash then
+					local duracao = math.clamp(dist / SEGUIR_VEL_DASH, 0.2, 1.5)
+					segProximoDash = agora + duracao + 0.15
+					iniciarDash(ponto + Vector3.new(0, 3, 0), { velocidade = SEGUIR_VEL_DASH })
+				end
+				return
+			end
+			if agora < segProximoDash then return end -- ainda no dash
+
+			-- PERTO: anda até o ponto atrás do jogador
+			local falta = Vector3.new(ponto.X - minhaRaiz.Position.X, 0, ponto.Z - minhaRaiz.Position.Z).Magnitude
+			if falta > 2 then
+				if agora - segUltimoMover > 0.1 then
+					segUltimoMover = agora
+					meuHum:MoveTo(ponto)
+				end
+
+				-- pula se estiver tentando andar e não sair do lugar, ou se o jogador estiver bem mais alto
+				local v = minhaRaiz.AssemblyLinearVelocity
+				local vel = Vector3.new(v.X, 0, v.Z).Magnitude
+				if vel < 2 and falta > 3 then
+					segParadoDesde = segParadoDesde or agora
+				else
+					segParadoDesde = nil
+				end
+				local travado = segParadoDesde and agora - segParadoDesde > 0.35
+				local alvoMaisAlto = alvoRaiz.Position.Y - minhaRaiz.Position.Y > 4 and falta < 12
+				if (travado or alvoMaisAlto) and agora - segUltimoPulo > 0.6 then
+					segUltimoPulo = agora
+					meuHum.Jump = true
+				end
+			else
+				segParadoDesde = nil
+			end
+		end)
+
+		-- renascer para de seguir
+		segConexoes[#segConexoes + 1] = player.CharacterAdded:Connect(pararSeguir)
+		return true
+	end
+
+	alternavel({ "seguir", "follow" }, "seguir <jogador> / unseguir - seguir um jogador (longe: dash, perto: anda atrás dele)", function(ligar, args)
+		if not ligar then
+			pararSeguir()
+			return true
+		end
+		if #args == 0 then return false, "Uso: seguir <jogador>" end
+		local alvoJogador = acharJogador(table.concat(args, " "))
+		if not alvoJogador then return false, "Jogador não encontrado: " .. table.concat(args, " ") end
+		return iniciarSeguir(alvoJogador)
+	end)
+
+	-- SENTAR NA CABEÇA: senta na cabeça do jogador escolhido e vai junto com ele.
+	-- Só sai se ele reiniciar (ou morrer/sair do servidor) ou se você pular.
+	local cabLigada = false
+	local cabAlvo -- Player
+	local cabAlvoChar
+	local cabConexoes = {}
+	local cabColisoes = {}
+	local cabRaiz, cabHum
+
+	function pararCabeca()
+		if not cabLigada then return end
+		cabLigada = false
+		for _, c in ipairs(cabConexoes) do c:Disconnect() end
+		table.clear(cabConexoes)
+		if not estado.noclip then -- com o Noclip ligado, quem manda na colisão é ele
+			for d in pairs(cabColisoes) do
+				if d.Parent then d.CanCollide = true end
+			end
+		end
+		table.clear(cabColisoes)
+		if cabHum and cabHum.Parent then cabHum.Sit = false end
+		if cabRaiz and cabRaiz.Parent then cabRaiz.AssemblyLinearVelocity = Vector3.zero end
+		cabAlvo, cabAlvoChar, cabRaiz, cabHum = nil, nil, nil, nil
+	end
+
+	local function iniciarCabeca(alvoJogador)
+		local raiz, hum = pegarPersonagem()
+		if not raiz then return false, "Sem personagem vivo" end
+		local alvoChar = alvoJogador.Character
+		local alvoHum = alvoChar and alvoChar:FindFirstChildOfClass("Humanoid")
+		if not (alvoChar and alvoChar:FindFirstChild("Head") and alvoHum and alvoHum.Health > 0) then
+			return false, alvoJogador.DisplayName .. " indisponível"
+		end
+
+		pararCabeca()
+		pararOrbita()
+		pararSeguir()
+		if estado.fly then definirFly(false) end
+
+		cabLigada = true
+		cabAlvo, cabAlvoChar, cabRaiz, cabHum = alvoJogador, alvoChar, raiz, hum
+		local char = raiz.Parent
+		hum.Sit = true
+
+		local function acompanhar()
+			if not (cabRaiz and cabRaiz.Parent) or cabHum.Health <= 0 then
+				pararCabeca()
+				return
+			end
+			-- ele reiniciou, morreu ou saiu: solta
+			local ch = cabAlvo and cabAlvo.Parent and cabAlvo.Character
+			local h = ch and ch:FindFirstChildOfClass("Humanoid")
+			if ch ~= cabAlvoChar or not h or h.Health <= 0 then
+				pararCabeca()
+				return
+			end
+			local cabeca = ch:FindFirstChild("Head")
+			local alvoRaiz = ch:FindFirstChild("HumanoidRootPart")
+			if not (cabeca and alvoRaiz) then return end
+
+			if not cabHum.Sit then cabHum.Sit = true end
+			local pos = cabeca.Position + Vector3.new(0, cabeca.Size.Y / 2 + 1.1, 0)
+			cabRaiz.CFrame = CFrame.new(pos) * alvoRaiz.CFrame.Rotation
+			cabRaiz.AssemblyLinearVelocity = Vector3.zero
+			cabRaiz.AssemblyAngularVelocity = Vector3.zero
+		end
+
+		-- sem colisão com o jogador (não empurra nem enrosca)
+		cabConexoes[#cabConexoes + 1] = RunService.Stepped:Connect(function()
+			if not (cabRaiz and cabRaiz.Parent) then return end
+			for _, d in ipairs(char:GetDescendants()) do
+				if d:IsA("BasePart") and d.CanCollide then
+					cabColisoes[d] = true
+					d.CanCollide = false
+				end
+			end
+			acompanhar()
+		end)
+		cabConexoes[#cabConexoes + 1] = RunService.RenderStepped:Connect(acompanhar)
+
+		-- pular sai
+		cabConexoes[#cabConexoes + 1] = UserInputService.JumpRequest:Connect(pararCabeca)
+		cabConexoes[#cabConexoes + 1] = player.CharacterAdded:Connect(pararCabeca)
+		return true
+	end
+
+	alternavel({ "hsit", "headsit", "sentarcabeca" }, "hsit <jogador> / unhsit - sentar na cabeça de um jogador (pular sai)", function(ligar, args)
+		if not ligar then
+			pararCabeca()
+			return true
+		end
+		if #args == 0 then return false, "Uso: hsit <jogador>" end
+		local alvoJogador = acharJogador(table.concat(args, " "))
+		if not alvoJogador then return false, "Jogador não encontrado: " .. table.concat(args, " ") end
+		return iniciarCabeca(alvoJogador)
+	end)
+
+	comando({ "menu", "m" }, "menu ou m - abrir/fechar o menu", function()
 		alternarPainel()
 		return true, aberto and "Menu aberto" or "Menu fechado"
 	end)
 
-	comando({ "cmds", "help", "?" }, "cmds - mostrar a lista completa", function()
+	comando({ "cmds", "help", "ajuda", "?" }, "cmds, help ou ajuda - mostrar a lista completa", function()
 		manterBarra = true
 		return true
 	end)
+
+	----------------------------------------------------------
+	-- GALERIA SECRETA: o comando "xv" abre/fecha. Não aparece no menu, na ajuda
+	-- nem na lista de sugestões da barra (por isso não usa comando()).
+	-- 12 espaços: 3 fileiras com 4 fotos. Toque numa foto para ampliar; toque de novo para voltar.
+	----------------------------------------------------------
+	do
+		-- >>> COLE AQUI OS LINKS DAS 12 FOTOS (deixe "" nos espaços vazios) <<<
+		local LINKS_GALERIA = {
+			"", "", "", "",
+			"", "", "", "",
+			"", "", "", "",
+		}
+		local COLUNAS, LINHAS = 4, 3
+		local galeria, ampliada
+		local fotos = {}   -- [i] = ImageButton do espaço
+		local carregada = false
+
+		local function baixar(i, link)
+			local arquivo = "galeria_foto" .. i .. ".png"
+			local marca = "galeria_foto" .. i .. ".txt" -- guarda qual link gerou o arquivo
+			local atual = isfile(arquivo) and isfile(marca) and readfile(marca) == link
+			if not atual then
+				writefile(arquivo, game:HttpGet(link))
+				writefile(marca, link)
+			end
+			return getcustomasset(arquivo)
+		end
+
+		local function montar()
+			local g = Instance.new("ScreenGui")
+			g.Name = "Galeria"
+			g.ResetOnSpawn = false
+			g.IgnoreGuiInset = gui.IgnoreGuiInset
+			g.DisplayOrder = 30
+			g.Enabled = false
+			g.Parent = playerGui
+
+			local tela = tamanhoTela()
+			local pad, altBarra = 8, 30
+			local celula = (math.min(520, tela.X - 20) - pad * (COLUNAS + 1)) / COLUNAS
+			local maxAlt = tela.Y - 20
+			if altBarra + pad * (LINHAS + 1) + celula * LINHAS > maxAlt then -- tela baixa: diminui as fotos
+				celula = (maxAlt - altBarra - pad * (LINHAS + 1)) / LINHAS
+			end
+			celula = math.max(celula, 20)
+			local larg = pad * (COLUNAS + 1) + celula * COLUNAS
+			local alt = altBarra + pad * (LINHAS + 1) + celula * LINHAS
+
+			local p = Instance.new("Frame")
+			p.Name = "PainelGaleria"
+			p.Size = UDim2.fromOffset(larg, alt)
+			p.Position = UDim2.fromOffset((tela.X - larg) / 2, (tela.Y - alt) / 2)
+			p.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
+			p.BackgroundTransparency = 0.12
+			p.ClipsDescendants = true
+			p.Parent = g
+			Instance.new("UICorner", p).CornerRadius = UDim.new(0, 14)
+			local contorno = Instance.new("UIStroke")
+			contorno.Color = Color3.new(1, 1, 1)
+			contorno.Thickness = 1.2
+			contorno.Transparency = 0.6
+			contorno.Parent = p
+
+			-- Barra de cima: arraste para mover; ✕ fecha
+			local barra = Instance.new("Frame")
+			barra.Size = UDim2.new(1, 0, 0, altBarra)
+			barra.BackgroundTransparency = 1
+			barra.Active = true
+			barra.Parent = p
+			tornarMovel(barra, p)
+			local fechar = Instance.new("TextButton")
+			fechar.AnchorPoint = Vector2.new(1, 0)
+			fechar.Position = UDim2.new(1, -4, 0, 2)
+			fechar.Size = UDim2.fromOffset(26, 26)
+			fechar.BackgroundTransparency = 1
+			fechar.Text = "✕"
+			fechar.TextColor3 = Color3.new(1, 1, 1)
+			fechar.Font = Enum.Font.GothamBold
+			fechar.TextSize = 16
+			fechar.Parent = barra
+			fechar.MouseButton1Click:Connect(function() g.Enabled = false end)
+
+			-- Os 12 espaços (3 fileiras de 4)
+			for i = 1, COLUNAS * LINHAS do
+				local linha = math.floor((i - 1) / COLUNAS)
+				local coluna = (i - 1) % COLUNAS
+				local f = Instance.new("ImageButton")
+				f.Name = "Foto" .. i
+				f.Position = UDim2.fromOffset(pad + coluna * (celula + pad), altBarra + pad + linha * (celula + pad))
+				f.Size = UDim2.fromOffset(celula, celula)
+				f.BackgroundColor3 = Color3.new(1, 1, 1)
+				f.BackgroundTransparency = 0.92
+				f.AutoButtonColor = false
+				f.Image = ""
+				f.ScaleType = Enum.ScaleType.Crop
+				f.Parent = p
+				Instance.new("UICorner", f).CornerRadius = UDim.new(0, 10)
+				local c = Instance.new("UIStroke")
+				c.Color = Color3.new(1, 1, 1)
+				c.Thickness = 1
+				c.Transparency = 0.75
+				c.Parent = f
+				fotos[i] = f
+				f.MouseButton1Click:Connect(function()
+					if f.Image ~= "" then
+						ampliada.Image = f.Image
+						ampliada.Visible = true
+					end
+				end)
+			end
+
+			-- Foto ampliada (cobre o painel; toque para voltar)
+			ampliada = Instance.new("ImageButton")
+			ampliada.Name = "Ampliada"
+			ampliada.Size = UDim2.new(1, 0, 1, 0)
+			ampliada.BackgroundColor3 = Color3.new(0, 0, 0)
+			ampliada.BackgroundTransparency = 0.25
+			ampliada.AutoButtonColor = false
+			ampliada.ScaleType = Enum.ScaleType.Fit
+			ampliada.ZIndex = 10
+			ampliada.Visible = false
+			ampliada.Parent = p
+			ampliada.MouseButton1Click:Connect(function() ampliada.Visible = false end)
+
+			galeria = g
+		end
+
+		local function carregar() -- baixa as fotos em segundo plano, só na primeira vez
+			if carregada then return end
+			carregada = true
+			task.spawn(function()
+				for i, link in ipairs(LINKS_GALERIA) do
+					if link ~= "" and fotos[i] then
+						local ok, imagem = pcall(baixar, i, link)
+						if ok and imagem then fotos[i].Image = imagem end
+					end
+				end
+			end)
+		end
+
+		comandos["xv"] = function()
+			if not galeria then montar() end
+			galeria.Enabled = not galeria.Enabled
+			if galeria.Enabled then
+				ampliada.Visible = false
+				carregar()
+			end
+			return true -- sem mensagem: ninguém precisa saber que existe
+		end
+	end
 
 	----------------------------------------------------------
 	-- Executar o que foi digitado
@@ -4758,6 +6586,92 @@ local function iniciarTeclado()
 
 end
 iniciarTeclado()
+
+------------------------------------------------------------
+-- CONFIGURAÇÕES POR FUNÇÃO (categoria "Config": um liga/desliga para cada função)
+-- Vale na hora e fica salvo em "config_script.json" (writefile do executor;
+-- sem ele vale só até fechar o jogo).
+------------------------------------------------------------
+do
+	local HttpService = game:GetService("HttpService")
+	local ARQUIVO_CFG = "config_script.json"
+	local CFG = MENU.cfg
+	local ordem = 300
+	local itens = {}
+
+	local function salvar()
+		if not (typeof(writefile) == "function") then return end
+		local t = {}
+		for _, it in ipairs(itens) do t[it.chave] = it.get() end
+		pcall(function() writefile(ARQUIVO_CFG, HttpService:JSONEncode(t)) end)
+	end
+
+	local function aplicar(it, v)
+		v = v and true or false
+		it.set(v)
+		it.botao.Text = it.rotulo .. ": " .. (v and "LIGADO" or "DESLIGADO")
+		VIDRO.aplicar(it.botao, v)
+	end
+
+	local function novoBotao(texto)
+		ordem = ordem + 1
+		local f = Instance.new("Frame")
+		f.Name = "CelulaConfig" .. ordem
+		f.LayoutOrder = ordem
+		f.Size = UDim2.new(1, 0, 0, ALTURA_BOTAO)
+		f.BackgroundTransparency = 1
+		f:SetAttribute("Categoria", "Config")
+		f.Visible = (MENU.atual == "Config")
+		f.Parent = grade
+		local b = Instance.new("TextButton")
+		b.Size = UDim2.new(1, 0, 1, 0)
+		b.Text = texto
+		b.Font = Enum.Font.GothamBold
+		b.TextSize = 14
+		b.TextScaled = true
+		b.Parent = f
+		Instance.new("UICorner", b).CornerRadius = UDim.new(0, 10)
+		local lim = Instance.new("UITextSizeConstraint")
+		lim.MaxTextSize = 14
+		lim.MinTextSize = 8
+		lim.Parent = b
+		return b
+	end
+
+	local function opcao(chave, texto, get, set)
+		local b = novoBotao(texto)
+		local it = { chave = chave, rotulo = texto, get = get, set = set, padrao = get(), botao = b }
+		itens[#itens + 1] = it
+		aplicar(it, get())
+		b.MouseButton1Click:Connect(function() aplicar(it, not get()) salvar() end)
+	end
+
+	opcao("super", "FLY: SUPER VOO", function() return SUPER.habilitado ~= false end, function(v) SUPER.habilitado = v end)
+	opcao("swimEfeitos", "SWIM: EFEITOS", function() return CFG.swimEfeitos end, function(v) CFG.swimEfeitos = v end)
+	opcao("noclipTransp", "NOCLIP: TRANSPARÊNCIA", function() return CFG.noclipTransp end, function(v) CFG.noclipTransp = v end)
+	opcao("barraVida", "ESP: BARRA DE VIDA", function() return CFG.barraVida end, function(v) CFG.barraVida = v end)
+	opcao("alertaChams", "CHAMS: ALERTA VERMELHO", function() return CFG.alertaChams end, function(v) CFG.alertaChams = v end)
+	opcao("sonar", "XRAY: SONAR", function() return MENU.sonar.ligado end, function(v) MENU.sonar.ligado = v end)
+	opcao("tpInstantaneo", "TP: INSTANTÂNEO", function() return CFG.tpInstantaneo end, function(v) CFG.tpInstantaneo = v end)
+	opcao("tpToolInstantaneo", "TPTOOL: INSTANTÂNEO", function() return CFG.tpToolInstantaneo end, function(v) CFG.tpToolInstantaneo = v end)
+
+	local br = novoBotao("RESTAURAR PADRÕES")
+	VIDRO.aplicar(br, false)
+	br.MouseButton1Click:Connect(function()
+		for _, it in ipairs(itens) do aplicar(it, it.padrao) end
+		salvar()
+	end)
+
+	-- carrega o que estava salvo
+	pcall(function()
+		if typeof(isfile) == "function" and typeof(readfile) == "function" and isfile(ARQUIVO_CFG) then
+			local t = HttpService:JSONDecode(readfile(ARQUIVO_CFG))
+			for _, it in ipairs(itens) do
+				if t[it.chave] ~= nil then aplicar(it, t[it.chave]) end
+			end
+		end
+	end)
+end
 
 ------------------------------------------------------------
 -- LOOP PRINCIPAL
