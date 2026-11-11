@@ -1,4 +1,5 @@
 -- LocalScript
+-- v70: copiar visual não mata mais o personagem ao trocar o corpo (pescoço não obrigatório) e, se mesmo assim morrer logo depois de copiar, desliga a troca de peças sozinho (sem ciclo de morte).
 -- v69: copiar visual agora CLONA as peças reais do corpo do outro jogador (malha, tamanho, rosto) e religa as juntas -> fim do corpo esticado/braço fino e dos buracos.
 -- v68: copiar visual copia a ESTRUTURA do corpo (tamanho de cada peça, juntas dos braços/pernas, ancoras, altura do chão) -> sem braços separados e com cabeça/corpo idênticos.
 -- v67: autoclick simplificado (só liga/desliga + cliques por segundo, clica em qualquer lugar e usa a ferramenta da mão), sem painel nem bolinhas.
@@ -8417,7 +8418,17 @@ local function iniciarTeclado()
 				end
 			end
 			if #trabalho == 0 then return 0 end
+			pcall(function() hum.RequiresNeck = false end) -- o Roblox mata o personagem quando a cabeça/pescoço troca de peça
 			pcall(function() hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false) end) -- não morre enquanto troca as peças
+			local t0, conMorte = os.clock(), nil
+			conMorte = hum.Died:Connect(function() -- morreu logo depois de trocar: este jogo não aceita, desliga a troca de peças
+				if os.clock() - t0 < 6 then
+					CV.corpoBloqueado = true
+					mostrarToast("Esse jogo mata ao trocar o corpo: copiando só roupas, rosto e tamanho", false)
+				end
+				if conMorte then conMorte:Disconnect() end
+			end)
+			task.delay(6, function() if conMorte then conMorte:Disconnect() end end)
 			local n = 0
 			for _, t in ipairs(trabalho) do
 				local nome, molde, velho = t[1], t[2], t[3]
@@ -8441,7 +8452,7 @@ local function iniciarTeclado()
 				end)
 				if ok then n += 1 end
 			end
-			task.delay(1, function() pcall(function() hum:SetStateEnabled(Enum.HumanoidStateType.Dead, true) end) end)
+			task.delay(3, function() pcall(function() hum:SetStateEnabled(Enum.HumanoidStateType.Dead, true) end) end)
 			return n
 		end
 
@@ -8567,7 +8578,7 @@ local function iniciarTeclado()
 			local hum = char and char:FindFirstChildOfClass("Humanoid")
 			if not (char and hum and f) then return false, "Personagem indisponível" end
 			local pecas, corpoOk = 0, 0
-			local usaCorpo = f.pecas ~= nil and next(f.pecas) ~= nil and f.geo ~= nil and f.geo.rig == hum.RigType
+			local usaCorpo = not CV.corpoBloqueado and f.pecas ~= nil and next(f.pecas) ~= nil and f.geo ~= nil and f.geo.rig == hum.RigType
 			-- tira o que você veste (só o que vai ser trocado, se a foto veio do avatar do Roblox)
 			local classes = {}
 			for _, c in ipairs(f.itens) do classes[c.ClassName] = true end
@@ -8721,10 +8732,12 @@ local function iniciarTeclado()
 		function CV.restaurar()
 			local original, origFoto, modo = CV.original, CV.origFoto, CV.modo
 			CV.atual, CV.copia, CV.original, CV.origFoto, CV.modo = nil, nil, nil, nil, nil
+			CV.corpoBloqueado = false
 			task.spawn(function()
 				local _, hum = pegarPersonagem()
 				if not hum then return end
 				local feito = false
+				pcall(function() hum.RequiresNeck = true end)
 				if modo == "desc" and original then
 					feito = (pcall(function() hum:ApplyDescription(original) end))
 				end
@@ -8740,6 +8753,7 @@ local function iniciarTeclado()
 			local hum = char:WaitForChild("Humanoid", 10)
 			if not hum then return end
 			char:WaitForChild("Head", 10)
+			if not CV.corpoBloqueado then pcall(function() hum.RequiresNeck = false end) end
 			task.wait(1.5) -- o jogo/Roblox termina de vestir o personagem antes
 			if CV.atual then
 				pcall(function() hum:ApplyDescription(CV.atual) end)
