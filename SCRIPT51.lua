@@ -417,7 +417,7 @@ function VIDRO.aplicar(b, ligado)
 	b.Font = Enum.Font.Gotham -- fonte normal (sem negrito)
 	b.TextTransparency = VIDRO.transpTexto
 	b.TextStrokeTransparency = 1 -- sem contorno no texto
-	b.AutoButtonColor = false
+	if b:IsA("GuiButton") then b.AutoButtonColor = false end -- caixas de texto (TextBox) não têm essa propriedade
 	local contorno = b:FindFirstChildOfClass("UIStroke")
 	if contorno then contorno:Destroy() end -- sem borda
 end
