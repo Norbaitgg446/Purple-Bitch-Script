@@ -16,7 +16,8 @@ local playerGui = player:WaitForChild("PlayerGui")
 ------------------------------------------------------------
 -- CONFIG
 ------------------------------------------------------------
-local DISTANCIA_MAXIMA = math.huge -- em studs: sem limite (ESP e Chams valem a qualquer distância; ponha um número, ex.: 500, para limitar)
+local CONSTS = {} -- valores fixos agrupados numa tabela só (o Roblox só aceita 200 variáveis locais no total)
+CONSTS.DISTANCIA_MAXIMA = math.huge -- em studs: sem limite (ESP e Chams valem a qualquer distância; ponha um número, ex.: 500, para limitar)
 local COR_ESP = Color3.fromRGB(255, 255, 255)
 local COR_CHAMS_CONTORNO = Color3.fromRGB(255, 60, 60)
 local COR_CHAMS_PREENCHIMENTO = Color3.fromRGB(255, 60, 60)
@@ -24,11 +25,11 @@ local TRANSPARENCIA_PREENCHIMENTO = 0.6 -- 1 = só o contorno, 0 = totalmente pr
 local VELOCIDADE_FLY_PADRAO = 10
 local MULTIPLICADOR_FLY = 10 -- cada ponto de velocidade do FLY vale isso em studs/s (aumente para ficar mais rápido)
 local POSE_HEROI = true -- true = personagem voa deitado, braço esticado (pose de herói); false = só voa
-local GANHO_INCLINACAO = 1 -- quanto o corpo acompanha a câmera ao olhar pra cima/baixo (1 = total: olhou pra baixo = deitado de barriga pra baixo; 0.5 = metade)
+CONSTS.GANHO_INCLINACAO = 1 -- quanto o corpo acompanha a câmera ao olhar pra cima/baixo (1 = total: olhou pra baixo = deitado de barriga pra baixo; 0.5 = metade)
 local EFEITO_VELOCIDADE = true -- true = riscos de vento + tremida + FOV maior quando o FLY chega na velocidade máxima
-local EFEITO_VEL_MINIMA = 60 -- studs/s: abaixo disso o efeito nunca aparece (voo lento)
-local EFEITO_TREMIDA = 1 -- força da tremida da tela (0 = sem tremer)
-local EFEITO_FOV_EXTRA = 15 -- quanto o campo de visão abre na velocidade máxima (0 = não muda)
+CONSTS.EFEITO_VEL_MINIMA = 60 -- studs/s: abaixo disso o efeito nunca aparece (voo lento)
+CONSTS.EFEITO_TREMIDA = 1 -- força da tremida da tela (0 = sem tremer)
+CONSTS.EFEITO_FOV_EXTRA = 15 -- quanto o campo de visão abre na velocidade máxima (0 = não muda)
 local EFEITO_QTD_RISCOS = 14 -- quantidade de riscos brancos (eles aparecem só na borda da tela)
 -- SUPER VOO: ao ficar na velocidade máxima, uma barrinha carrega e ativa o boost
 local SUPER = {
@@ -40,7 +41,7 @@ local SUPER = {
 	fov = 25,         -- campo de visão extra
 }
 local VELOCIDADE_VFLY_PADRAO = 80
-local VELOCIDADE_MIN, VELOCIDADE_MAX = 1, 500
+CONSTS.VELOCIDADE_MIN, CONSTS.VELOCIDADE_MAX = 1, 500
 -- REEXECUTAR APÓS O REJOIN (precisa de executor com queue_on_teleport). Preencha UM dos dois:
 local ARQUIVO_SCRIPT = "" -- nome deste script na pasta workspace do executor (ex.: "menu.lua")
 local URL_SCRIPT = ""     -- ou o link direto (raw) do script, se ele estiver hospedado
@@ -69,7 +70,7 @@ gui.Parent = playerGui
 ------------------------------------------------------------
 -- ARRASTAR / REDIMENSIONAR (mouse e toque)
 ------------------------------------------------------------
-local LIMITE_ARRASTO = 6 -- pixels que precisa andar para contar como arrasto (menos que isso é clique)
+CONSTS.LIMITE_ARRASTO = 6 -- pixels que precisa andar para contar como arrasto (menos que isso é clique)
 local TAMANHO_MINIMO = Vector2.new(220, 140) -- menor tamanho possível do painel
 
 local function tamanhoTela()
@@ -110,7 +111,7 @@ local function ligarArrasto(alca, aoIniciar, aoMover, aoSoltar)
 		if not (mesmoDedo or mouse) then return end
 
 		local delta = Vector2.new(input.Position.X, input.Position.Y) - inicio
-		if not moveu and delta.Magnitude < LIMITE_ARRASTO then return end
+		if not moveu and delta.Magnitude < CONSTS.LIMITE_ARRASTO then return end
 		moveu = true
 		aoMover(delta)
 	end)
@@ -318,9 +319,9 @@ local MENU = { atual = "Movimento", abas = {}, mostrar = nil,
 	cfg = { barraVida = true, alertaChams = true, swimEfeitos = true, noclipTransp = true, tpInstantaneo = false, tpToolInstantaneo = false,
 		superVel = true, flashVel = true, fxChakra = true, fxPulo = true, fxPuloInfinito = true, zoomEscuro = true } }
 do -- bloco (libera variáveis locais)
-local CATEGORIAS = { "Movimento", "Combate", "Visão", "Jogadores", "Extras", "Config", "Ajuda" }
+CONSTS.CATEGORIAS = { "Movimento", "Combate", "Visão", "Jogadores", "Extras", "Config", "Ajuda" }
 local LARGURA_LATERAL = 104
-local COR_DESTAQUE = Color3.fromRGB(130, 60, 255)
+CONSTS.COR_DESTAQUE = Color3.fromRGB(130, 60, 255)
 conteudo.Position = UDim2.new(0, LARGURA_LATERAL + 12, 0, 40)
 conteudo.Size = UDim2.new(1, -(LARGURA_LATERAL + 12), 1, -40)
 
@@ -346,12 +347,12 @@ do
 	pad.PaddingLeft = UDim.new(0, 4)
 	pad.PaddingRight = UDim.new(0, 4)
 	pad.Parent = lateral
-	for i, nome in ipairs(CATEGORIAS) do
+	for i, nome in ipairs(CONSTS.CATEGORIAS) do
 		local b = Instance.new("TextButton")
 		b.Name = "Aba" .. nome
 		b.LayoutOrder = i
 		b.Size = UDim2.new(1, 0, 0, 34)
-		b.BackgroundColor3 = COR_DESTAQUE
+		b.BackgroundColor3 = CONSTS.COR_DESTAQUE
 		b.BackgroundTransparency = 1
 		b.Text = nome
 		b.TextColor3 = Color3.new(1, 1, 1)
@@ -402,7 +403,6 @@ ligarArrasto(alcaResize,
 )
 
 local COR_OFF = Color3.fromRGB(170, 50, 50)
-local COR_ON = Color3.fromRGB(50, 170, 80)
 
 -- ESTILO "BOLHA" (vidro transparente) dos botões do menu principal
 -- Mude aqui para ajustar: transparência maior = mais transparente
@@ -804,7 +804,7 @@ end
 local COR_VIDA_CHEIA = Color3.fromRGB(90, 255, 120)
 local COR_VIDA_BAIXA = Color3.fromRGB(255, 70, 70)
 local COR_ONDA = Color3.fromRGB(120, 220, 255) -- anel do chão (vira vermelho no alerta)
-local DISTANCIA_ALERTA = 30 -- studs: abaixo disso aparece o "!" e o nome treme
+CONSTS.DISTANCIA_ALERTA = 30 -- studs: abaixo disso aparece o "!" e o nome treme
 local ultimoESP
 
 -- Pop ao entrar no alcance (cresce com um "quique") e encolhe ao sair
@@ -995,7 +995,7 @@ function atualizarESP()
 		local raiz = char and char:FindFirstChild("HumanoidRootPart")
 		if raiz then
 			local dist = (raiz.Position - minhaRaiz.Position).Magnitude
-			definirDentroESP(obj, dist <= DISTANCIA_MAXIMA)
+			definirDentroESP(obj, dist <= CONSTS.DISTANCIA_MAXIMA)
 			obj.gui.Enabled = obj.dentro or obj.escala.Scale > 0.01
 			obj.label.Text = string.format("%s\n[%d studs]", p.DisplayName, math.floor(dist))
 
@@ -1008,7 +1008,7 @@ function atualizarESP()
 			obj.enche.Parent.Visible = MENU.cfg.barraVida
 
 			-- alerta: "!" piscando + nome vermelho tremendo quando está muito perto
-			local perto = obj.dentro and dist <= DISTANCIA_ALERTA
+			local perto = obj.dentro and dist <= CONSTS.DISTANCIA_ALERTA
 			obj.alerta = obj.alerta + ((perto and 1 or 0) - obj.alerta) * math.min(1, dt * 10)
 			local al = obj.alerta
 			if al < 0.01 then al = 0 end
@@ -1139,7 +1139,7 @@ local function lerVelocidade(caixa, atual)
 		caixa.Text = tostring(atual)
 		return atual
 	end
-	n = math.clamp(n, VELOCIDADE_MIN, VELOCIDADE_MAX)
+	n = math.clamp(n, CONSTS.VELOCIDADE_MIN, CONSTS.VELOCIDADE_MAX)
 	caixa.Text = tostring(n)
 	return n
 end
@@ -1846,7 +1846,7 @@ do
 			vel, maxima = vBV.Velocity.Magnitude, velocidadeVFly
 		end
 		if EFEITO_VELOCIDADE and (flyBV or vBV) then
-			if vel >= EFEITO_VEL_MINIMA and maxima > 0 then
+			if vel >= CONSTS.EFEITO_VEL_MINIMA and maxima > 0 then
 				alvo = math.clamp((vel / maxima - 0.7) / 0.3, 0, 1)
 			end
 		end
@@ -1996,10 +1996,10 @@ do
 		if not cam then return end
 		if efeitoIntens > 0.01 then
 			if not fovBase then fovBase = cam.FieldOfView end
-			cam.FieldOfView = fovBase + EFEITO_FOV_EXTRA * efeitoIntens + SUPER.fov * superMix + (estado.dashFov or 0)
+			cam.FieldOfView = fovBase + CONSTS.EFEITO_FOV_EXTRA * efeitoIntens + SUPER.fov * superMix + (estado.dashFov or 0)
 
 			local t = os.clock() * (35 + 25 * superMix)
-			local amp = EFEITO_TREMIDA * efeitoIntens + SUPER.tremida * superMix + (estado.dashTremida or 0)
+			local amp = CONSTS.EFEITO_TREMIDA * efeitoIntens + SUPER.tremida * superMix + (estado.dashTremida or 0)
 			local nx, ny, nr = math.noise(t, 0, 0), math.noise(0, t, 0), math.noise(0, 0, t)
 			cam.CFrame = cam.CFrame
 				* CFrame.new(nx * 0.25 * amp, ny * 0.25 * amp, 0)
@@ -2081,7 +2081,7 @@ local function atualizarFly()
 
 	-- O corpo acompanha a câmera SEMPRE (mesmo parado):
 	-- olhou pra baixo = deita de barriga pra baixo; olhou pra cima = deita de barriga pra cima
-	local inclinacao = pitch * GANHO_INCLINACAO
+	local inclinacao = pitch * CONSTS.GANHO_INCLINACAO
 	if POSE_HEROI then
 		-- ao se mover, ainda "deita" mais (pose de herói), mantendo a liberdade de cima/baixo
 		-- frente: deita de barriga pra baixo; trás: deita de costas; lados: rola (abaixo)
@@ -4031,11 +4031,11 @@ do -- bloco (libera variáveis locais)
 ------------------------------------------------------------
 -- TELEPORTE SUAVE (dash): em vez de aparecer lá de uma vez, você voa rapidinho até o ponto
 -- (acelera, passa direto por paredes e freia na chegada), com os riscos de vento e a tremida do fly
-local DASH_VELOCIDADE = 220 -- studs por segundo (aumente para ir mais rápido)
+CONSTS.DASH_VELOCIDADE = 220 -- studs por segundo (aumente para ir mais rápido)
 -- TPTOOL (o item): false = voa até lá ultra rápido (uns 0.35s) com riscos de vento, tremida, FOV e estrondo na chegada
 --                  true = teleporte instantâneo, sem animação nenhuma
 -- (o liga/desliga fica em MENU.cfg.tpToolInstantaneo, categoria Config)
-local TPTOOL_VELOCIDADE = 3000 -- studs/s (a duração mínima do voo forte é 0.35s)
+CONSTS.TPTOOL_VELOCIDADE = 3000 -- studs/s (a duração mínima do voo forte é 0.35s)
 do
 	local conexao, terminarAtual, conColisao
 
@@ -4145,7 +4145,7 @@ do
 	--                      instantaneo = true (aparece lá na hora, já em um ponto livre) }
 	iniciarDash = function(destino, opcoes)
 		opcoes = opcoes or {}
-		local velocidade = opcoes.velocidade or DASH_VELOCIDADE
+		local velocidade = opcoes.velocidade or CONSTS.DASH_VELOCIDADE
 		local forte = opcoes.forte == true
 		if terminarAtual then terminarAtual() end
 		versaoFx += 1 -- cancela o tranco de câmera de um estrondo anterior
@@ -4270,7 +4270,7 @@ local function criarTPTool()
 				-- teleporte na hora, mantendo para onde o personagem estava virado (e sem ficar preso)
 				iniciarDash(destino, { instantaneo = true })
 			else
-				iniciarDash(destino, { velocidade = TPTOOL_VELOCIDADE, forte = true })
+				iniciarDash(destino, { velocidade = CONSTS.TPTOOL_VELOCIDADE, forte = true })
 			end
 		end
 	end)
@@ -9002,4 +9002,46 @@ do
 	opcao("tpInstantaneo", "TP: INSTANTÂNEO", function() return CFG.tpInstantaneo end, function(v) CFG.tpInstantaneo = v end)
 	opcao("tpToolInstantaneo", "TPTOOL: INSTANTÂNEO", function() return CFG.tpToolInstantaneo end, function(v) CFG.tpToolInstantaneo = v end)
 
-	local br = novoBotao(
+	local br = novoBotao("RESTAURAR PADRÕES")
+	VIDRO.aplicar(br, false)
+	br.MouseButton1Click:Connect(function()
+		for _, it in ipairs(itens) do aplicar(it, it.padrao) end
+		salvar()
+	end)
+
+	-- carrega o que estava salvo
+	pcall(function()
+		if typeof(isfile) == "function" and typeof(readfile) == "function" and isfile(ARQUIVO_CFG) then
+			local t = HttpService:JSONDecode(readfile(ARQUIVO_CFG))
+			for _, it in ipairs(itens) do
+				if t[it.chave] ~= nil then aplicar(it, t[it.chave]) end
+			end
+		end
+	end)
+end
+
+------------------------------------------------------------
+-- LOOP PRINCIPAL
+------------------------------------------------------------
+RunService.RenderStepped:Connect(function()
+	atualizarESP()
+	atualizarFly()
+	atualizarVFly()
+	atualizarSwim()
+	atualizarShiftLock()
+end)
+
+-- Ao morrer/respawnar, desliga os voos
+player.CharacterAdded:Connect(function()
+	estado.fly = false
+	estado.vfly = false
+	estado.swim = false
+	pararFly()
+	pararVFly()
+	pararSwim()
+	pintarBotao(botaoSwim, "SWIM", false)
+	pintarBotao(botaoFly, "FLY", false)
+	pintarBotao(botaoVFly, "VFLY", false)
+	atualizarSetasVFly()
+	atualizarBotaoVertical()
+end)
