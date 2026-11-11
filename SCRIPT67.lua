@@ -1,4 +1,6 @@
 -- LocalScript
+-- v67: autoclick simplificado (só liga/desliga + cliques por segundo, clica em qualquer lugar e usa a ferramenta da mão), sem painel nem bolinhas.
+-- v66: copiar visual agora copia também as ANIMAÇÕES (parado, andar, correr, pulo, queda, escalar, nadar) e o TAMANHO/GROSSURA do corpo (altura, largura, profundidade, cabeça, proporção).
 -- v65: autoclick mede sozinho onde o clique cai; copiar visual limpa tudo que prende você no outro jogador (scripts, soldas, constraints).
 -- v64: arrasto sem pulo e clique no lugar certo (mede o desvio do toque); copiar visual sem soldas do outro jogador (não gruda mais).
 -- v63: autoclick clica direto no botão/ClickDetector embaixo da bolinha (sem calibrar); copiar visual clona mesmo com Archivable desligado.
@@ -695,7 +697,7 @@ do
 
 		{ cab = "JOGADORES" },
 		{ t = "COPIAR VISUAL", c = "cv · copiarvisual · copiarskin · copyavatar · skin · avatar <jogador ou ID>   |   uncv · uncopiarvisual",
-			d = "Copia a roupa, o cabelo e o corpo de outro jogador para o seu personagem (só você vê a mudança). Se ele está no servidor e o jogo tem avatar/roupa própria, copia exatamente o que ele está vestindo agora no jogo; se o jogo não tem sistema de skin (ou ele não está no servidor), usa a skin do Roblox dele (digite o nome de usuário ou o ID). O visual copiado continua quando você renasce. uncv volta ao seu visual original. Se o Roblox não deixar aplicar o visual completo, o script copia direto as roupas, os acessórios, as cores e o rosto dele. Em alguns jogos (com personagem próprio) pode pegar só parte." },
+			d = "Copia a roupa, o cabelo, o rosto, o corpo (altura, largura, grossura, cabeça) e as animações (parado, andar, correr, pulo...) de outro jogador para o seu personagem (só você vê a mudança). Se ele está no servidor e o jogo tem avatar/roupa própria, copia exatamente o que ele está vestindo agora no jogo; se o jogo não tem sistema de skin (ou ele não está no servidor), usa a skin do Roblox dele (digite o nome de usuário ou o ID). O visual copiado continua quando você renasce. uncv volta ao seu visual original. Se o Roblox não deixar aplicar o visual completo, o script copia direto as roupas, os acessórios, as cores e o rosto dele. Em alguns jogos (com personagem próprio) pode pegar só parte." },
 		{ t = "MARCAR JOGADOR", c = "marcar · mark <jogador> [cor]   |   unmarcar · unmark [jogador ou todos]",
 			d = "Destaca um jogador com cor fixa (igual ao chams: contorno e preenchimento, aparece através das paredes) e põe o nome e a distância em cima da cabeça dele. Cores: vermelho, azul, verde, amarelo, rosa, roxo, laranja, ciano, branco (sem cor, ele escolhe uma). Exemplo: marcar fulano azul. Pode marcar vários. unmarcar tira a marca; sem nome mostra os marcados; unmarcar todos limpa. A lista fica salva: se o marcado voltar a entrar num servidor, ele é marcado de novo e você é avisado. É independente do botão CHAMS." },
 		{ t = "MUTAR JOGADOR", c = "mute · mutar <jogador>   |   unmute · unmutar [jogador ou todos]",
@@ -715,8 +717,8 @@ do
 			d = "Senta em cima de um jogador: comando + nome (ex.: hsit joao)." },
 
 		{ cab = "VISÃO E COMBATE" },
-		{ t = "AUTO CLICK", c = "autoclick · ac · autoclicker · clicker · clique   |   unautoclick · unac\nac novo · ac iniciar · ac parar · ac limpar",
-			d = "Funciona como os apps de autoclique do celular. O comando abre um painelzinho com o botão + Criar autoclick: cada autoclick vira uma bolinha numerada na tela. Arraste a bolinha até o ponto onde quer que ele clique. Cada bolinha tem a sua configuração: cliques por segundo (0.1 a 100), total de cliques (0 = sem limite), timer em segundos (0 = sem limite) e o modo (Mouse, Toque ou Ferramenta, que ativa o item da mão). Dá pra criar quantas bolinhas quiser, ligar uma a uma (▶ Iniciar) ou todas juntas, e remover no ✕. Enquanto clica, a bolinha fica verde e o clique atravessa ela. O X do painel só esconde o painel (as bolinhas continuam); ac abre de novo; unac para tudo e remove as bolinhas. Atalhos: ac 15 já cria com 15 cliques por segundo; ac 15 toque escolhe o modo." },
+		{ t = "AUTO CLICK", c = "autoclick · ac [cliques por segundo]   |   unautoclick · unac",
+			d = "Liga e desliga. Ligado, clica sozinho em qualquer lugar da tela, na velocidade escolhida (cliques por segundo, de 0.1 a 100; padrão 10). Se você estiver com uma ferramenta na mão (picareta, espada...), ela é usada a cada clique. Serve para jogos de mineração e de ficar clicando na tela. Exemplo: ac 15 liga com 15 cliques por segundo; unac desliga. No menu, a caixinha ao lado é a velocidade." },
 		{ t = "VER JOGADORES (ESP)",c = "esp · espectar   |   unesp · unespectar",
 			d = "Nome e distância dos jogadores na tela. A barra de vida pode ser desligada em Config." },
 		{ t = "CONTORNO (CHAMS)", c = "cm · contorno   |   uncm · uncontorno",
@@ -7156,681 +7158,67 @@ local function iniciarTeclado()
 		end)
 	end
 
-	-- AUTO CLICK (estilo app de celular): o comando abre um painel com "+ Criar autoclick". Cada autoclick é uma
-	-- bolinha na tela: arraste até onde quer que ele clique. Cada bolinha tem a sua configuração (cliques por
-	-- segundo, total de cliques, timer e modo) e você pode criar várias e ligar uma a uma ou todas juntas.
-	-- Enquanto uma bolinha clica ela fica "fantasma" (o clique atravessa) e não dá pra arrastar: pare antes.
+	-- AUTO CLICK (simples): liga/desliga e só. Fica clicando sozinho em qualquer lugar da tela, na velocidade que
+	-- você escolher (cliques por segundo). Se tiver ferramenta na mão (picareta, espada...), ela é usada a cada clique;
+	-- além disso manda um clique no meio da tela (jogos de ficar clicando para ganhar moedas).
 	do
-		local AC = { pontos = {}, proximo = 0, painel = nil, lista = nil, conexao = nil, padraoCps = 10, vim = nil }
-		AC.modos = { "mouse", "toque", "ferramenta" }
-		AC.nomeModo = { mouse = "Mouse", toque = "Toque", ferramenta = "Ferramenta" }
-		AC.corParado, AC.corRodando = Color3.fromRGB(100, 60, 230), Color3.fromRGB(70, 200, 120)
+		local AC = { ligado = false, cps = 10, acum = 0, conexao = nil, vim = nil }
 
-		-- O clique NÃO usa mais a posição do mouse na tela (no celular ela saía deslocada). Ele é feito direto
-		-- no que está embaixo da bolinha: o botão da tela, o ClickDetector do mundo ou a ferramenta da mão.
-		-- MEDIÇÃO AUTOMÁTICA (sem você fazer nada): põe um quadradinho invisível no lugar da bolinha, move o mouse
-		-- virtual por perto até o quadradinho "sentir" o mouse e descobre onde o clique realmente cai (posição e escala).
-		function AC.medir(cg, palpite)
+		function AC.clicar()
+			-- 1) ferramenta na mão (mineração, espada, etc.)
+			local char = player.Character
+			local tool = char and char:FindFirstChildOfClass("Tool")
+			if tool then pcall(function() tool:Activate() end) end
+			-- 2) clique no meio da tela (qualquer lugar)
 			if not AC.vim then
 				local ok, v = pcall(function() return game:GetService("VirtualInputManager") end)
 				AC.vim = ok and v or false
 			end
-			local vim = AC.vim
-			if not (vim and typeof(vim.SendMouseMoveEvent) == "function") then return nil end
-			local sg = Instance.new("ScreenGui")
-			sg.Name = "AutoclickMedir"
-			sg.IgnoreGuiInset = gui.IgnoreGuiInset
-			sg.ResetOnSpawn = false
-			sg.DisplayOrder = 2000000000
-			pcall(function() sg.ScreenInsets = gui.ScreenInsets end)
-			sg.Parent = playerGui
-			local TAM = 100
-			local tile = Instance.new("Frame")
-			tile.AnchorPoint = Vector2.new(0.5, 0.5)
-			tile.Position = UDim2.fromOffset(cg.X, cg.Y)
-			tile.Size = UDim2.fromOffset(TAM, TAM)
-			tile.BackgroundTransparency = 0.99
-			tile.BorderSizePixel = 0
-			tile.Active = true
-			tile.Parent = sg
-			local dentro = false
-			tile.MouseMoved:Connect(function() dentro = true end)
-			local function testar(x, y)
-				dentro = false
-				pcall(function() vim:SendMouseMoveEvent(x, y, game) end)
-				RunService.RenderStepped:Wait()
-				RunService.RenderStepped:Wait()
-				return dentro
-			end
-
-			local pontos = {}
-			for dx = -450, 450, 50 do
-				for dy = -450, 450, 50 do pontos[#pontos + 1] = Vector2.new(dx, dy) end
-			end
-			table.sort(pontos, function(a, b) return (a - palpite).Magnitude < (b - palpite).Magnitude end)
-			local achado
-			for _, o in ipairs(pontos) do
-				local p = cg + o
-				if p.X >= 0 and p.Y >= 0 and testar(p.X, p.Y) then
-					achado = p
-					break
-				end
-			end
-			local resultado
-			if achado then
-				local function borda(dir) -- anda de 4 em 4 até sair do quadradinho
-					local n = 0
-					while n < 80 do
-						local q = achado + dir * 4 * (n + 1)
-						if not testar(q.X, q.Y) then break end
-						n += 1
-					end
-					return n * 4
-				end
-				local esq, dir_ = borda(Vector2.new(-1, 0)), borda(Vector2.new(1, 0))
-				local cima, baixo = borda(Vector2.new(0, -1)), borda(Vector2.new(0, 1))
-				local centro = achado + Vector2.new((dir_ - esq) / 2, (baixo - cima) / 2)
-				local sx, sy = (esq + dir_ + 4) / TAM, (cima + baixo + 4) / TAM
-				if sx < 0.5 or sx > 4 then sx = 1 end
-				if sy < 0.5 or sy > 4 then sy = 1 end
-				resultado = { g0 = cg, u0 = centro, sx = sx, sy = sy }
-			end
-			sg:Destroy()
-			return resultado
-		end
-
-		-- onde o clique virtual tem que cair para acertar o ponto cg (posição da bolinha na tela)
-		function AC.mapear(p, cg)
-			local m = p.map
-			if not m then return cg + (CONSTS.DELTA or Vector2.zero) end
-			local d = cg - m.g0
-			return m.u0 + Vector2.new(d.X * m.sx, d.Y * m.sy)
-		end
-
-		function AC.garantirCalib(cb) -- mede cada bolinha que ainda não foi medida (ou que mudou de lugar) e depois continua
-			if AC.medindo then return end
-			task.spawn(function()
-				AC.medindo = true
-				local avisou = false
-				for _, p in ipairs(AC.pontos) do
-					local cg = p.bolinha.AbsolutePosition + p.bolinha.AbsoluteSize / 2
-					if not (p.map and (p.map.g0 - cg).Magnitude < 2) then
-						if not avisou then
-							avisou = true
-							mostrarToast("Ajustando o clique...", true)
-						end
-						local m = AC.medir(cg, AC.ultimoDv or CONSTS.DELTA or Vector2.new(40, 50))
-						if m then
-							p.map = m
-							AC.ultimoDv = m.u0 - m.g0
-						end
-					end
-				end
-				AC.medindo = false
-				cb()
-			end)
-		end
-
-		local GuiServiceAC = game:GetService("GuiService")
-
-		-- botão (de qualquer menu do jogo) que está embaixo do ponto c
-		function AC.acharBotao(c)
-			local melhor, melhorOrdem
-			local inset = GuiServiceAC:GetGuiInset()
-			for _, sg in ipairs(playerGui:GetChildren()) do
-				if sg:IsA("ScreenGui") and sg ~= gui and sg.Enabled then
-					local desl = sg.IgnoreGuiInset and Vector2.zero or inset
-					for _, d in ipairs(sg:GetDescendants()) do
-						if d:IsA("GuiButton") and d.Visible then
-							local pos, tam = d.AbsolutePosition + desl, d.AbsoluteSize
-							if c.X >= pos.X and c.X <= pos.X + tam.X and c.Y >= pos.Y and c.Y <= pos.Y + tam.Y then
-								local visivel = true
-								local pai = d.Parent
-								while pai and pai ~= sg do
-									if pai:IsA("GuiObject") and not pai.Visible then visivel = false break end
-									pai = pai.Parent
-								end
-								if visivel then
-									local ordem = sg.DisplayOrder * 100000 + d.ZIndex
-									if not melhorOrdem or ordem > melhorOrdem then melhor, melhorOrdem = d, ordem end
-								end
-							end
-						end
-					end
-				end
-			end
-			return melhor
-		end
-
-		-- aperta o botão de verdade (executor: firesignal / getconnections)
-		function AC.apertar(b)
-			local nomes = { "MouseButton1Down", "MouseButton1Click", "MouseButton1Up", "Activated" }
-			local feito = false
-			if typeof(firesignal) == "function" then
-				for _, n in ipairs(nomes) do
-					if pcall(function() firesignal(b[n]) end) then feito = true end
-				end
-			end
-			if not feito and typeof(getconnections) == "function" then
-				for _, n in ipairs(nomes) do
-					pcall(function()
-						for _, con in ipairs(getconnections(b[n])) do pcall(function() con:Fire() end) end
-					end)
-				end
-				feito = true
-			end
-			return feito
-		end
-
-		-- ClickDetector do mundo que está embaixo do ponto c
-		function AC.clicarMundo(c)
-			local cam = workspace.CurrentCamera
-			if not cam or typeof(fireclickdetector) ~= "function" then return false end
-			local ray = cam:ViewportPointToRay(c.X, c.Y)
-			local params = RaycastParams.new()
-			params.FilterType = Enum.RaycastFilterType.Exclude
-			params.FilterDescendantsInstances = { player.Character }
-			local r = workspace:Raycast(ray.Origin, ray.Direction * 1000, params)
-			local obj = r and r.Instance
-			while obj and obj ~= workspace do
-				local cd = obj:FindFirstChildOfClass("ClickDetector")
-				if cd then
-					pcall(fireclickdetector, cd)
-					return true
-				end
-				obj = obj.Parent
-			end
-			return false
-		end
-
-		function AC.clicar(p)
-			local cg = p.bolinha.AbsolutePosition + p.bolinha.AbsoluteSize / 2 -- centro da bolinha (sistema da tela)
-			local c = AC.mapear(p, cg) -- onde o clique virtual realmente cai
-			if p.modo == "ferramenta" then
-				local tool = player.Character and player.Character:FindFirstChildOfClass("Tool")
-				if tool then
-					tool:Activate()
-					return
-				end
-			end
-			-- 1) botão da tela embaixo da bolinha (procura de novo se a bolinha mudou de lugar)
-			if p.alvoC ~= cg or not (p.alvo and p.alvo.Parent and p.alvo.Visible) or os.clock() - (p.alvoT or 0) > 1 then
-			p.alvo, p.alvoC, p.alvoT = AC.acharBotao(cg), cg, os.clock()
-			end
-			if p.alvo and AC.apertar(p.alvo) then return end
-			-- 2) ClickDetector no mundo
-			if AC.clicarMundo(cg) then return end
-			-- 3) por último, clique virtual
-			if not AC.vim then
-				local ok, v = pcall(function() return game:GetService("VirtualInputManager") end)
-				AC.vim = ok and v or false
-			end
+			local tela = tamanhoTela()
+			local c = Vector2.new(tela.X / 2, tela.Y / 2) + (CONSTS.DELTA or Vector2.zero)
 			if AC.vim then
-				local ok
-				if p.modo == "toque" then
-					ok = pcall(function()
-						AC.vim:SendTouchEvent(p.id, 0, c.X, c.Y)
-						AC.vim:SendTouchEvent(p.id, 2, c.X, c.Y)
-					end)
-				else
-					ok = pcall(function()
-						AC.vim:SendMouseButtonEvent(c.X, c.Y, 0, true, game, 0)
-						AC.vim:SendMouseButtonEvent(c.X, c.Y, 0, false, game, 0)
-					end)
-				end
+				local ok = pcall(function()
+					AC.vim:SendMouseButtonEvent(c.X, c.Y, 0, true, game, 0)
+					AC.vim:SendMouseButtonEvent(c.X, c.Y, 0, false, game, 0)
+				end)
 				if ok then return end
 			end
-			if typeof(mousemoveabs) == "function" then pcall(mousemoveabs, c.X, c.Y) end
 			if typeof(mouse1click) == "function" then pcall(mouse1click) end
 		end
 
-		function AC.pintar(p)
-			p.bolinha.BackgroundColor3 = p.ligado and AC.corRodando or AC.corParado
-			p.bolinha.Active = not p.ligado -- rodando: não segura o clique
-			pcall(function() p.bolinha.Interactable = not p.ligado end)
-			if AC.mini and AC.mini.Parent then
-				AC.mini.BackgroundColor3 = AC.algumRodando() and Color3.fromRGB(35, 110, 65) or Color3.fromRGB(25, 25, 30)
-			end
-			if p.btnLigar then
-				p.btnLigar.Text = p.ligado and "■ Parar" or "▶ Iniciar"
-				p.btnLigar.BackgroundColor3 = p.ligado and Color3.fromRGB(255, 110, 110) or Color3.fromRGB(110, 235, 150)
-			end
-		end
-
-		function AC.algumRodando()
-			for _, p in ipairs(AC.pontos) do
-				if p.ligado then return true end
-			end
-			return false
-		end
-
 		function AC.passo(dt)
-			local agora = os.clock()
-			for _, p in ipairs(AC.pontos) do
-				if p.ligado then
-					if p.tempo > 0 and agora - p.inicio >= p.tempo then
-						AC.parar(p)
-					else
-						p.acum += dt * p.cps
-						local feitos = 0
-						while p.ligado and p.acum >= 1 and feitos < 5 do -- no máx. 5 por quadro, para não travar
-							p.acum -= 1
-							feitos += 1
-							AC.clicar(p)
-							p.feitos += 1
-							if p.maximo > 0 and p.feitos >= p.maximo then AC.parar(p) end
-						end
-						if p.acum > 5 then p.acum = 0 end
-					end
-				end
+			AC.acum += dt * AC.cps
+			local feitos = 0
+			while AC.acum >= 1 and feitos < 5 do -- no máx. 5 por quadro, para não travar
+				AC.acum -= 1
+				feitos += 1
+				AC.clicar()
 			end
-			if not AC.algumRodando() and AC.conexao then
-				AC.conexao:Disconnect()
-				AC.conexao = nil
-			end
+			if AC.acum > 5 then AC.acum = 0 end
 		end
 
-		function AC.parar(p)
-			p.ligado = false
-			AC.pintar(p)
-		end
-
-		-- lê as caixinhas do cartão; devolve nil se algum número for inválido
-		function AC.ler(p)
-			local cps = tonumber(p.caixaCps.Text)
-			local maximo = tonumber(p.caixaMax.Text) or 0
-			local tempo = tonumber(p.caixaTempo.Text) or 0
-			if not cps or cps < 0.1 or cps > 100 then return false, "Cliques por segundo: de 0.1 a 100" end
-			if maximo < 0 or tempo < 0 then return false, "Total e tempo: 0 (sem limite) ou mais" end
-			p.cps, p.maximo, p.tempo = cps, math.floor(maximo), tempo
-			return true
-		end
-
-		function AC.iniciar(p)
-			local ok, msg = AC.ler(p)
-			if not ok then
-				mostrarToast(msg, false)
-				return false
-			end
-			p.ligado, p.feitos, p.acum, p.inicio = true, 0, 1, os.clock() -- acum = 1: o 1º clique é na hora
-			AC.pintar(p)
-			if not AC.conexao then AC.conexao = RunService.Heartbeat:Connect(AC.passo) end
-			return true
-		end
-
-		function AC.pararTodos()
-			for _, p in ipairs(AC.pontos) do
-				if p.ligado then AC.parar(p) end
-			end
-		end
-
-		function AC.remover(p)
-			if p.ligado then AC.parar(p) end
-			local i = table.find(AC.pontos, p)
-			if i then table.remove(AC.pontos, i) end
-			if p.bolinha then p.bolinha:Destroy() end
-			if p.cartao then p.cartao:Destroy() end
-		end
-
-		function AC.limparTudo()
-			for i = #AC.pontos, 1, -1 do AC.remover(AC.pontos[i]) end
+		function AC.parar()
+			AC.ligado = false
 			if AC.conexao then AC.conexao:Disconnect() AC.conexao = nil end
 		end
 
-		-- caixinha pequena com legenda em cima
-		function AC.caixa(pai, x, w, legenda, texto)
-			local lg = Instance.new("TextLabel")
-			lg.Position = UDim2.new(x, 0, 0, 2)
-			lg.Size = UDim2.new(w, -3, 0, 11)
-			lg.BackgroundTransparency = 1
-			lg.Text = legenda
-			lg.TextColor3 = Color3.fromRGB(200, 185, 255)
-			lg.Font = Enum.Font.Gotham
-			lg.TextSize = 9
-			lg.Parent = pai
-			local cx = Instance.new("TextBox")
-			cx.Position = UDim2.new(x, 0, 0, 14)
-			cx.Size = UDim2.new(w, -3, 0, 24)
-			cx.BackgroundColor3 = Color3.new(1, 1, 1)
-			cx.BackgroundTransparency = 0.88
-			cx.Text = texto
-			cx.TextColor3 = Color3.new(1, 1, 1)
-			cx.Font = Enum.Font.Gotham
-			cx.TextSize = 13
-			cx.ClearTextOnFocus = false
-			cx.Parent = pai
-			Instance.new("UICorner", cx).CornerRadius = UDim.new(0, 6)
-			return cx
+		function AC.iniciar()
+			AC.ligado, AC.acum = true, 1 -- o 1º clique é na hora
+			if not AC.conexao then AC.conexao = RunService.Heartbeat:Connect(AC.passo) end
 		end
 
-		function AC.botao(pai, x, w, texto, cor)
-			local b = Instance.new("TextButton")
-			b.Position = UDim2.new(x, 0, 0, 44)
-			b.Size = UDim2.new(w, -3, 0, 24)
-			b.Text = texto
-			b.Font = Enum.Font.GothamMedium
-			b.TextSize = 11
-			b.AutoButtonColor = true
-			VIDRO.vidroSpawn(b, cor, 0.62)
-			b.Parent = pai
-			Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6)
-			return b
-		end
-
-		function AC.criar(cps, modo)
-			AC.proximo += 1
-			local tela = tamanhoTela()
-			local p = { id = AC.proximo, cps = cps or AC.padraoCps, maximo = 0, tempo = 0, modo = modo or "mouse", ligado = false, feitos = 0, acum = 0, inicio = 0 }
-
-			-- a bolinha na tela
-			local b = Instance.new("TextLabel")
-			b.Name = "AutoclickBolinha" .. p.id
-			b.AnchorPoint = Vector2.new(0.5, 0.5)
-			b.Size = UDim2.fromOffset(46, 46)
-			local desloca = ((#AC.pontos) % 6) * 54
-			b.Position = UDim2.fromOffset(math.clamp(tela.X / 2 - 135 + desloca, 30, tela.X - 30), tela.Y / 2)
-			b.BackgroundColor3 = AC.corParado
-			b.BackgroundTransparency = 0.25
-			b.Text = tostring(p.id)
-			b.TextColor3 = Color3.new(1, 1, 1)
-			b.Font = Enum.Font.GothamBold
-			b.TextSize = 18
-			b.Active = true
-			b.ZIndex = 40
-			b.Parent = gui
-			Instance.new("UICorner", b).CornerRadius = UDim.new(1, 0)
-			local borda = Instance.new("UIStroke")
-			borda.Color = Color3.new(1, 1, 1)
-			borda.Thickness = 2
-			borda.Transparency = 0.2
-			borda.Parent = b
-			tornarMovel(b, b)
-			p.bolinha = b
-
-			-- o cartão de configuração no painel
-			local c = Instance.new("Frame")
-			c.LayoutOrder = p.id
-			c.Size = UDim2.new(1, -4, 0, 74)
-			c.BackgroundColor3 = Color3.new(1, 1, 1)
-			c.BackgroundTransparency = 0.92
-			c.Parent = AC.lista
-			Instance.new("UICorner", c).CornerRadius = UDim.new(0, 8)
-			p.cartao = c
-
-			local num = Instance.new("TextLabel")
-			num.Position = UDim2.fromOffset(6, 14)
-			num.Size = UDim2.fromOffset(24, 24)
-			num.BackgroundColor3 = AC.corParado
-			num.BackgroundTransparency = 0.3
-			num.Text = tostring(p.id)
-			num.TextColor3 = Color3.new(1, 1, 1)
-			num.Font = Enum.Font.GothamBold
-			num.TextSize = 13
-			num.Parent = c
-			Instance.new("UICorner", num).CornerRadius = UDim.new(1, 0)
-
-			local area = Instance.new("Frame") -- o resto do cartão (à direita do número)
-			area.Position = UDim2.fromOffset(36, 0)
-			area.Size = UDim2.new(1, -40, 1, 0)
-			area.BackgroundTransparency = 1
-			area.Parent = c
-			p.caixaCps = AC.caixa(area, 0, 0.34, "cliques/seg", tostring(p.cps))
-			p.caixaMax = AC.caixa(area, 0.34, 0.33, "total (0=∞)", "0")
-			p.caixaTempo = AC.caixa(area, 0.67, 0.33, "tempo s (0=∞)", "0")
-			local bModo = AC.botao(area, 0, 0.36, AC.nomeModo[p.modo], Color3.fromRGB(150, 130, 255))
-			p.btnLigar = AC.botao(area, 0.36, 0.38, "▶ Iniciar", Color3.fromRGB(110, 235, 150))
-			local bTirar = AC.botao(area, 0.74, 0.26, "✕", Color3.fromRGB(255, 110, 110))
-
-			for _, cx in ipairs({ p.caixaCps, p.caixaMax, p.caixaTempo }) do -- mudou o número com ele rodando: vale na hora
-				cx.FocusLost:Connect(function()
-					if not p.ligado then return end
-					local ok, msg = AC.ler(p)
-					if not ok then mostrarToast(msg, false) end
-				end)
-			end
-			bModo.MouseButton1Click:Connect(function() -- troca o modo: mouse > toque > ferramenta
-				local i = table.find(AC.modos, p.modo) or 1
-				p.modo = AC.modos[i % #AC.modos + 1]
-				bModo.Text = AC.nomeModo[p.modo]
-			end)
-			p.btnLigar.MouseButton1Click:Connect(function()
-				if p.ligado then AC.parar(p) else AC.garantirCalib(function() AC.iniciar(p) end) end
-			end)
-			bTirar.MouseButton1Click:Connect(function() AC.remover(p) end)
-
-			AC.pontos[#AC.pontos + 1] = p
-			AC.pintar(p)
-			return p
-		end
-
-		function AC.montar()
-			local f = Instance.new("Frame")
-			f.Name = "PainelAutoclick"
-			local telaM = tamanhoTela()
-			f.AnchorPoint = Vector2.new(0, 0)
-			f.Position = UDim2.fromOffset(math.clamp(telaM.X / 2 + 160, 0, math.max(0, telaM.X - 268)), math.max(0, (telaM.Y - 330) / 2))
-			f.Size = AC.tamanho or UDim2.fromOffset(268, 330)
-			f.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
-			f.BackgroundTransparency = 0.18
-			f.ZIndex = 30
-			f.Parent = gui
-			Instance.new("UICorner", f).CornerRadius = UDim.new(0, 12)
-			local contorno = Instance.new("UIStroke")
-			contorno.Color = Color3.new(1, 1, 1)
-			contorno.Thickness = 1.2
-			contorno.Transparency = 0.55
-			contorno.Parent = f
-
-			local tit = Instance.new("TextLabel")
-			tit.Size = UDim2.new(1, 0, 0, 28)
-			tit.BackgroundTransparency = 1
-			tit.Text = "Autoclick"
-			tit.TextColor3 = Color3.new(1, 1, 1)
-			tit.Font = Enum.Font.GothamBold
-			tit.TextSize = 15
-			tit.Active = true
-			tit.ZIndex = 31
-			tit.Parent = f
-			tornarMovel(tit, f)
-			MENU.botaoFechar(f).ZIndex = 32 -- só esconde o painel; as bolinhas continuam
-
-			-- botão – : vira um botãozinho "AC" que você move; toque nele para abrir o painel de novo
-			local bMin = Instance.new("TextButton")
-			bMin.Name = "Minimizar"
-			bMin.AnchorPoint = Vector2.new(1, 0)
-			bMin.Position = UDim2.new(1, -30, 0, 4)
-			bMin.Size = UDim2.fromOffset(22, 22)
-			bMin.BackgroundColor3 = Color3.fromRGB(40, 40, 58)
-			bMin.BackgroundTransparency = 0.3
-			bMin.BorderSizePixel = 0
-			bMin.Text = "–"
-			bMin.TextColor3 = Color3.new(1, 1, 1)
-			bMin.Font = Enum.Font.GothamBold
-			bMin.TextSize = 15
-			bMin.ZIndex = 32
-			bMin.Parent = f
-			bMin.MouseButton1Click:Connect(function() AC.minimizar() end)
-
-			-- alça no canto de baixo: arraste para aumentar ou diminuir o painel
-			local alca = Instance.new("TextButton")
-			alca.Name = "AlcaRedimensionar"
-			alca.AnchorPoint = Vector2.new(1, 1)
-			alca.Position = UDim2.new(1, 0, 1, 0)
-			alca.Size = UDim2.fromOffset(26, 26)
-			alca.BackgroundColor3 = Color3.fromRGB(60, 60, 68)
-			alca.BackgroundTransparency = 0.35
-			alca.Text = "◢"
-			alca.TextColor3 = Color3.new(1, 1, 1)
-			alca.Font = Enum.Font.GothamBold
-			alca.TextSize = 15
-			alca.AutoButtonColor = false
-			alca.ZIndex = 34
-			alca.Parent = f
-			Instance.new("UICorner", alca).CornerRadius = UDim.new(0, 8)
-			local tamIni
-			ligarArrasto(alca,
-				function() tamIni = f.AbsoluteSize end,
-				function(delta)
-					local tela, pos = tamanhoTela(), f.AbsolutePosition
-					local w = math.clamp(tamIni.X + delta.X, 190, math.max(190, tela.X - pos.X))
-					local h = math.clamp(tamIni.Y + delta.Y, 150, math.max(150, tela.Y - pos.Y))
-					f.Size = UDim2.fromOffset(w, h)
-					AC.tamanho = f.Size
-				end
-			)
-
-			local function botaoTopo(x, y, w, texto, cor)
-				local b = Instance.new("TextButton")
-				b.Position = UDim2.new(x, 0, 0, y)
-				b.Size = UDim2.new(w, 0, 0, 26)
-				b.Text = texto
-				b.Font = Enum.Font.GothamMedium
-				b.TextSize = 12
-				b.AutoButtonColor = true
-				b.ZIndex = 31
-				VIDRO.vidroSpawn(b, cor, 0.62)
-				b.Parent = f
-				Instance.new("UICorner", b).CornerRadius = UDim.new(0, 8)
-				return b
-			end
-			botaoTopo(0.04, 32, 0.92, "+ Criar autoclick", Color3.fromRGB(110, 235, 150)).MouseButton1Click:Connect(function()
-				AC.criar()
-			end)
-			botaoTopo(0.04, 62, 0.45, "▶ Iniciar todos", Color3.fromRGB(150, 130, 255)).MouseButton1Click:Connect(function()
-				AC.garantirCalib(function()
-					for _, p in ipairs(AC.pontos) do
-						if not p.ligado then AC.iniciar(p) end
-					end
-				end)
-			end)
-			botaoTopo(0.51, 62, 0.45, "■ Parar todos", Color3.fromRGB(255, 110, 110)).MouseButton1Click:Connect(AC.pararTodos)
-
-			local dica = Instance.new("TextLabel")
-			dica.Position = UDim2.fromOffset(10, 92)
-			dica.Size = UDim2.new(1, -20, 0, 24)
-			dica.BackgroundTransparency = 1
-			dica.Text = "Arraste a bolinha até onde quer clicar. Cada uma tem a sua configuração."
-			dica.TextColor3 = Color3.fromRGB(200, 185, 255)
-			dica.Font = Enum.Font.Gotham
-			dica.TextSize = 10
-			dica.TextWrapped = true
-			dica.ZIndex = 31
-			dica.Parent = f
-
-			local lista = Instance.new("ScrollingFrame")
-			lista.Position = UDim2.new(0.03, 0, 0, 120)
-			lista.Size = UDim2.new(0.94, 0, 1, -128)
-			lista.BackgroundTransparency = 1
-			lista.BorderSizePixel = 0
-			lista.ScrollBarThickness = 3
-			lista.CanvasSize = UDim2.new()
-			lista.AutomaticCanvasSize = Enum.AutomaticSize.Y
-			lista.ZIndex = 31
-			lista.Parent = f
-			local lay = Instance.new("UIListLayout")
-			lay.Padding = UDim.new(0, 5)
-			lay.SortOrder = Enum.SortOrder.LayoutOrder
-			lay.Parent = lista
-
-			AC.painel, AC.lista = f, lista
-			for _, p in ipairs(AC.pontos) do p.cartao.Parent = lista end
-		end
-
-		function AC.minimizar()
-			if not (AC.painel and AC.painel.Parent) then return end
-			if not (AC.mini and AC.mini.Parent) then
-				local m = Instance.new("TextButton")
-				m.Name = "AutoclickMini"
-				m.Size = UDim2.fromOffset(44, 44)
-				m.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
-				m.BackgroundTransparency = 0.15
-				m.Text = "AC"
-				m.TextColor3 = Color3.new(1, 1, 1)
-				m.Font = Enum.Font.GothamBold
-				m.TextSize = 15
-				m.AutoButtonColor = false
-				m.ZIndex = 35
-				m.Parent = gui
-				Instance.new("UICorner", m).CornerRadius = UDim.new(1, 0)
-				local borda = Instance.new("UIStroke")
-				borda.Color = Color3.new(1, 1, 1)
-				borda.Thickness = 1.5
-				borda.Transparency = 0.4
-				borda.Parent = m
-				tornarMovel(m, m, function() AC.restaurar() end) -- arrasta para mover, toca para abrir
-				AC.mini = m
-			end
-			local pos = AC.painel.AbsolutePosition
-			AC.mini.Position = UDim2.fromOffset(pos.X, pos.Y)
-			AC.mini.BackgroundColor3 = AC.algumRodando() and Color3.fromRGB(35, 110, 65) or Color3.fromRGB(25, 25, 30)
-			AC.mini.Visible = true
-			AC.painel.Visible = false
-		end
-
-		function AC.restaurar()
-			if AC.mini then AC.mini.Visible = false end
-			if AC.painel then AC.painel.Visible = true end
-		end
-
-		function AC.mostrar()
-			if not (AC.painel and AC.painel.Parent) then AC.montar() end
-			if AC.mini then AC.mini.Visible = false end
-			AC.painel.Visible = true
-		end
-
-		function AC.abrir()
-			AC.mostrar()
-			if #AC.pontos == 0 then AC.criar() end -- já nasce com uma bolinha
-		end
-
-		alternavel({ "autoclick", "ac" }, "autoclick ou ac / unautoclick ou unac - painel de autoclick com bolinhas na tela (cada uma com cliques/seg, total, timer e modo)", function(ligar, args)
+		alternavel({ "autoclick", "ac" }, "autoclick ou ac [cliques por segundo] / unautoclick ou unac - clica sozinho em qualquer lugar da tela (usa a ferramenta da mão, se tiver)", function(ligar, args)
 			if not ligar then
-				AC.limparTudo()
-				if AC.painel then AC.painel.Visible = false end
-				if AC.mini then AC.mini.Visible = false end
-				return true, "Autoclick desligado (bolinhas removidas)"
+				AC.parar()
+				return true, "Autoclick desligado"
 			end
-			local a1 = args[1] and args[1]:lower()
-			if a1 == "iniciar" or a1 == "start" or a1 == "play" or a1 == "ligar" then
-				AC.abrir()
-				AC.garantirCalib(function()
-					for _, p in ipairs(AC.pontos) do
-						if not p.ligado then AC.iniciar(p) end
-					end
-				end)
-				return true, "Autoclick iniciado"
-			elseif a1 == "parar" or a1 == "stop" or a1 == "pausar" or a1 == "pause" then
-				AC.pararTodos()
-				return true, "Autoclick parado"
-			elseif a1 == "novo" or a1 == "criar" or a1 == "add" or a1 == "new" then
-				AC.mostrar()
-				AC.criar(tonumber(args[2]))
-				return true, "Bolinha criada: arraste até onde quer clicar"
-			elseif a1 == "limpar" or a1 == "clear" then
-				AC.limparTudo()
-				return true, "Bolinhas removidas"
+			if args[1] then
+				local n = tonumber(args[1])
+				if not n or n < 0.1 or n > 100 then return false, "Cliques por segundo: de 0.1 a 100" end
+				AC.cps = n
 			end
-			local cps, modo
-			for _, a in ipairs(args) do
-				local n = tonumber(a)
-				if n then
-					if n < 0.1 or n > 100 then return false, "Cliques por segundo: de 0.1 a 100" end
-					cps = n
-				elseif AC.nomeModo[a:lower()] then
-					modo = a:lower()
-				else
-					return false, "Uso: autoclick [cliques por segundo] [mouse|toque|ferramenta] | novo | iniciar | parar | limpar"
-				end
-			end
-			if cps then AC.padraoCps = cps end
-			if #AC.pontos == 0 and (cps or modo) then -- primeira bolinha já com as opções digitadas
-				AC.mostrar()
-				AC.criar(cps, modo)
-			else
-				AC.abrir()
-				if cps or modo then AC.criar(cps, modo) end
-			end
-			return true, "Autoclick: arraste a bolinha até onde quer clicar e toque em Iniciar"
+			AC.iniciar()
+			return true, "Autoclick ligado (" .. AC.cps .. " cliques por segundo)"
 		end)
 	end
 
@@ -8844,8 +8232,124 @@ local function iniciarTeclado()
 			end)
 		end
 
+
+		-- nomes das escalas do corpo R15 (altura, largura, grossura/profundidade, cabeça, proporção, tipo)
+		CV.NOMES_ESCALA = { "BodyHeightScale", "BodyWidthScale", "BodyDepthScale", "HeadScale", "BodyTypeScale", "BodyProportionScale" }
+
+		-- escalas a partir de uma HumanoidDescription
+		function CV.escalasDeDesc(desc)
+			local e = {}
+			pcall(function()
+				e.BodyHeightScale, e.BodyWidthScale, e.BodyDepthScale = desc.HeightScale, desc.WidthScale, desc.DepthScale
+				e.HeadScale, e.BodyTypeScale, e.BodyProportionScale = desc.HeadScale, desc.BodyTypeScale, desc.ProportionScale
+			end)
+			return e
+		end
+
+		-- lê as animações que o personagem usa (script Animate: idle, walk, run, jump, fall, climb, swim...)
+		function CV.lerAnims(char)
+			local r = {}
+			local ok = pcall(function()
+				local an = char:FindFirstChild("Animate")
+				if not an then return end
+				for _, pasta in ipairs(an:GetChildren()) do
+					if pasta:IsA("StringValue") or pasta:IsA("Folder") or pasta:IsA("Configuration") then
+						local lista = {}
+						for _, a in ipairs(pasta:GetChildren()) do
+							if a:IsA("Animation") and a.AnimationId ~= "" then
+								local w = a:FindFirstChild("Weight")
+								lista[#lista + 1] = { nome = a.Name, id = a.AnimationId, peso = w and w:IsA("NumberValue") and w.Value or 1 }
+							end
+						end
+						if #lista > 0 then r[pasta.Name] = lista end
+					end
+				end
+			end)
+			return r
+		end
+
+		-- animações a partir de uma HumanoidDescription (skin do Roblox)
+		function CV.animsDeDesc(desc)
+			local r = {}
+			pcall(function()
+				local mapa = { idle = desc.IdleAnimation, walk = desc.WalkAnimation, run = desc.RunAnimation, jump = desc.JumpAnimation,
+					fall = desc.FallAnimation, climb = desc.ClimbAnimation, swim = desc.SwimAnimation }
+				for nome, id in pairs(mapa) do
+					if type(id) == "number" and id ~= 0 then
+						r[nome] = { { nome = "Animation1", id = "rbxassetid://" .. tostring(id), peso = 1 } }
+					end
+				end
+			end)
+			return r
+		end
+
+		-- põe as animações no SEU script Animate (ele recarrega sozinho) e para as que estão tocando
+		function CV.aplicarAnims(char, anims)
+			if not (char and anims and next(anims)) then return 0 end
+			local n = 0
+			pcall(function()
+				local an = char:FindFirstChild("Animate")
+				if not an then return end
+				for nome, lista in pairs(anims) do
+					local pasta = an:FindFirstChild(nome)
+					if not pasta then
+						pasta = Instance.new("StringValue")
+						pasta.Name = nome
+						pasta.Parent = an
+					end
+					for _, velho in ipairs(pasta:GetChildren()) do
+						if velho:IsA("Animation") then velho:Destroy() end
+					end
+					for _, d in ipairs(lista) do
+						local a = Instance.new("Animation")
+						a.Name = d.nome
+						a.AnimationId = d.id
+						local w = Instance.new("NumberValue")
+						w.Name = "Weight"
+						w.Value = d.peso or 1
+						w.Parent = a
+						a.Parent = pasta
+						n += 1
+					end
+				end
+				-- para as animações atuais para a nova (parado/andar) entrar na hora
+				local hum = char:FindFirstChildOfClass("Humanoid")
+				local animador = hum and (hum:FindFirstChildOfClass("Animator"))
+				if animador then
+					for _, t in ipairs(animador:GetPlayingAnimationTracks()) do pcall(function() t:Stop(0.1) end) end
+				end
+			end)
+			return n
+		end
+
+		-- põe altura, largura, grossura, cabeça... (cria o valor se o seu personagem não tiver)
+		function CV.aplicarEscalas(hum, escalas)
+			local n = 0
+			if not (hum and escalas) then return 0 end
+			if hum.RigType ~= Enum.HumanoidRigType.R15 then return 0 end
+			for _, nome in ipairs(CV.NOMES_ESCALA) do
+				local valor = escalas[nome]
+				if type(valor) == "number" then
+					pcall(function()
+						local v = hum:FindFirstChild(nome)
+						if not v then
+							v = Instance.new("NumberValue")
+							v.Name = nome
+							v.Value = valor
+							v.Parent = hum
+						elseif v:IsA("NumberValue") then
+							v.Value = valor
+						end
+						n += 1
+					end)
+				end
+			end
+			return n
+		end
+
 		function CV.foto(char)
 			local f = { itens = {}, face = nil, cores = {}, corpo = {}, escalas = {}, cabecaMesh = nil, completo = true }
+			f.anims = CV.lerAnims(char)
 			for _, o in ipairs(char:GetChildren()) do
 				if ehItem(o) then
 					local c = CV.clonar(o)
@@ -8888,6 +8392,7 @@ local function iniciarTeclado()
 		-- "foto" a partir de uma HumanoidDescription (avatar do Roblox, mesmo de quem não está no servidor)
 		function CV.fotoDeDescricao(desc)
 			local f = { itens = {}, face = nil, cores = {} }
+			f.anims = CV.animsDeDesc(desc)
 			local function add(id)
 				if type(id) ~= "number" or id == 0 then return end
 				local o = CV.carregar(id)
@@ -9006,13 +8511,9 @@ local function iniciarTeclado()
 					corpoOk += 1
 				end)
 			end
-			for nome, valor in pairs(f.escalas or {}) do -- altura, largura, cabeça...
-				local v = hum:FindFirstChild(nome)
-				if v and v:IsA("NumberValue") and type(valor) == "number" then
-					pcall(function() v.Value = valor end)
-					corpoOk += 1
-				end
-			end
+			corpoOk += CV.aplicarEscalas(hum, f.escalas) -- altura, largura, grossura, cabeça...
+			local animsOk = CV.aplicarAnims(char, f.anims) -- animação de parado, andar, correr, pulo...
+			corpoOk += animsOk
 			for nome, cor in pairs(f.cores or {}) do -- cor de cada parte (quando não veio BodyColors)
 				local p = char:FindFirstChild(nome)
 				if p and p:IsA("BasePart") then pcall(function() p.Color = cor end) end
@@ -9024,6 +8525,13 @@ local function iniciarTeclado()
 				for _, t in ipairs({ 0.2, 1, 2.5 }) do
 					task.wait(t)
 					CV.limparGrude()
+					-- o jogo/Roblox pode ter voltado o tamanho e as animações: aplica de novo
+					local c2 = player.Character
+					local h2 = c2 and c2:FindFirstChildOfClass("Humanoid")
+					if h2 then
+						CV.aplicarEscalas(h2, f.escalas)
+						CV.aplicarAnims(c2, f.anims)
+					end
 				end
 			end)
 			return true, pecas .. " itens, " .. corpoOk .. " do corpo"
@@ -9067,6 +8575,14 @@ local function iniciarTeclado()
 			-- 2) cópia direta por cima (cabelo, acessórios, corpo, rosto, tamanho, cores)
 			local foto = origem.foto
 			if not foto and origem.desc then foto = CV.fotoDeDescricao(origem.desc) end
+			if foto and origem.desc then -- completa o que o jogo não mostrou (tamanho e animações) com o avatar do Roblox
+				foto.escalas = foto.escalas or {}
+				local ed = CV.escalasDeDesc(origem.desc)
+				for _, nome in ipairs(CV.NOMES_ESCALA) do
+					if foto.escalas[nome] == nil and ed[nome] then foto.escalas[nome] = ed[nome] end
+				end
+				if not foto.anims or not next(foto.anims) then foto.anims = CV.animsDeDesc(origem.desc) end
+			end
 			if feitoDesc then task.wait(0.3) end
 			local okFoto, erro = false, "Não foi possível pegar o visual"
 			if foto then okFoto, erro = CV.aplicarFoto(foto) end
@@ -11881,6 +11397,7 @@ local function iniciarTeclado()
 			{ nome = "CRON", ordem = 49, nomes = { "cron", "cronometro" } },
 			{ nome = "MUTE", ordem = 50, nomes = { "mute", "mutar" }, caixa = "", dica = "jogador", unCaixa = true },
 			{ nome = "MARCAR", ordem = 51, nomes = { "marcar", "mark" }, caixa = "", dica = "jogador cor", unCaixa = true },
+			{ nome = "AUTOCLICK", ordem = 63, nomes = { "autoclick", "ac" }, caixa = "10", dica = "cliques/s", vivo = true },
 			{ nome = "CV", ordem = 52, nomes = { "cv", "copiarvisual" }, caixa = "", dica = "jogador" },
 		}
 
@@ -11986,7 +11503,6 @@ local function iniciarTeclado()
 			{ nome = "INFO", ordem = 60, cmd = "info", caixa = "", dica = "jogador" },
 			{ nome = "LOW", ordem = 61, cmd = "low" },
 			{ nome = "CHATLOG", ordem = 62, cmd = "chatlog" },
-			{ nome = "AUTOCLICK", ordem = 63, cmd = "autoclick" },
 		}
 		for _, a in ipairs(acoes) do
 			local b, caixa = criarLinha(a.ordem, a.nome, a.caixa ~= nil, a.caixa)
