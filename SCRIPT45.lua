@@ -5729,9 +5729,9 @@ local function iniciarTeclado()
 	local entradas = {} -- { nomes = {...}, desc = "..." } -> usado para filtrar/completar a lista
 	local manterBarra = false -- true = o comando pediu para a barra continuar aberta (cmds)
 	local comandos = {} -- [palavra] = function(args) -> sucesso, mensagem
-	local LARGURA_FECHADA, ALTURA_FECHADA = 88, 18 -- tira fina quando fechada
-	local LARGURA_PAINEL = 250 -- painel aberto (caixa + lista juntos)
-	local ALTURA_CAIXA, ALTURA_LINHA, MAX_LINHAS = 26, 22, 7
+	local LARGURA_FECHADA, ALTURA_FECHADA = 108, 26 -- tira quando fechada
+	local LARGURA_PAINEL = 300 -- painel aberto (caixa + lista juntos)
+	local ALTURA_CAIXA, ALTURA_LINHA, MAX_LINHAS = 28, 27, 7
 	local tAbriu = 0 -- quando a barra abriu (ignora perda de foco logo no começo)
 	local tocandoPainel = false -- dedo/mouse apertando dentro do painel (não fecha)
 
@@ -5755,19 +5755,34 @@ local function iniciarTeclado()
 		ZIndex = 10,
 	}, gui)
 
+	-- Borda com brilho neon que gira devagar (roxo -> rosa -> roxo)
+	local function efeitoBorda(stroke, segundos)
+		local g = novo("UIGradient", {
+			Color = ColorSequence.new({
+				ColorSequenceKeypoint.new(0, Color3.fromRGB(120, 70, 255)),
+				ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 80, 210)),
+				ColorSequenceKeypoint.new(1, Color3.fromRGB(120, 70, 255)),
+			}),
+		}, stroke)
+		pcall(function()
+			TweenService:Create(g, TweenInfo.new(segundos or 5, Enum.EasingStyle.Linear, Enum.EasingDirection.In, -1), { Rotation = 360 }):Play()
+		end)
+	end
+
 	local icone = novo("TextButton", {
 		Name = "Icone",
 		Size = UDim2.fromScale(1, 1),
-		BackgroundColor3 = Color3.fromRGB(18, 18, 22),
-		BackgroundTransparency = 0.2,
+		BackgroundColor3 = Color3.fromRGB(48, 22, 86),
+		BackgroundTransparency = 0.05,
 		AutoButtonColor = false,
-		Text = "> comandos",
-		TextColor3 = Color3.fromRGB(170, 170, 182),
-		Font = Enum.Font.Gotham,
-		TextSize = 11,
+		Text = "›  comandos",
+		TextColor3 = Color3.fromRGB(225, 205, 255),
+		Font = Enum.Font.GothamMedium,
+		TextSize = 12,
 	}, cmdFrame)
-	novo("UICorner", { CornerRadius = UDim.new(0, 4) }, icone)
-	novo("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 1, Transparency = 0.82 }, icone)
+	novo("UICorner", { CornerRadius = UDim.new(0, 8) }, icone)
+	-- (sem UIGradient no fundo da tira: ele também pintaria o texto do botão)
+	efeitoBorda(novo("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 1.5, Transparency = 0.15 }, icone), 5)
 
 	-- Painel único: caixa de digitar em cima e a lista de comandos logo abaixo
 	local painelCmd = novo("Frame", {
@@ -5775,30 +5790,35 @@ local function iniciarTeclado()
 		AnchorPoint = Vector2.new(1, 1),
 		Position = UDim2.new(1, -10, 1, -40),
 		Size = UDim2.fromOffset(LARGURA_PAINEL, ALTURA_CAIXA + 16 + MAX_LINHAS * ALTURA_LINHA),
-		BackgroundColor3 = Color3.fromRGB(18, 18, 22),
-		BackgroundTransparency = 0.08,
+		BackgroundColor3 = Color3.new(1, 1, 1), -- a cor vem do UIGradient abaixo
+		BackgroundTransparency = 0.04,
 		Active = true,
 		Visible = false,
 		ZIndex = 11,
 	}, gui)
-	novo("UICorner", { CornerRadius = UDim.new(0, 6) }, painelCmd)
-	novo("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 1, Transparency = 0.82 }, painelCmd)
+	novo("UICorner", { CornerRadius = UDim.new(0, 10) }, painelCmd)
+	novo("UIGradient", {
+		Rotation = 90,
+		Color = ColorSequence.new(Color3.fromRGB(44, 20, 78), Color3.fromRGB(20, 9, 38)),
+	}, painelCmd)
+	efeitoBorda(novo("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 1.5, Transparency = 0.2 }, painelCmd), 6)
 
 	local caixaCmd = novo("TextBox", {
 		Name = "Comando",
 		Position = UDim2.fromOffset(6, 6),
 		Size = UDim2.new(1, -12, 0, ALTURA_CAIXA),
-		BackgroundColor3 = Color3.fromRGB(32, 32, 38),
+		BackgroundColor3 = Color3.fromRGB(16, 7, 32),
 		Text = "",
 		PlaceholderText = "comando (cmds = lista)",
-		PlaceholderColor3 = Color3.fromRGB(120, 120, 130),
+		PlaceholderColor3 = Color3.fromRGB(135, 110, 175),
 		TextColor3 = Color3.new(1, 1, 1),
 		Font = Enum.Font.Gotham,
 		TextSize = 13,
 		TextXAlignment = Enum.TextXAlignment.Left,
 		ClearTextOnFocus = false,
 	}, painelCmd)
-	novo("UICorner", { CornerRadius = UDim.new(0, 4) }, caixaCmd)
+	novo("UICorner", { CornerRadius = UDim.new(0, 7) }, caixaCmd)
+	novo("UIStroke", { Color = Color3.fromRGB(150, 90, 255), Thickness = 1, Transparency = 0.55 }, caixaCmd)
 	novo("UIPadding", { PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8) }, caixaCmd)
 	-- iOS: sem a caixa de texto nativa (o quadrado branco); digita direto na barra
 	pcall(function() caixaCmd.ShowNativeInput = false end)
@@ -5808,8 +5828,8 @@ local function iniciarTeclado()
 		Name = "Aviso",
 		AutomaticSize = Enum.AutomaticSize.XY,
 		Size = UDim2.fromOffset(0, 0),
-		BackgroundColor3 = Color3.fromRGB(18, 18, 22),
-		BackgroundTransparency = 0.1,
+		BackgroundColor3 = Color3.fromRGB(30, 14, 54),
+		BackgroundTransparency = 0.05,
 		TextWrapped = true,
 		Font = Enum.Font.GothamBold,
 		TextSize = 12,
@@ -5891,6 +5911,14 @@ local function iniciarTeclado()
 
 	local linhasSugestao = {}
 
+	-- Escapa < > & para o texto formatado (RichText) das sugestões
+	local function xml(s)
+		s = s:gsub("&", "&amp;")
+		s = s:gsub("<", "&lt;")
+		s = s:gsub(">", "&gt;")
+		return s
+	end
+
 	-- Monta a lista de comandos que combinam com o que está sendo digitado (vazio = todos)
 	local function atualizarSugestoes(texto)
 		for _, l in ipairs(linhasSugestao) do l:Destroy() end
@@ -5921,22 +5949,64 @@ local function iniciarTeclado()
 			return a.i < b.i
 		end)
 
+		-- Cada linha: COMANDO (vermelho) | divisória neon | explicação (lilás claro)
+		-- A descrição original é "comando args / uncomando - explicação": separa no primeiro " - "
 		for k, a in ipairs(achados) do
+			local esq, dir = a.e.desc:match("^(.-)%s+%-%s+(.+)$")
+			if not esq then esq, dir = a.nome, a.e.desc end
+			local base = esq:match("^(.-)%s+/%s+") or esq -- tira a parte "/ uncomando"
+			local args = {}
+			for arg in base:gmatch("[%[<][^%]>]*[%]>]") do args[#args + 1] = xml(arg) end
+			local textoCmd = "<b>" .. xml(a.nome) .. "</b>"
+			if #args > 0 then
+				textoCmd = textoCmd .. ' <font color="rgb(190,120,150)">' .. table.concat(args, " ") .. "</font>"
+			end
+
 			local linha = novo("TextButton", {
 				LayoutOrder = k,
-				Size = UDim2.new(1, -6, 0, ALTURA_LINHA),
-				BackgroundColor3 = Color3.fromRGB(40, 40, 48),
+				Size = UDim2.new(1, -6, 0, ALTURA_LINHA - 2),
+				BackgroundColor3 = Color3.fromRGB(70, 36, 120),
 				BackgroundTransparency = 0.6,
-				Text = a.e.desc,
-				TextTruncate = Enum.TextTruncate.AtEnd,
-				TextXAlignment = Enum.TextXAlignment.Left,
-				TextColor3 = Color3.fromRGB(205, 205, 215),
-				Font = Enum.Font.Gotham,
-				TextSize = 11,
+				Text = "",
 				AutoButtonColor = true,
 			}, rolagem)
-			novo("UICorner", { CornerRadius = UDim.new(0, 4) }, linha)
-			novo("UIPadding", { PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 6) }, linha)
+			novo("UICorner", { CornerRadius = UDim.new(0, 6) }, linha)
+			novo("TextLabel", {
+				Position = UDim2.fromOffset(8, 0),
+				Size = UDim2.new(0, 114, 1, 0),
+				BackgroundTransparency = 1,
+				RichText = true,
+				Text = textoCmd,
+				TextColor3 = Color3.fromRGB(255, 80, 100),
+				Font = Enum.Font.GothamMedium,
+				TextSize = 12,
+				TextXAlignment = Enum.TextXAlignment.Left,
+				TextTruncate = Enum.TextTruncate.AtEnd,
+			}, linha)
+			local divisoria = novo("Frame", {
+				AnchorPoint = Vector2.new(0, 0.5),
+				Position = UDim2.new(0, 128, 0.5, 0),
+				Size = UDim2.new(0, 2, 0.7, 0),
+				BackgroundColor3 = Color3.new(1, 1, 1),
+				BorderSizePixel = 0,
+			}, linha)
+			novo("UICorner", { CornerRadius = UDim.new(1, 0) }, divisoria)
+			novo("UIGradient", {
+				Rotation = 90,
+				Color = ColorSequence.new(Color3.fromRGB(255, 90, 220), Color3.fromRGB(110, 120, 255)),
+			}, divisoria)
+			novo("UIStroke", { Color = Color3.fromRGB(190, 110, 255), Thickness = 1, Transparency = 0.6 }, divisoria)
+			novo("TextLabel", {
+				Position = UDim2.fromOffset(140, 0),
+				Size = UDim2.new(1, -146, 1, 0),
+				BackgroundTransparency = 1,
+				Text = dir,
+				TextColor3 = Color3.fromRGB(205, 190, 255),
+				Font = Enum.Font.Gotham,
+				TextSize = 11,
+				TextXAlignment = Enum.TextXAlignment.Left,
+				TextTruncate = Enum.TextTruncate.AtEnd,
+			}, linha)
 			linha.Activated:Connect(function() completarComando(a.nome) end)
 			linhasSugestao[#linhasSugestao + 1] = linha
 		end
@@ -5946,7 +6016,7 @@ local function iniciarTeclado()
 				Size = UDim2.new(1, -6, 0, ALTURA_LINHA),
 				BackgroundTransparency = 1,
 				Text = "Nenhum comando assim",
-				TextColor3 = Color3.fromRGB(140, 140, 150),
+				TextColor3 = Color3.fromRGB(160, 135, 200),
 				Font = Enum.Font.Gotham,
 				TextSize = 11,
 			}, rolagem)
@@ -6024,10 +6094,22 @@ local function iniciarTeclado()
 		end)
 	end
 
-	-- Toque rápido na tira abre a barra; arrastar move a tira
-	tornarMovel(icone, cmdFrame, function()
-		if not barraAberta then abrirBarra() end
-	end)
+	-- Toque rápido na tira abre a barra; arrastar desliza a tira SÓ para os lados
+	-- (o Y nunca muda: ela fica sempre colada no canto de baixo da tela)
+	local origemX = 0
+	ligarArrasto(icone,
+		function() origemX = cmdFrame.AbsolutePosition.X end,
+		function(delta)
+			local tela, tam, a = tamanhoTela(), cmdFrame.AbsoluteSize, cmdFrame.AnchorPoint
+			local x = math.clamp(origemX + delta.X, 4, math.max(4, tela.X - tam.X - 4))
+			local p = cmdFrame.Position
+			cmdFrame.Position = UDim2.new(0, x + a.X * tam.X, p.Y.Scale, p.Y.Offset)
+			if barraAberta then ajustarPainel() end
+		end,
+		function(moveu)
+			if not moveu and not barraAberta then abrirBarra() end
+		end
+	)
 
 	-- A lista filtra enquanto você digita
 	caixaCmd:GetPropertyChangedSignal("Text"):Connect(function()
