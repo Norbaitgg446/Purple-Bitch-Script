@@ -1,4 +1,5 @@
 -- LocalScript
+-- v69: copiar visual agora CLONA as peças reais do corpo do outro jogador (malha, tamanho, rosto) e religa as juntas -> fim do corpo esticado/braço fino e dos buracos.
 -- v68: copiar visual copia a ESTRUTURA do corpo (tamanho de cada peça, juntas dos braços/pernas, ancoras, altura do chão) -> sem braços separados e com cabeça/corpo idênticos.
 -- v67: autoclick simplificado (só liga/desliga + cliques por segundo, clica em qualquer lugar e usa a ferramenta da mão), sem painel nem bolinhas.
 -- v66: copiar visual agora copia também as ANIMAÇÕES (parado, andar, correr, pulo, queda, escalar, nadar) e o TAMANHO/GROSSURA do corpo (altura, largura, profundidade, cabeça, proporção).
@@ -8404,26 +8405,49 @@ local function iniciarTeclado()
 			end
 		end
 
+		-- troca cada peça do seu corpo por um clone da peça do outro jogador e religa as juntas/soldas nela
+		function CV.aplicarCorpo(char, hum, f)
+			if not (f and f.pecas and next(f.pecas)) then return 0 end
+			if not (f.geo and f.geo.rig == hum.RigType) then return 0 end
+			local trabalho = {}
+			for nome, molde in pairs(f.pecas) do
+				local velho = char:FindFirstChild(nome)
+				if velho and velho:IsA("BasePart") and nome ~= "HumanoidRootPart" and velho:GetAttribute("CVFoto") ~= f.id then
+					trabalho[#trabalho + 1] = { nome, molde, velho }
+				end
+			end
+			if #trabalho == 0 then return 0 end
+			pcall(function() hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false) end) -- não morre enquanto troca as peças
+			local n = 0
+			for _, t in ipairs(trabalho) do
+				local nome, molde, velho = t[1], t[2], t[3]
+				local ok = pcall(function()
+					local novo = molde:Clone()
+					novo.Name = nome
+					novo:SetAttribute("CVFoto", f.id)
+					novo.Anchored = false
+					novo.CFrame = velho.CFrame
+					novo.Parent = char
+					for _, j in ipairs(char:GetDescendants()) do -- juntas e soldas (corpo, acessórios, ferramenta)
+						if j:IsA("JointInstance") or j:IsA("WeldConstraint") then
+							if j.Part0 == velho then j.Part0 = novo end
+							if j.Part1 == velho then j.Part1 = novo end
+						end
+					end
+					for _, j in ipairs(velho:GetChildren()) do -- as juntas que moravam na peça velha vão para a nova
+						if j:IsA("JointInstance") or j:IsA("WeldConstraint") then j.Parent = novo end
+					end
+					velho:Destroy()
+				end)
+				if ok then n += 1 end
+			end
+			task.delay(1, function() pcall(function() hum:SetStateEnabled(Enum.HumanoidStateType.Dead, true) end) end)
+			return n
+		end
+
 		function CV.aplicarGeo(char, hum, geo)
 			if not (char and hum and geo) or hum.RigType ~= geo.rig then return 0 end
 			local n = 0
-			for nome, d in pairs(geo.partes) do
-				local p = char:FindFirstChild(nome)
-				if p and p:IsA("BasePart") then
-					pcall(function()
-						p.Size = d.size
-						p.Material = d.mat
-						p.Reflectance = d.refl
-					end)
-					n += 1
-				end
-			end
-			for chave, cf in pairs(geo.ancoras) do
-				local pn, an = chave:match("^(.-)/(.+)$")
-				local p = pn and char:FindFirstChild(pn)
-				local a = p and p:FindFirstChild(an)
-				if a and a:IsA("Attachment") then pcall(function() a.CFrame = cf end) end
-			end
 			for chave, j in pairs(geo.juntas) do
 				local pn, jn = chave:match("^(.-)/(.+)$")
 				local p = pn and char:FindFirstChild(pn)
@@ -8436,7 +8460,7 @@ local function iniciarTeclado()
 		end
 
 		function CV.foto(char)
-			local f = { itens = {}, face = nil, cores = {}, corpo = {}, escalas = {}, cabecaMesh = nil, completo = true }
+			local f = { itens = {}, face = nil, cores = {}, corpo = {}, escalas = {}, cabecaMesh = nil, completo = true, pecas = {}, id = tostring(os.clock()) .. "_" .. math.random(1, 1000000000) }
 			f.anims = CV.lerAnims(char)
 			f.geo = CV.lerGeo(char)
 			for _, o in ipairs(char:GetChildren()) do
@@ -8445,6 +8469,8 @@ local function iniciarTeclado()
 					if c then f.itens[#f.itens + 1] = c end
 				elseif o:IsA("BasePart") and o.Name ~= "HumanoidRootPart" then
 					f.cores[o.Name] = o.Color
+					local molde = CV.clonar(o) -- peça inteira (malha, tamanho, textura, rosto)
+					if molde then f.pecas[o.Name] = molde end
 					if o:IsA("MeshPart") then -- corpo R15: malha e textura de cada parte
 						local sa
 						local s = o:FindFirstChildOfClass("SurfaceAppearance")
@@ -8541,6 +8567,7 @@ local function iniciarTeclado()
 			local hum = char and char:FindFirstChildOfClass("Humanoid")
 			if not (char and hum and f) then return false, "Personagem indisponível" end
 			local pecas, corpoOk = 0, 0
+			local usaCorpo = f.pecas ~= nil and next(f.pecas) ~= nil and f.geo ~= nil and f.geo.rig == hum.RigType
 			-- tira o que você veste (só o que vai ser trocado, se a foto veio do avatar do Roblox)
 			local classes = {}
 			for _, c in ipairs(f.itens) do classes[c.ClassName] = true end
@@ -8566,7 +8593,7 @@ local function iniciarTeclado()
 				if ok then pecas += 1 end
 			end
 			-- corpo: malha e textura de cada parte (R15)
-			for nome, d in pairs(f.corpo or {}) do
+			for nome, d in pairs(usaCorpo and {} or f.corpo or {}) do -- (com as peças clonadas não precisa trocar a malha)
 				local p = char:FindFirstChild(nome)
 				if p and p:IsA("MeshPart") then
 					local feito = false
@@ -8600,8 +8627,12 @@ local function iniciarTeclado()
 					corpoOk += 1
 				end)
 			end
-			if not f.geo then corpoOk += CV.aplicarEscalas(hum, f.escalas) end -- altura, largura, grossura, cabeça... (sem estrutura copiada)
-			corpoOk += CV.aplicarGeo(char, hum, f.geo) -- tamanho de cada peça + juntas + âncoras
+			if usaCorpo then
+				corpoOk += CV.aplicarCorpo(char, hum, f) -- peças reais do outro jogador
+				CV.aplicarGeo(char, hum, f.geo) -- juntas, altura do chão, acessórios
+			else
+				corpoOk += CV.aplicarEscalas(hum, f.escalas) -- sem as peças dele: usa as escalas do avatar
+			end
 			local animsOk = CV.aplicarAnims(char, f.anims) -- animação de parado, andar, correr, pulo...
 			corpoOk += animsOk
 			for nome, cor in pairs(f.cores or {}) do -- cor de cada parte (quando não veio BodyColors)
@@ -8619,8 +8650,12 @@ local function iniciarTeclado()
 					local c2 = player.Character
 					local h2 = c2 and c2:FindFirstChildOfClass("Humanoid")
 					if h2 then
-						if not f.geo then CV.aplicarEscalas(h2, f.escalas) end
-						CV.aplicarGeo(c2, h2, f.geo)
+						if usaCorpo then
+							CV.aplicarCorpo(c2, h2, f)
+							CV.aplicarGeo(c2, h2, f.geo)
+						else
+							CV.aplicarEscalas(h2, f.escalas)
+						end
 						CV.aplicarAnims(c2, f.anims)
 					end
 				end
