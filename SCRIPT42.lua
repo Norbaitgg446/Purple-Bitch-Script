@@ -8316,21 +8316,26 @@ local function iniciarTeclado()
 	end)
 
 	----------------------------------------------------------
-	-- GALERIA SECRETA: o comando "xv" abre/fecha. Não aparece no menu, na ajuda
-	-- nem na lista de sugestões da barra (por isso não usa comando()).
-	-- 12 espaços: 3 fileiras com 4 fotos. Toque numa foto para ampliar; toque de novo para voltar.
+	-- GALERIA (+18): comando "xv" (aparece na lista de sugestões e na ajuda como os outros).
+	--   xv   -> mostra o aviso de maiores de 18 anos; se continuar, abre a galeria
+	--   unxv -> fecha a galeria (é a ÚNICA forma de fechar; este não aparece na lista)
+	-- 12 espaços: 3 fileiras com 4 fotos. Toque numa foto para ampliar.
+	-- Na foto ampliada: zoom com a roda do mouse, pinça (celular) ou botões + / −;
+	-- arraste para mover; toque duplo alterna o zoom; "← Voltar" volta às miniaturas
+	-- (não fecha a galeria).
 	----------------------------------------------------------
 	do
 		-- >>> COLE AQUI OS LINKS DAS 12 FOTOS (deixe "" nos espaços vazios) <<<
 		local LINKS_GALERIA = {
-			"https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSfZYU-2RBNlqL8ZDsRtFJob8ndW6Du7wdpTN2dXFHBU8j1FScLzw1XOPc&s=10", "", "", "",
-			"", "", "", "",
-			"", "", "", "",
+			"https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSfZYU-2RBNlqL8ZDsRtFJob8ndW6Du7wdpTN2dXFHBU8j1FScLzw1XOPc&s=10", "https://ei.phncdn.com/videos/202108/13/392892021/thumbs_20/(m=eaAaGwObaaaa)(mh=c5DRlqysmwXgL8tJ)16.jpg", "https://ei.phncdn.com/videos/202110/16/396462241/thumbs_5/(m=eaAaGwObaaaa)(mh=Z5Afz7H1GHMujBay)7.jpg", "https://ei.phncdn.com/videos/201812/25/198486701/original/(m=eaAaGwObaaaa)(mh=vt2bM0pPlNZIanWf)10.jpg",
+			"https://ei.phncdn.com/videos/202204/20/406682801/original/(m=eaAaGwObaaaa)(mh=vy_53KEgZZvL9AcX)10.jpg", "https://ei.phncdn.com/videos/202202/19/403351281/original/(m=eaAaGwObaaaa)(mh=jl8qLSkwqZD64aPU)1.jpg", "https://ei.phncdn.com/videos/202303/17/427624641/thumbs_5/(m=eaAaGwObaaaa)(mh=Q9g-rGkwRHZcyz07)16.jpg", "https://ei.phncdn.com/videos/201902/18/208402241/original/(m=eaAaGwObaaaa)(mh=4US6SFAzBXxECY3o)15.jpg",
+			"https://ei.phncdn.com/videos/202109/24/395260111/thumbs_10/(m=eaAaGwObaaaa)(mh=E-pE9sK4Qei1cYnl)12.jpg", "https://ei.phncdn.com/videos/201911/23/263576112/original/(m=q2Q369UbeaAaGwObaaaa)(mh=AGU3SPKts5RLhM5F)0.jpg", "https://ei.phncdn.com/videos/202204/28/407164711/original/(m=eaAaGwObaaaa)(mh=bm5zlFVfzCW-x1m7)8.jpg", "https://ei.phncdn.com/videos/202111/24/398583401/original/(m=eaAaGwObaaaa)(mh=dTry6z2qTWkox61Z)7.jpg",
 		}
 		local COLUNAS, LINHAS = 4, 3
-		local galeria, ampliada
-		local fotos = {}   -- [i] = ImageButton do espaço
-		local carregada = false
+		local ZOOM_MIN, ZOOM_MAX = 1, 8
+		-- estado da galeria (numa tabela só, para não gastar variáveis locais):
+		-- gui, visor, aviso = telas; fotos = ImageButtons; abrirFoto = função criada ao montar
+		local G = { fotos = {}, carregada = false, zoom = 1, pan = Vector2.new(0, 0) }
 
 		local function baixar(i, link)
 			local arquivo = "galeria_foto" .. i .. ".png"
@@ -8378,24 +8383,13 @@ local function iniciarTeclado()
 			contorno.Transparency = 0.6
 			contorno.Parent = p
 
-			-- Barra de cima: arraste para mover; ✕ fecha
+			-- Barra de cima: só serve para arrastar (a galeria só fecha com o comando unxv)
 			local barra = Instance.new("Frame")
 			barra.Size = UDim2.new(1, 0, 0, altBarra)
 			barra.BackgroundTransparency = 1
 			barra.Active = true
 			barra.Parent = p
 			tornarMovel(barra, p)
-			local fechar = Instance.new("TextButton")
-			fechar.AnchorPoint = Vector2.new(1, 0)
-			fechar.Position = UDim2.new(1, -4, 0, 2)
-			fechar.Size = UDim2.fromOffset(26, 26)
-			fechar.BackgroundTransparency = 1
-			fechar.Text = "✕"
-			fechar.TextColor3 = Color3.new(1, 1, 1)
-			fechar.Font = Enum.Font.GothamBold
-			fechar.TextSize = 16
-			fechar.Parent = barra
-			fechar.MouseButton1Click:Connect(function() g.Enabled = false end)
 
 			-- Os 12 espaços (3 fileiras de 4)
 			for i = 1, COLUNAS * LINHAS do
@@ -8417,52 +8411,267 @@ local function iniciarTeclado()
 				c.Thickness = 1
 				c.Transparency = 0.75
 				c.Parent = f
-				fotos[i] = f
+				G.fotos[i] = f
 				f.MouseButton1Click:Connect(function()
-					if f.Image ~= "" then
-						ampliada.Image = f.Image
-						ampliada.Visible = true
-					end
+					if f.Image ~= "" then G.abrirFoto(f.Image) end
 				end)
 			end
 
-			-- Foto ampliada (cobre o painel; toque para voltar)
-			ampliada = Instance.new("ImageButton")
-			ampliada.Name = "Ampliada"
-			ampliada.Size = UDim2.new(1, 0, 1, 0)
-			ampliada.BackgroundColor3 = Color3.new(0, 0, 0)
-			ampliada.BackgroundTransparency = 0.25
-			ampliada.AutoButtonColor = false
-			ampliada.ScaleType = Enum.ScaleType.Fit
-			ampliada.ZIndex = 10
-			ampliada.Visible = false
-			ampliada.Parent = p
-			ampliada.MouseButton1Click:Connect(function() ampliada.Visible = false end)
+			-- Visor da foto ampliada (cobre as miniaturas, deixa a barra de cima livre para arrastar)
+			local visor = Instance.new("Frame")
+			visor.Name = "Visor"
+			visor.Position = UDim2.fromOffset(0, altBarra)
+			visor.Size = UDim2.new(1, 0, 1, -altBarra)
+			visor.BackgroundColor3 = Color3.new(0, 0, 0)
+			visor.BackgroundTransparency = 0.15
+			visor.ClipsDescendants = true
+			visor.Active = true
+			visor.ZIndex = 10
+			visor.Visible = false
+			visor.Parent = p
 
-			galeria = g
+			local img = Instance.new("ImageLabel")
+			img.Name = "FotoAmpliada"
+			img.AnchorPoint = Vector2.new(0.5, 0.5)
+			img.BackgroundTransparency = 1
+			img.ScaleType = Enum.ScaleType.Fit
+			img.ZIndex = 11
+			img.Parent = visor
+
+			local function botaoVisor(texto, largura, pos, ancora)
+				local b = Instance.new("TextButton")
+				b.AnchorPoint = ancora
+				b.Position = pos
+				b.Size = UDim2.fromOffset(largura, 28)
+				b.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+				b.BackgroundTransparency = 0.15
+				b.AutoButtonColor = true
+				b.Text = texto
+				b.TextColor3 = Color3.new(1, 1, 1)
+				b.Font = Enum.Font.GothamBold
+				b.TextSize = 14
+				b.ZIndex = 12
+				b.Parent = visor
+				Instance.new("UICorner", b).CornerRadius = UDim.new(0, 8)
+				return b
+			end
+			local bVoltar = botaoVisor("← Voltar", 74, UDim2.fromOffset(6, 6), Vector2.new(0, 0))
+			local bMais = botaoVisor("+", 28, UDim2.new(1, -6, 0, 6), Vector2.new(1, 0))
+			local bMenos = botaoVisor("−", 28, UDim2.new(1, -40, 0, 6), Vector2.new(1, 0))
+			local rotulo = Instance.new("TextLabel")
+			rotulo.AnchorPoint = Vector2.new(1, 0)
+			rotulo.Position = UDim2.new(1, -74, 0, 6)
+			rotulo.Size = UDim2.fromOffset(50, 28)
+			rotulo.BackgroundTransparency = 1
+			rotulo.TextColor3 = Color3.new(1, 1, 1)
+			rotulo.Font = Enum.Font.GothamMedium
+			rotulo.TextSize = 13
+			rotulo.ZIndex = 12
+			rotulo.Parent = visor
+
+			-- tamanho do visor (calculado, não depende de a tela estar ativa)
+			local vw, vh = larg, alt - altBarra
+
+			local function ajustar()
+				G.zoom = math.clamp(G.zoom, ZOOM_MIN, ZOOM_MAX)
+				local w, h = vw * G.zoom, vh * G.zoom
+				local mx, my = math.max(0, (w - vw) / 2), math.max(0, (h - vh) / 2)
+				G.pan = Vector2.new(math.clamp(G.pan.X, -mx, mx), math.clamp(G.pan.Y, -my, my))
+				img.Size = UDim2.fromOffset(w, h)
+				img.Position = UDim2.new(0.5, G.pan.X, 0.5, G.pan.Y)
+				rotulo.Text = math.floor(G.zoom * 100 + 0.5) .. "%"
+			end
+
+			G.abrirFoto = function(imagem)
+				G.zoom = 1
+				G.pan = Vector2.new(0, 0)
+				img.Image = imagem
+				visor.Visible = true
+				ajustar()
+			end
+
+			bVoltar.MouseButton1Click:Connect(function() visor.Visible = false end)
+			bMais.MouseButton1Click:Connect(function() G.zoom = G.zoom * 1.4 ajustar() end)
+			bMenos.MouseButton1Click:Connect(function() G.zoom = G.zoom / 1.4 ajustar() end)
+
+			-- Arrastar para mover a foto ampliada (mouse ou dedo) + toque duplo para alternar o zoom
+			local arrastando, inicio, panInicio, pinca, ultimoToque = nil, Vector2.new(0, 0), Vector2.new(0, 0), false, 0
+			visor.InputBegan:Connect(function(input)
+				local tipo = input.UserInputType
+				if tipo == Enum.UserInputType.MouseButton1 or tipo == Enum.UserInputType.Touch then
+					arrastando = input
+					inicio = Vector2.new(input.Position.X, input.Position.Y)
+					panInicio = G.pan
+					local agora = os.clock()
+					if agora - ultimoToque < 0.3 then
+						G.zoom = (G.zoom > 1.01) and 1 or 2.5
+						G.pan = Vector2.new(0, 0)
+						ajustar()
+						ultimoToque = 0
+					else
+						ultimoToque = agora
+					end
+				end
+			end)
+			UserInputService.InputChanged:Connect(function(input)
+				if not (g.Enabled and visor.Visible) then return end
+				local tipo = input.UserInputType
+				if tipo == Enum.UserInputType.MouseWheel then
+					-- só vale com o mouse em cima do visor
+					local m = UserInputService:GetMouseLocation()
+					if not g.IgnoreGuiInset then m = m - game:GetService("GuiService"):GetGuiInset() end
+					local ap, as = visor.AbsolutePosition, visor.AbsoluteSize
+					if m.X >= ap.X and m.X <= ap.X + as.X and m.Y >= ap.Y and m.Y <= ap.Y + as.Y then
+						G.zoom = G.zoom * ((input.Position.Z > 0) and 1.2 or (1 / 1.2))
+						ajustar()
+					end
+				elseif arrastando and not pinca and (tipo == Enum.UserInputType.MouseMovement or input == arrastando) then
+					local d = Vector2.new(input.Position.X, input.Position.Y) - inicio
+					if d.Magnitude > 3 or G.pan ~= panInicio then
+						G.pan = panInicio + d
+						ajustar()
+					end
+				end
+			end)
+			UserInputService.InputEnded:Connect(function(input)
+				if input == arrastando then arrastando = nil end
+			end)
+			-- Pinça de dois dedos (celular)
+			local zoomInicioPinca = 1
+			UserInputService.TouchPinch:Connect(function(_, escala, _, estado)
+				if not (g.Enabled and visor.Visible) then return end
+				if estado == Enum.UserInputState.Begin then
+					pinca = true
+					arrastando = nil
+					zoomInicioPinca = G.zoom
+				elseif estado == Enum.UserInputState.Change then
+					G.zoom = zoomInicioPinca * escala
+					ajustar()
+				else
+					pinca = false
+				end
+			end)
+
+			G.gui = g
+			G.visor = visor
 		end
 
 		local function carregar() -- baixa as fotos em segundo plano, só na primeira vez
-			if carregada then return end
-			carregada = true
+			if G.carregada then return end
+			G.carregada = true
 			task.spawn(function()
 				for i, link in ipairs(LINKS_GALERIA) do
-					if link ~= "" and fotos[i] then
+					if link ~= "" and G.fotos[i] then
 						local ok, imagem = pcall(baixar, i, link)
-						if ok and imagem then fotos[i].Image = imagem end
+						if ok and imagem then G.fotos[i].Image = imagem end
 					end
 				end
 			end)
 		end
 
-		comandos["xv"] = function()
-			if not galeria then montar() end
-			galeria.Enabled = not galeria.Enabled
-			if galeria.Enabled then
-				ampliada.Visible = false
-				carregar()
+		local function abrirGaleria()
+			if not G.gui then montar() end
+			G.visor.Visible = false
+			G.gui.Enabled = true
+			carregar()
+		end
+
+		-- Aviso de maiores de 18 anos (aparece toda vez que o xv é executado)
+		local function perguntar18()
+			if not G.aviso then
+				local a = Instance.new("ScreenGui")
+				a.Name = "Aviso18"
+				a.ResetOnSpawn = false
+				a.IgnoreGuiInset = gui.IgnoreGuiInset
+				a.DisplayOrder = 60
+				a.Enabled = false
+				a.Parent = playerGui
+
+				-- fundo escuro que também bloqueia toques no que está atrás
+				local fundo = Instance.new("TextButton")
+				fundo.Size = UDim2.new(1, 0, 1, 0)
+				fundo.BackgroundColor3 = Color3.new(0, 0, 0)
+				fundo.BackgroundTransparency = 0.45
+				fundo.AutoButtonColor = false
+				fundo.Text = ""
+				fundo.Parent = a
+
+				local largCaixa = math.min(320, tamanhoTela().X - 40)
+				local caixa = Instance.new("Frame")
+				caixa.AnchorPoint = Vector2.new(0.5, 0.5)
+				caixa.Position = UDim2.new(0.5, 0, 0.5, 0)
+				caixa.Size = UDim2.fromOffset(largCaixa, 176)
+				caixa.BackgroundColor3 = Color3.fromRGB(22, 22, 28)
+				caixa.Active = true
+				caixa.Parent = fundo
+				Instance.new("UICorner", caixa).CornerRadius = UDim.new(0, 14)
+				local borda = Instance.new("UIStroke")
+				borda.Color = Color3.new(1, 1, 1)
+				borda.Transparency = 0.6
+				borda.Thickness = 1.2
+				borda.Parent = caixa
+
+				local titulo = Instance.new("TextLabel")
+				titulo.Position = UDim2.fromOffset(12, 12)
+				titulo.Size = UDim2.new(1, -24, 0, 24)
+				titulo.BackgroundTransparency = 1
+				titulo.Text = "Conteúdo +18"
+				titulo.TextColor3 = Color3.fromRGB(255, 90, 90)
+				titulo.Font = Enum.Font.GothamBold
+				titulo.TextSize = 18
+				titulo.Parent = caixa
+
+				local texto = Instance.new("TextLabel")
+				texto.Position = UDim2.fromOffset(12, 44)
+				texto.Size = UDim2.new(1, -24, 0, 70)
+				texto.BackgroundTransparency = 1
+				texto.Text = "Este comando é para maiores de 18 anos.\nDeseja continuar?"
+				texto.TextColor3 = Color3.new(1, 1, 1)
+				texto.Font = Enum.Font.Gotham
+				texto.TextSize = 15
+				texto.TextWrapped = true
+				texto.Parent = caixa
+
+				local function botaoAviso(rotuloBotao, x, cor)
+					local b = Instance.new("TextButton")
+					b.Position = UDim2.new(x, x == 0 and 12 or 4, 1, -50)
+					b.Size = UDim2.new(0.5, -16, 0, 38)
+					b.BackgroundColor3 = cor
+					b.Text = rotuloBotao
+					b.TextColor3 = Color3.new(1, 1, 1)
+					b.Font = Enum.Font.GothamBold
+					b.TextSize = 15
+					b.Parent = caixa
+					Instance.new("UICorner", b).CornerRadius = UDim.new(0, 10)
+					return b
+				end
+				local bCancelar = botaoAviso("Cancelar", 0, Color3.fromRGB(60, 60, 72))
+				local bContinuar = botaoAviso("Continuar", 0.5, Color3.fromRGB(190, 55, 55))
+				bCancelar.MouseButton1Click:Connect(function() a.Enabled = false end)
+				bContinuar.MouseButton1Click:Connect(function()
+					a.Enabled = false
+					abrirGaleria()
+				end)
+				G.aviso = a
 			end
-			return true -- sem mensagem: ninguém precisa saber que existe
+			G.aviso.Enabled = true
+		end
+
+		-- "xv" aparece nas sugestões e na ajuda igual aos outros comandos
+		comando({ "xv" }, "xv - galeria (conteúdo +18, pede confirmação)", function()
+			if G.gui and G.gui.Enabled then return true end -- já está aberta (feche com unxv)
+			perguntar18()
+			return true
+		end)
+
+		-- "unxv" é a única forma de fechar a galeria (de propósito fora da lista de sugestões)
+		comandos["unxv"] = function()
+			if G.aviso then G.aviso.Enabled = false end
+			if G.gui then
+				G.gui.Enabled = false
+				G.visor.Visible = false
+			end
+			return true
 		end
 	end
 
@@ -8793,46 +9002,4 @@ do
 	opcao("tpInstantaneo", "TP: INSTANTÂNEO", function() return CFG.tpInstantaneo end, function(v) CFG.tpInstantaneo = v end)
 	opcao("tpToolInstantaneo", "TPTOOL: INSTANTÂNEO", function() return CFG.tpToolInstantaneo end, function(v) CFG.tpToolInstantaneo = v end)
 
-	local br = novoBotao("RESTAURAR PADRÕES")
-	VIDRO.aplicar(br, false)
-	br.MouseButton1Click:Connect(function()
-		for _, it in ipairs(itens) do aplicar(it, it.padrao) end
-		salvar()
-	end)
-
-	-- carrega o que estava salvo
-	pcall(function()
-		if typeof(isfile) == "function" and typeof(readfile) == "function" and isfile(ARQUIVO_CFG) then
-			local t = HttpService:JSONDecode(readfile(ARQUIVO_CFG))
-			for _, it in ipairs(itens) do
-				if t[it.chave] ~= nil then aplicar(it, t[it.chave]) end
-			end
-		end
-	end)
-end
-
-------------------------------------------------------------
--- LOOP PRINCIPAL
-------------------------------------------------------------
-RunService.RenderStepped:Connect(function()
-	atualizarESP()
-	atualizarFly()
-	atualizarVFly()
-	atualizarSwim()
-	atualizarShiftLock()
-end)
-
--- Ao morrer/respawnar, desliga os voos
-player.CharacterAdded:Connect(function()
-	estado.fly = false
-	estado.vfly = false
-	estado.swim = false
-	pararFly()
-	pararVFly()
-	pararSwim()
-	pintarBotao(botaoSwim, "SWIM", false)
-	pintarBotao(botaoFly, "FLY", false)
-	pintarBotao(botaoVFly, "VFLY", false)
-	atualizarSetasVFly()
-	atualizarBotaoVertical()
-end)
+	local br = novoBotao(
