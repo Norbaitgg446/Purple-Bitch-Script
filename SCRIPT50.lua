@@ -149,6 +149,7 @@ botao.AutoButtonColor = true
 botao.BackgroundTransparency = 1
 botao.TextTransparency = 1
 botao.ZIndex = 10 -- fica na frente do painel
+botao.Visible = false -- só aparece quando digitar "menu" na barra de comandos
 botao.Parent = gui
 Instance.new("UICorner", botao).CornerRadius = UDim.new(0, 12)
 
@@ -168,11 +169,11 @@ painel.Name = "Painel"
 painel.AnchorPoint = Vector2.new(0, 0)
 painel.Position = UDim2.fromOffset((telaInicial.X - larguraInicial) / 2, math.max(20, (telaInicial.Y - alturaInicial) / 2))
 painel.Size = UDim2.new(0, 0, 0, 0)
-painel.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+painel.BackgroundColor3 = Color3.fromRGB(24, 24, 36)
 painel.Visible = false
 painel.ClipsDescendants = true
 painel.Parent = gui
-Instance.new("UICorner", painel).CornerRadius = UDim.new(0, 14)
+Instance.new("UICorner", painel).CornerRadius = UDim.new(0, 8)
 
 -- FOTOS DE FUNDO DO PAINEL (até 4, troca a cada vez que abre o menu)
 local proximaFotoFundo -- chamada em alternarPainel; definida logo abaixo
@@ -182,7 +183,7 @@ do
 	local LINKS_FOTOS = {
 		"https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRo72Vsot2aEMyHqbb1Nij43mYDpQUqGgGLHYvYOu84BD4Y-agSFZXu4U0&s=10", -- foto purple (fundo do painel e botão MENU)
 	}
-	local TRANSPARENCIA_FOTO = 0.4 -- 0 = foto forte, 1 = invisível
+	local TRANSPARENCIA_FOTO = 0.15 -- 0 = foto forte, 1 = invisível
 	local ID_FOTO_FUNDO = "rbxassetid://0" -- plano B (opcional): ID do Roblox
 
 	local fundo = Instance.new("ImageLabel")
@@ -285,7 +286,7 @@ titulo.Size = UDim2.new(1, -54, 0, 40)
 titulo.BackgroundTransparency = 1
 titulo.Text = "Purple Bitch Script" -- nome do projeto
 titulo.TextColor3 = Color3.new(1, 1, 1)
-titulo.Font = Enum.Font.GothamBold
+titulo.Font = Enum.Font.Gotham
 titulo.TextSize = 20
 titulo.TextScaled = true
 titulo.TextXAlignment = Enum.TextXAlignment.Left
@@ -305,7 +306,8 @@ conteudo.Position = UDim2.new(0, 0, 0, 40)
 conteudo.Size = UDim2.new(1, 0, 1, -40)
 conteudo.BackgroundTransparency = 1
 conteudo.BorderSizePixel = 0
-conteudo.ScrollBarThickness = 4
+conteudo.ScrollBarThickness = 2
+conteudo.ScrollBarImageTransparency = 0.5
 conteudo.ScrollingDirection = Enum.ScrollingDirection.Y
 conteudo.CanvasSize = UDim2.new()
 conteudo.AutomaticCanvasSize = Enum.AutomaticSize.Y
@@ -321,7 +323,7 @@ local MENU = { atual = "Movimento", abas = {}, mostrar = nil,
 do -- bloco (libera variáveis locais)
 CONSTS.CATEGORIAS = { "Movimento", "Combate", "Visão", "Jogadores", "Extras", "Config", "Ajuda" }
 local LARGURA_LATERAL = 104
-CONSTS.COR_DESTAQUE = Color3.fromRGB(130, 60, 255)
+CONSTS.COR_DESTAQUE = Color3.fromRGB(100, 60, 230)
 conteudo.Position = UDim2.new(0, LARGURA_LATERAL + 12, 0, 40)
 conteudo.Size = UDim2.new(1, -(LARGURA_LATERAL + 12), 1, -40)
 
@@ -329,14 +331,12 @@ local lateral = Instance.new("ScrollingFrame")
 lateral.Name = "Categorias"
 lateral.Position = UDim2.new(0, 8, 0, 44)
 lateral.Size = UDim2.new(0, LARGURA_LATERAL, 1, -88)
-lateral.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
-lateral.BackgroundTransparency = 0.25
+lateral.BackgroundTransparency = 1
 lateral.BorderSizePixel = 0
-lateral.ScrollBarThickness = 2
+lateral.ScrollBarThickness = 0
 lateral.CanvasSize = UDim2.new()
 lateral.AutomaticCanvasSize = Enum.AutomaticSize.Y
 lateral.Parent = painel
-Instance.new("UICorner", lateral).CornerRadius = UDim.new(0, 10)
 do
 	local lay = Instance.new("UIListLayout")
 	lay.SortOrder = Enum.SortOrder.LayoutOrder
@@ -356,11 +356,11 @@ do
 		b.BackgroundTransparency = 1
 		b.Text = nome
 		b.TextColor3 = Color3.new(1, 1, 1)
-		b.Font = Enum.Font.GothamBold
+		b.Font = Enum.Font.Gotham
 		b.TextSize = 14
 		b.AutoButtonColor = false
 		b.Parent = lateral
-		Instance.new("UICorner", b).CornerRadius = UDim.new(0, 8)
+		Instance.new("UICorner", b).CornerRadius = UDim.new(0, 4)
 		MENU.abas[nome] = b
 		b.MouseButton1Click:Connect(function()
 			if MENU.mostrar then MENU.mostrar(nome) end
@@ -404,35 +404,28 @@ ligarArrasto(alcaResize,
 
 local COR_OFF = Color3.fromRGB(170, 50, 50)
 
--- ESTILO "BOLHA" (vidro transparente) dos botões do menu principal
--- Mude aqui para ajustar: transparência maior = mais transparente
+-- ESTILO das linhas do menu principal: liso, sem contorno, sem brilho
 local VIDRO = {
-	corOff = Color3.fromRGB(255, 255, 255), transpOff = 0.92, -- desligado: quase só o contorno
-	corOn = Color3.fromRGB(110, 235, 150), transpOn = 0.75, -- ligado: leve brilho verde
-	transpTexto = 0, -- texto (0 = forte, 1 = invisível)
-	transpContorno = 0.45, -- contorno fininho
+	corOff = Color3.fromRGB(20, 20, 32), transpOff = 0.8, -- linha desligada: quase transparente, a foto aparece
+	corOn = Color3.fromRGB(100, 60, 230), transpOn = 0.55, -- linha ligada: roxo leve, a foto aparece
+	transpTexto = 0,
 }
 function VIDRO.aplicar(b, ligado)
 	b.BackgroundColor3 = ligado and VIDRO.corOn or VIDRO.corOff
 	b.BackgroundTransparency = ligado and VIDRO.transpOn or VIDRO.transpOff
-	b.TextColor3 = Color3.new(0, 0, 0) -- texto preto
+	b.TextColor3 = Color3.new(1, 1, 1) -- texto branco normal
 	b.Font = Enum.Font.Gotham -- fonte normal (sem negrito)
 	b.TextTransparency = VIDRO.transpTexto
 	b.TextStrokeTransparency = 1 -- sem contorno no texto
+	b.AutoButtonColor = false
 	local contorno = b:FindFirstChildOfClass("UIStroke")
-	if not contorno then
-		contorno = Instance.new("UIStroke")
-		contorno.Parent = b
-	end
-	contorno.Color = Color3.new(1, 1, 1)
-	contorno.Thickness = 1.2
-	contorno.Transparency = VIDRO.transpContorno
+	if contorno then contorno:Destroy() end -- sem borda
 end
 
--- LISTA ORGANIZADA: duas colunas, todos os botões do mesmo tamanho, um embaixo do outro.
+-- LISTA: uma coluna, todas as linhas do mesmo tamanho, uma embaixo da outra.
 -- O 1º número de criarLinha é só a ordem na grade (menor = primeiro).
-local ALTURA_BOTAO = 38
-local ESPACO = 6
+local ALTURA_BOTAO = 36
+local ESPACO = 4
 
 local lista = Instance.new("UIListLayout") -- empilha: grade de botões em cima, dicas embaixo
 lista.SortOrder = Enum.SortOrder.LayoutOrder
@@ -454,13 +447,13 @@ grade.AutomaticSize = Enum.AutomaticSize.Y
 grade.BackgroundTransparency = 1
 grade.Parent = conteudo
 
--- Os botões ficam numa grade de 2 colunas (só aparecem os da categoria escolhida; o resto some e a grade se reorganiza).
+-- Os botões ficam numa lista de 1 coluna (só aparecem os da categoria escolhida; o resto some e a grade se reorganiza).
 do
 	local gl = Instance.new("UIGridLayout")
-	gl.CellSize = UDim2.new(0.5, -ESPACO / 2, 0, ALTURA_BOTAO)
+	gl.CellSize = UDim2.new(1, 0, 0, ALTURA_BOTAO)
 	gl.CellPadding = UDim2.fromOffset(ESPACO, ESPACO)
 	gl.SortOrder = Enum.SortOrder.LayoutOrder
-	gl.FillDirectionMaxCells = 2
+	gl.FillDirectionMaxCells = 1
 	gl.Parent = grade
 end
 
@@ -496,34 +489,41 @@ local function criarLinha(ordem, nome, comVelocidade, velocidadePadrao)
 	local b = Instance.new("TextButton")
 	b.Name = "Botao" .. nome
 	b.Position = UDim2.new(0, 0, 0, 0)
-	b.Size = UDim2.new(0.68, 0, 1, 0) -- todos os botões têm o mesmo tamanho
+	b.Size = comVelocidade and UDim2.new(0.76, 0, 1, 0) or UDim2.new(1, 0, 1, 0) -- todas as linhas têm a mesma altura
 	b.Text = (MENU.trad[nome] or nome) .. ": DESLIGADO"
 	VIDRO.aplicar(b, false)
-	b.Font = Enum.Font.GothamBold
-	b.TextSize = 15
+	b.Font = Enum.Font.Gotham
+	b.TextSize = 13
+	b.TextXAlignment = Enum.TextXAlignment.Left
 	b.TextScaled = true -- o texto encolhe se não couber
 	local limite = Instance.new("UITextSizeConstraint")
-	limite.MaxTextSize = 15
+	limite.MaxTextSize = 13
 	limite.MinTextSize = 8
 	limite.Parent = b
 	b.Parent = celulaFrame
-	Instance.new("UICorner", b).CornerRadius = UDim.new(0, 10)
+	Instance.new("UICorner", b).CornerRadius = UDim.new(0, 4)
+	do
+		local pad = Instance.new("UIPadding")
+		pad.PaddingLeft, pad.PaddingRight = UDim.new(0, 12), UDim.new(0, 8)
+		pad.PaddingTop, pad.PaddingBottom = UDim.new(0, 5), UDim.new(0, 5)
+		pad.Parent = b
+	end
 
 	local caixa = nil
 	if comVelocidade then
 		caixa = Instance.new("TextBox")
 		caixa.Name = "Velocidade" .. nome
-		caixa.Position = UDim2.new(0.70, 0, 0, 0)
-		caixa.Size = UDim2.new(0.30, 0, 1, 0)
+		caixa.Position = UDim2.new(0.78, 0, 0, 0)
+		caixa.Size = UDim2.new(0.22, 0, 1, 0)
 		VIDRO.aplicar(caixa, false)
 		caixa.Text = tostring(velocidadePadrao)
 		caixa.PlaceholderText = "vel."
 		caixa.PlaceholderColor3 = Color3.fromRGB(140, 140, 140)
-		caixa.Font = Enum.Font.GothamBold
-		caixa.TextSize = 15
+		caixa.Font = Enum.Font.Gotham
+		caixa.TextSize = 13
 		caixa.ClearTextOnFocus = false
 		caixa.Parent = celulaFrame
-		Instance.new("UICorner", caixa).CornerRadius = UDim.new(0, 10)
+		Instance.new("UICorner", caixa).CornerRadius = UDim.new(0, 4)
 	end
 	return b, caixa
 end
@@ -582,7 +582,7 @@ do
 	busca.TextXAlignment = Enum.TextXAlignment.Left
 	busca.ClearTextOnFocus = false
 	busca.Parent = dica
-	Instance.new("UICorner", busca).CornerRadius = UDim.new(0, 8)
+	Instance.new("UICorner", busca).CornerRadius = UDim.new(0, 4)
 	do
 		local pad = Instance.new("UIPadding")
 		pad.PaddingLeft, pad.PaddingRight = UDim.new(0, 10), UDim.new(0, 10)
@@ -593,7 +593,7 @@ do
 	local AJUDA = {
 		{ cab = "COMO USAR" },
 		{ t = "MENU E PAINEL", c = "menu · m",
-			d = "Toque no botão MENU para abrir e fechar. Arraste o título do painel (ou o botão MENU) para mover; arraste o canto de baixo à direita para mudar o tamanho. Escolha a categoria na lateral. Alguns botões têm uma caixinha ao lado: digite a velocidade, o valor ou o nome do jogador e ligue o botão." },
+			d = "O menu não aparece sozinho: digite menu na barra de comandos para mostrar o botão MENU e abrir o painel. Depois, toque no botão MENU (ou digite menu de novo) para abrir e fechar. Arraste o título do painel (ou o botão MENU) para mover; arraste o canto de baixo à direita para mudar o tamanho. Escolha a categoria na lateral. Alguns botões têm uma caixinha ao lado: digite a velocidade, o valor ou o nome do jogador e ligue o botão." },
 		{ t = "BARRA DE COMANDOS", c = "tecla , (vírgula) no PC",
 			d = "A tirinha > comandos no canto da tela (arraste para mover). Toque nela: abre a caixa de digitar com a lista de comandos, que filtra enquanto você digita (toque num comando para completar). Enter, fechar o teclado ou tocar fora fecha. Vários de uma vez, separados por vírgula: fly 80, np. Para ligar use o comando; para desligar, un + comando (ex.: fly e unfly)." },
 		{ t = "AJUDA NA BARRA", c = "cmds · help · ajuda · ?", d = "Mostra a lista completa de comandos na barra." },
@@ -718,7 +718,7 @@ function MENU.mostrar(nome)
 	end
 	dica.Visible = (nome == "Ajuda")
 	for n, b in pairs(MENU.abas) do
-		b.BackgroundTransparency = (n == nome) and 0.1 or 1
+		b.BackgroundTransparency = (n == nome) and 0.4 or 1
 	end
 	conteudo.CanvasPosition = Vector2.new(0, 0)
 end
@@ -739,12 +739,17 @@ end
 ------------------------------------------------------------
 -- ANIMAÇÃO DE ENTRADA DO BOTÃO
 ------------------------------------------------------------
-task.wait(0.5)
-TweenService:Create(botao, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-	Size = UDim2.new(0, 52, 0, 52), -- quadrado (combina com a foto do botão)
-	BackgroundTransparency = 0,
-	TextTransparency = 0,
-}):Play()
+-- (guardado na tabela MENU para não gastar variável local: o Roblox só aceita 200)
+function MENU.mostrarBotao() -- chamada pelo comando "menu" (só na primeira vez)
+	if MENU.botaoMostrado then return end
+	MENU.botaoMostrado = true
+	botao.Visible = true
+	TweenService:Create(botao, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+		Size = UDim2.new(0, 52, 0, 52), -- quadrado (combina com a foto do botão)
+		BackgroundTransparency = 0,
+		TextTransparency = 0,
+	}):Play()
+end
 
 ------------------------------------------------------------
 -- ABRIR / FECHAR PAINEL
@@ -1376,18 +1381,6 @@ do
 	local botaoAlvo = criarLinha(15, "ALVO", false)
 	local botaoParede = criarLinha(16, "PAREDE", false)
 	local botaoTime = criarLinha(17, "TIME", false)
-	-- célula vazia: completa a linha para as 3 opções do aimbot ficarem juntas e separadas das outras configurações
-	do
-		local vazio = Instance.new("Frame")
-		vazio.Name = "CelulaAimVazia"
-		vazio.LayoutOrder = 18
-		vazio.Size = UDim2.new(1, 0, 0, ALTURA_BOTAO)
-		vazio.BackgroundTransparency = 1
-		vazio:SetAttribute("Categoria", "Config")
-		vazio.Visible = (MENU.atual == "Config")
-		vazio.Parent = grade
-	end
-
 	local function pintarOpcoes()
 		botaoAlvo.Text = "AIM ALVO: " .. (aim.parte == "Head" and "CABEÇA" or "TRONCO")
 		VIDRO.aplicar(botaoAlvo, false)
@@ -2828,7 +2821,7 @@ botaoCriarSpawn.Text = "+ Criar spawn aqui"
 botaoCriarSpawn.Font = Enum.Font.GothamMedium
 botaoCriarSpawn.TextSize = 12
 botaoCriarSpawn.AutoButtonColor = true
-VIDRO.vidroSpawn(botaoCriarSpawn, VIDRO.corOn, 0.62)
+VIDRO.vidroSpawn(botaoCriarSpawn, Color3.fromRGB(110, 235, 150), 0.62)
 botaoCriarSpawn.Parent = painelSpawn
 Instance.new("UICorner", botaoCriarSpawn).CornerRadius = UDim.new(0, 8)
 
@@ -2962,7 +2955,7 @@ function criarLinhaSpawn(cframeSalvo, nomeSalvo)
 	ir.Text = "IR"
 	ir.Font = Enum.Font.GothamBold
 	ir.TextSize = 12
-	VIDRO.vidroSpawn(ir, VIDRO.corOn, 0.6)
+	VIDRO.vidroSpawn(ir, Color3.fromRGB(110, 235, 150), 0.6)
 	ir.Parent = linha
 	Instance.new("UICorner", ir).CornerRadius = UDim.new(0, 6)
 
@@ -5775,12 +5768,11 @@ local function iniciarTeclado()
 		BackgroundColor3 = Color3.fromRGB(48, 22, 86),
 		BackgroundTransparency = 0.05,
 		AutoButtonColor = false,
-		Text = "›  comandos",
-		TextColor3 = Color3.fromRGB(225, 205, 255),
+		Text = "comandos",
+		TextColor3 = Color3.new(0, 0, 0),
 		Font = Enum.Font.GothamMedium,
 		TextSize = 12,
 	}, cmdFrame)
-	novo("UICorner", { CornerRadius = UDim.new(0, 8) }, icone)
 	-- (sem UIGradient no fundo da tira: ele também pintaria o texto do botão)
 	efeitoBorda(novo("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 1.5, Transparency = 0.15 }, icone), 5)
 
@@ -5817,7 +5809,6 @@ local function iniciarTeclado()
 		TextXAlignment = Enum.TextXAlignment.Left,
 		ClearTextOnFocus = false,
 	}, painelCmd)
-	novo("UICorner", { CornerRadius = UDim.new(0, 7) }, caixaCmd)
 	novo("UIStroke", { Color = Color3.fromRGB(150, 90, 255), Thickness = 1, Transparency = 0.55 }, caixaCmd)
 	novo("UIPadding", { PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8) }, caixaCmd)
 	-- iOS: sem a caixa de texto nativa (o quadrado branco); digita direto na barra
@@ -5949,7 +5940,7 @@ local function iniciarTeclado()
 			return a.i < b.i
 		end)
 
-		-- Cada linha: COMANDO (vermelho) | divisória neon | explicação (lilás claro)
+		-- Cada linha: COMANDO (vermelho) | divisória branca | explicação (lilás claro)
 		-- A descrição original é "comando args / uncomando - explicação": separa no primeiro " - "
 		for k, a in ipairs(achados) do
 			local esq, dir = a.e.desc:match("^(.-)%s+%-%s+(.+)$")
@@ -5986,16 +5977,10 @@ local function iniciarTeclado()
 			local divisoria = novo("Frame", {
 				AnchorPoint = Vector2.new(0, 0.5),
 				Position = UDim2.new(0, 128, 0.5, 0),
-				Size = UDim2.new(0, 2, 0.7, 0),
+				Size = UDim2.new(0, 1, 0.7, 0),
 				BackgroundColor3 = Color3.new(1, 1, 1),
 				BorderSizePixel = 0,
 			}, linha)
-			novo("UICorner", { CornerRadius = UDim.new(1, 0) }, divisoria)
-			novo("UIGradient", {
-				Rotation = 90,
-				Color = ColorSequence.new(Color3.fromRGB(255, 90, 220), Color3.fromRGB(110, 120, 255)),
-			}, divisoria)
-			novo("UIStroke", { Color = Color3.fromRGB(190, 110, 255), Thickness = 1, Transparency = 0.6 }, divisoria)
 			novo("TextLabel", {
 				Position = UDim2.fromOffset(140, 0),
 				Size = UDim2.new(1, -146, 1, 0),
@@ -8387,7 +8372,8 @@ local function iniciarTeclado()
 	comandoSentar("ombro", { "ssit", "shouldersit", "sentarombro" }, "ssit <jogador> / unssit - sentar no ombro de um jogador (pular sai)")
 	comandoSentar("frente", { "fsit", "frontsit", "sentarfrente" }, "fsit <jogador> / unfsit - sentar de frente para um jogador (pular sai)")
 
-	comando({ "menu", "m" }, "menu ou m - abrir/fechar o menu", function()
+	comando({ "menu", "m" }, "menu ou m - mostrar o botão MENU e abrir/fechar o menu", function()
+		MENU.mostrarBotao() -- na primeira vez o botão MENU aparece junto com o painel
 		alternarPainel()
 		return true, aberto and "Menu aberto" or "Menu fechado"
 	end)
@@ -9047,15 +9033,21 @@ do
 		local b = Instance.new("TextButton")
 		b.Size = UDim2.new(1, 0, 1, 0)
 		b.Text = texto
-		b.Font = Enum.Font.GothamBold
-		b.TextSize = 14
+		b.Font = Enum.Font.Gotham
+		b.TextSize = 13
+		b.TextXAlignment = Enum.TextXAlignment.Left
 		b.TextScaled = true
 		b.Parent = f
-		Instance.new("UICorner", b).CornerRadius = UDim.new(0, 10)
+		Instance.new("UICorner", b).CornerRadius = UDim.new(0, 4)
+		local pad = Instance.new("UIPadding")
+		pad.PaddingLeft, pad.PaddingRight = UDim.new(0, 12), UDim.new(0, 8)
+		pad.PaddingTop, pad.PaddingBottom = UDim.new(0, 5), UDim.new(0, 5)
+		pad.Parent = b
 		local lim = Instance.new("UITextSizeConstraint")
-		lim.MaxTextSize = 14
+		lim.MaxTextSize = 13
 		lim.MinTextSize = 8
 		lim.Parent = b
+		VIDRO.aplicar(b, false)
 		return b
 	end
 
@@ -9127,3 +9119,71 @@ player.CharacterAdded:Connect(function()
 	atualizarSetasVFly()
 	atualizarBotaoVertical()
 end)
+
+------------------------------------------------------------
+-- AVISO AO EXECUTAR: tela escurece e mostra a mensagem por 5 segundos.
+-- Qualquer tecla, clique ou toque na tela fecha na hora.
+------------------------------------------------------------
+do
+	local TEXTO_AVISO = 'Digite "ajuda", "help", "cmds" ou "?" para saber os comandos'
+	local SEGUNDOS_AVISO = 5
+
+	local g = Instance.new("ScreenGui")
+	g.Name = "AvisoInicial"
+	g.ResetOnSpawn = false
+	g.IgnoreGuiInset = true
+	g.DisplayOrder = 100
+	g.Parent = playerGui
+
+	local escuro = Instance.new("Frame")
+	escuro.Size = UDim2.fromScale(1, 1)
+	escuro.BackgroundColor3 = Color3.new(0, 0, 0)
+	escuro.BackgroundTransparency = 1
+	escuro.BorderSizePixel = 0
+	escuro.Active = false -- não segura toques do jogo
+	escuro.Parent = g
+
+	local texto = Instance.new("TextLabel")
+	texto.AnchorPoint = Vector2.new(0.5, 0.5)
+	texto.Position = UDim2.fromScale(0.5, 0.47)
+	texto.Size = UDim2.new(1, -40, 0, 30)
+	texto.BackgroundTransparency = 1
+	texto.Text = TEXTO_AVISO
+	texto.TextColor3 = Color3.new(1, 1, 1)
+	texto.TextTransparency = 1
+	texto.Font = Enum.Font.GothamBold
+	texto.TextSize = 18
+	texto.TextWrapped = true
+	texto.Parent = escuro
+
+	TweenService:Create(escuro, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { BackgroundTransparency = 0.2 }):Play()
+	TweenService:Create(texto, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { TextTransparency = 0 }):Play()
+
+	local fechado = false
+	local con
+	local function fechar()
+		if fechado then return end
+		fechado = true
+		if con then con:Disconnect() end
+		local info = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+		pcall(function()
+			TweenService:Create(escuro, info, { BackgroundTransparency = 1 }):Play()
+			TweenService:Create(texto, info, { TextTransparency = 1 }):Play()
+		end)
+		task.delay(0.35, function() g:Destroy() end)
+	end
+
+	-- pequena folga para o toque que executou o script não fechar o aviso
+	task.delay(0.3, function()
+		if fechado then return end
+		con = UserInputService.InputBegan:Connect(function(input)
+			local t = input.UserInputType
+			if t == Enum.UserInputType.Keyboard or t == Enum.UserInputType.Touch
+				or t == Enum.UserInputType.MouseButton1 or t == Enum.UserInputType.MouseButton2
+				or t == Enum.UserInputType.MouseButton3 or t == Enum.UserInputType.Gamepad1 then
+				fechar()
+			end
+		end)
+	end)
+	task.delay(SEGUNDOS_AVISO, fechar)
+end
