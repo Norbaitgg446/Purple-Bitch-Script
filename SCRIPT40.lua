@@ -1,4 +1,6 @@
 -- LocalScript
+-- v38: barrinha no super velocidade (carrega mesmo mexendo a câmera), anéis dos pés só com o pé no chão, pulo infinito sem empilhar,
+--      anotações com rolagem/editor grande/redimensionável, ajuda completa com busca, novas opções em Config.
 -- Onde colocar: StarterGui (ou StarterPlayer > StarterPlayerScripts)
 -- Recursos: ESP (nome + distância), Chams (contorno/preenchimento), Fly e VFly (veículo) com velocidade ajustável
 
@@ -313,7 +315,8 @@ local MENU = { atual = "Movimento", abas = {}, mostrar = nil,
 	-- ajustes do sonar do Xray (mudam na categoria Config)
 	sonar = { ligado = true, intervalo = 4, alcance = 120, duracao = 1.8 },
 	-- liga/desliga da categoria Config
-	cfg = { barraVida = true, alertaChams = true, swimEfeitos = true, noclipTransp = true, tpInstantaneo = false, tpToolInstantaneo = false } }
+	cfg = { barraVida = true, alertaChams = true, swimEfeitos = true, noclipTransp = true, tpInstantaneo = false, tpToolInstantaneo = false,
+		superVel = true, flashVel = true, fxChakra = true, fxPulo = true, fxPuloInfinito = true, zoomEscuro = true } }
 do -- bloco (libera variáveis locais)
 local CATEGORIAS = { "Movimento", "Combate", "Visão", "Jogadores", "Extras", "Config", "Ajuda" }
 local LARGURA_LATERAL = 104
@@ -549,21 +552,162 @@ local botaoRejoin = criarLinha(13, "REJOIN", false)
 botaoRejoin.Text = "REENTRAR"
 
 
-local dica = Instance.new("TextLabel")
+local dica = Instance.new("Frame") -- categoria "Ajuda": guia completo (com busca)
 dica.Name = "Dicas"
 dica.LayoutOrder = 2
 dica.Size = UDim2.new(1, 0, 0, 0)
 dica.AutomaticSize = Enum.AutomaticSize.Y
 dica.BackgroundTransparency = 1
-dica.TextWrapped = true
-dica.TextXAlignment = Enum.TextXAlignment.Left
-dica.TextYAlignment = Enum.TextYAlignment.Top
-dica.Text = "Mover: arraste o título do painel ou o botão MENU. Tamanho: arraste o ◢ do canto.\nFly: WASD/analógico para mover, mire a câmera para subir/descer.\nEspaço/E = subir, Shift/Q = descer.\nVFLY: use sentado em um veículo. Aparecem setas na tela (esquerda: ▲▼◀▶ andam; direita: SOBE/DESCE) para jogos em que o analógico não move o veículo; arraste o ≡ para mudar de lugar.\nNOCLIP: atravessa paredes (sem o Fly você cai pelo chão).\nSWIM: nada no ar como se estivesse na água.\nSPAWNS: salve posições (ficam gravadas por jogo, se o executor permitir), renomeie, veja a distância e clique em IR para voar até lá. O nome aparece discreto em cima do spawn quando você está perto.\nVIEW: escolha um jogador para ver pela câmera dele (espectar). Na barra de cima, ◀ ▶ trocam de jogador e SAIR volta pra você. Comando: view <jogador> / unview.\nTP: digite na busca para filtrar; a lista mostra a distância. Clique no nome (ou dê Enter na busca para ir no primeiro da lista) para voar até o jogador em velocidade supersônica.\nXRAY: deixa o mapa transparente (caixa: 0 = normal, 0.95 = quase invisível).\nTPTOOL: dá um item no inventário; equipe e clique/toque onde quer ir (você voa até lá em uma fração de segundo, com os efeitos de velocidade e o estrondo na chegada).\nSHIFTLOCK: mostra o cadeado na tela (arraste para mover). Toque nele: azul = travado, branco = solto. O ⇄ embaixo troca o ombro da câmera. Comando: sl / unsl.\nAIMBOT: bolinha verde no centro = alcance (digite o tamanho na caixa). A mira muda ao travar: na cabeça os tracinhos fecham (vermelho), no tronco eles abrem (laranja); a vida do alvo aparece pequena no canto da bolinha. ALVO troca cabeça/tronco, PAREDE = mirar através de paredes, TIME = ignorar seu time. Comando: aim [tamanho] / unaim.\nBARRA DE COMANDOS: a barrinha \"> comandos\" no canto de baixo da tela (arraste para mover). Toque nela e abre um painel escuro com a caixa de digitar e a lista de comandos logo abaixo, que filtra enquanto você digita (toque num comando para completar). Ao dar Enter, fechar o teclado ou tocar fora, o painel volta para a tira fina. Ex.: fly 80, unfly, np, xy, rj. No PC, a tecla , (vírgula) também abre a barra. Vários comandos de uma vez: fly 80, np."
-dica.TextColor3 = Color3.fromRGB(170, 170, 180)
-dica.Font = Enum.Font.Gotham
-dica.TextSize = 12
 dica.Visible = false -- só aparece na categoria "Ajuda"
 dica.Parent = conteudo
+do
+	local lay = Instance.new("UIListLayout")
+	lay.SortOrder = Enum.SortOrder.LayoutOrder
+	lay.Padding = UDim.new(0, 9)
+	lay.Parent = dica
+
+	-- Caixa de busca: digite o nome da função ou qualquer apelido do comando (ex.: nadar, sw, fly, np)
+	local busca = Instance.new("TextBox")
+	busca.Name = "BuscaAjuda"
+	busca.LayoutOrder = 0
+	busca.Size = UDim2.new(1, 0, 0, 32)
+	busca.BackgroundColor3 = Color3.new(1, 1, 1)
+	busca.BackgroundTransparency = 0.9
+	busca.Text = ""
+	busca.PlaceholderText = "Buscar função ou comando (ex.: nadar, sw, fly)"
+	busca.PlaceholderColor3 = Color3.fromRGB(150, 150, 160)
+	busca.TextColor3 = Color3.new(1, 1, 1)
+	busca.Font = Enum.Font.Gotham
+	busca.TextSize = 13
+	busca.TextXAlignment = Enum.TextXAlignment.Left
+	busca.ClearTextOnFocus = false
+	busca.Parent = dica
+	Instance.new("UICorner", busca).CornerRadius = UDim.new(0, 8)
+	do
+		local pad = Instance.new("UIPadding")
+		pad.PaddingLeft, pad.PaddingRight = UDim.new(0, 10), UDim.new(0, 10)
+		pad.Parent = busca
+	end
+
+	-- t = nome da função | c = comandos (todos os apelidos; "un" + comando desliga) | d = o que faz
+	local AJUDA = {
+		{ cab = "COMO USAR" },
+		{ t = "MENU E PAINEL", c = "menu · m",
+			d = "Toque no botão MENU para abrir e fechar. Arraste o título do painel (ou o botão MENU) para mover; arraste o canto de baixo à direita para mudar o tamanho. Escolha a categoria na lateral. Alguns botões têm uma caixinha ao lado: digite a velocidade, o valor ou o nome do jogador e ligue o botão." },
+		{ t = "BARRA DE COMANDOS", c = "tecla , (vírgula) no PC",
+			d = "A tirinha > comandos no canto da tela (arraste para mover). Toque nela: abre a caixa de digitar com a lista de comandos, que filtra enquanto você digita (toque num comando para completar). Enter, fechar o teclado ou tocar fora fecha. Vários de uma vez, separados por vírgula: fly 80, np. Para ligar use o comando; para desligar, un + comando (ex.: fly e unfly)." },
+		{ t = "AJUDA NA BARRA", c = "cmds · help · ajuda · ?", d = "Mostra a lista completa de comandos na barra." },
+
+		{ cab = "MOVIMENTO" },
+		{ t = "VOAR (FLY)", c = "fly · voar [vel]   |   unfly · unvoar",
+			d = "Voa livre. Analógico/WASD move e a câmera para cima/baixo sobe/desce (PC: Espaço/E sobe, Shift/Q desce). Velocidade de 1 a 500 (caixinha ou comando, ex.: fly 80). Em velocidade alta aparecem riscos de vento e a tela treme. Segurando a velocidade máxima a barrinha enche e ativa o SUPER VOO (3x mais rápido, só para frente). O corpo deita acompanhando a câmera (pose de herói)." },
+		{ t = "VOAR (VEÍCULO)", c = "vf [vel]   |   unvf",
+			d = "Use sentado num veículo. Setas na tela: as da esquerda andam e as da direita fazem SOBE/DESCE (para jogos em que o analógico não move o veículo). Também tem super voo." },
+		{ t = "NADAR NO AR", c = "swim · sw · nadar [vel]   |   unswim · unsw · unnadar",
+			d = "Nada no ar como se estivesse na água. Velocidade de 1 a 500 (padrão 40). Os efeitos podem ser desligados em Config." },
+		{ t = "ATRAVESSAR PAREDES", c = "np · noclip   |   unnp · unnoclip",
+			d = "Atravessa paredes e objetos; as partes que você toca ficam transparentes. Sem o Fly você cai pelo chão." },
+		{ t = "GRUDAR NO CHÃO", c = "grudar · gd   |   ungrudar · ungd",
+			d = "Você acompanha carros e plataformas que se mexem, mas ainda anda normal. Anéis azuis aparecem no chão embaixo de cada pé, só enquanto aquele pé está apoiado." },
+		{ t = "ANDAR NAS PAREDES", c = "wall · parede   |   unwall · unparede",
+			d = "Anda no chão, nas paredes e no teto, contorna quinas e acompanha rampas; a câmera continua normal. Os anéis azuis ficam colados na superfície, só com o pé apoiado." },
+		{ t = "VELOCIDADE DE ANDAR", c = "speed · velocidade [1 a 500]   |   unspeed · unvelocidade",
+			d = "Muda a velocidade de andar (vale de novo depois de renascer). A partir de 150 liga o modo Flash: linhas de velocidade e raios. Correndo nele, a barrinha enche e ativa o SUPER (2x mais rápido e campo de visão aberto). Virar a câmera ou torcer o analógico não zera a carga." },
+		{ t = "FORÇA DO PULO", c = "jump · pulo [1 a 500]   |   unjump · unpulo",
+			d = "Muda a força do pulo. A partir de 150 o pulo e a queda fazem onda de impacto, poeira e rachaduras." },
+		{ t = "PULO INFINITO", c = "flyjump · fj   |   unflyjump · unfj",
+			d = "Cada toque no pular dá um novo pulo, mesmo no ar, com dois anéis rápidos embaixo dos pés (sem acumular)." },
+		{ t = "EFEITOS", c = "fx · efeitos [0.1 a 1]   |   unfx · unefeitos",
+			d = "Liga e desliga os efeitos discretos: flash da velocidade, pulo, anéis de grudar e paredes. O número muda a intensidade. Cada efeito também liga/desliga separado na categoria Config." },
+		{ t = "SENTAR", c = "sit · sentar", d = "Senta o personagem." },
+
+		{ cab = "JOGADORES" },
+		{ t = "TELEPORTAR", c = "tp · ir · teleportar [jogador]",
+			d = "Vai até um jogador (aceita parte do nome) em velocidade supersônica. No menu, digite na busca para filtrar a lista com as distâncias e toque no nome." },
+		{ t = "ESPECTAR", c = "view [jogador]   |   unview",
+			d = "Vê pela câmera de outro jogador. Na barra de cima, as setas trocam de jogador e SAIR volta para você." },
+		{ t = "SEGUIR JOGADOR", c = "seguir · follow [jogador]   |   unseguir · unfollow",
+			d = "Segue um jogador: longe, dá um dash até ele; perto, anda atrás." },
+		{ t = "ORBITAR JOGADOR", c = "orbitar · orbit · obt [jogador] [velocidade] [distância]   |   unorbitar · unorbit · unobt",
+			d = "Gira em volta de um jogador atravessando paredes. Velocidade em graus por segundo, distância em studs." },
+		{ t = "SENTAR EM JOGADOR",
+			c = "hsit · headsit · sentarcabeca  (cabeça)\nbsit · backsit · sentarcostas  (costas)\nssit · shouldersit · sentarombro  (ombro)\nfsit · frontsit · sentarfrente  (de frente)\nPara sair: un + comando (ex.: unhsit) ou pular",
+			d = "Senta em cima de um jogador: comando + nome (ex.: hsit joao)." },
+
+		{ cab = "VISÃO E COMBATE" },
+		{ t = "VER JOGADORES (ESP)", c = "esp · espectar   |   unesp · unespectar",
+			d = "Nome e distância dos jogadores na tela. A barra de vida pode ser desligada em Config." },
+		{ t = "CONTORNO (CHAMS)", c = "cm · contorno   |   uncm · uncontorno",
+			d = "Contorno e preenchimento nos jogadores, visíveis através das paredes." },
+		{ t = "MIRA AUTOMÁTICA", c = "aim · aimbot · mira [tamanho]   |   unaim · unaimbot · unmira",
+			d = "Bolinha verde no centro = alcance (digite o tamanho). Ao travar: na cabeça os tracinhos fecham (vermelho), no tronco abrem (laranja). Botões: ALVO (cabeça/tronco), PAREDE (mirar através de paredes) e TIME (ignorar o seu time)." },
+		{ t = "MAPA TRANSPARENTE (XRAY)", c = "xy · xray [0 a 0.95]   |   unxy · unxray",
+			d = "Deixa o mapa transparente (0 = normal, 0.95 = quase invisível), com um sonar que acende o que passa por ele." },
+		{ t = "CÂMERA TRAVADA (SHIFTLOCK)", c = "sl · shiftlock   |   unsl · unshiftlock",
+			d = "Mostra o cadeado na tela (arraste para mover). Azul = travado, branco = solto. O botão de setas embaixo troca o ombro da câmera." },
+		{ t = "ZOOM LUNETA", c = "zoom [1.5 a 100]   |   unzoom",
+			d = "Aproxima como uma luneta de pirata, em 1ª pessoa, com o escuro em volta da lente (dá para desligar em Config). A roda do mouse ajusta o aumento." },
+		{ t = "CÂMERA LIVRE", c = "freecam · fc · camera · câmera [vel]   |   unfreecam · unfc · uncamera · uncâmera",
+			d = "Câmera solta, com o personagem parado." },
+		{ t = "RÉGUA", c = "regua · ruler   |   unregua · unruler",
+			d = "Toque em 2 pontos e veja a distância em studs." },
+
+		{ cab = "EXTRAS" },
+		{ t = "FERRAMENTA TP", c = "tptool · tpt   |   untptool · untpt",
+			d = "Dá um item no inventário. Equipe e toque onde quer ir: você voa até lá numa fração de segundo, com os efeitos de velocidade." },
+		{ t = "LOCAIS SALVOS (SPAWNS)", c = "set [nome]   |   go [nome ou número]",
+			d = "set salva a posição atual; go vai até ela (sem nome mostra a lista). No menu dá para renomear, ver a distância e tocar em IR." },
+		{ t = "ANOTAÇÕES", c = "notas · notes",
+			d = "Caderno com folhas. + NOVA cria; ABRIR mostra a folha inteira, com rolagem; X exclui. Arraste o título para mover e o canto de baixo para mudar o tamanho. Salva sozinho." },
+		{ t = "ANTI-AFK", c = "afk   |   unafk", d = "Não ser expulso por ficar parado (começa ligado)." },
+		{ t = "AVISOS DE ENTRADA", c = "avisos   |   unavisos", d = "Mostra na tela quando jogadores entram e saem." },
+		{ t = "FPS", c = "fps1 · fps2 · fps3   |   unfps",
+			d = "Deixa o jogo mais leve. 1 = sem sombras e texturas simples. 2 = o 1 + sem efeitos, animações dos outros e menos distância. 3 = o 2 + tudo liso (lego). unfps volta ao normal." },
+		{ t = "REENTRAR", c = "rj · rejoin", d = "Reentra no servidor." },
+
+		{ cab = "CONFIG" },
+		{ t = "CONFIG: LIGAR/DESLIGAR CADA EFEITO", c = "categoria Config",
+			d = "FLY: SUPER VOO · FLY: POSE DE HERÓI · FLY: EFEITO DE VELOCIDADE · SPEED: SUPER VELOCIDADE · SPEED: EFEITO FLASH · GRUDAR/WALL: BOLINHAS NOS PÉS · PULO: ONDA E POEIRA · PULO INFINITO: EFEITO · ZOOM: ESCURO EM VOLTA · SWIM: EFEITOS · NOCLIP: TRANSPARÊNCIA · ESP: BARRA DE VIDA · CHAMS: ALERTA VERMELHO · XRAY: SONAR · TP: INSTANTÂNEO · TPTOOL: INSTANTÂNEO. Fica salvo. RESTAURAR PADRÕES volta tudo ao início." },
+	}
+
+	local itens = {}
+	for i, e in ipairs(AJUDA) do
+		local l = Instance.new("TextLabel")
+		l.LayoutOrder = i
+		l.Size = UDim2.new(1, 0, 0, 0)
+		l.AutomaticSize = Enum.AutomaticSize.Y
+		l.BackgroundTransparency = 1
+		l.TextWrapped = true
+		l.RichText = true
+		l.TextXAlignment = Enum.TextXAlignment.Left
+		l.TextYAlignment = Enum.TextYAlignment.Top
+		l.Font = Enum.Font.Gotham
+		l.TextSize = 12
+		l.TextColor3 = Color3.fromRGB(200, 200, 212)
+		if e.cab then
+			l.TextSize = 13
+			l.Text = '<b><font color="#B48CFF">' .. e.cab .. "</font></b>"
+		else
+			l.Text = "<b>" .. e.t .. '</b>\n<font color="#8FD0FF">' .. e.c .. "</font>\n" .. e.d
+		end
+		l.Parent = dica
+		itens[#itens + 1] = { l = l, cab = e.cab ~= nil, txt = string.lower((e.t or "") .. " " .. (e.c or "") .. " " .. (e.d or "")) }
+	end
+
+	local function filtrar()
+		local q = string.lower(busca.Text):match("^%s*(.-)%s*$") or ""
+		for _, it in ipairs(itens) do
+			if q == "" then
+				it.l.Visible = true
+			elseif it.cab then
+				it.l.Visible = false -- títulos de seção somem durante a busca
+			else
+				it.l.Visible = it.txt:find(q, 1, true) ~= nil
+			end
+		end
+	end
+	busca:GetPropertyChangedSignal("Text"):Connect(filtrar)
+end
 
 -- Troca de categoria: mostra só os botões dela e destaca a aba
 function MENU.mostrar(nome)
@@ -4579,11 +4723,50 @@ do -- bloco (libera variáveis locais)
 	painelNotas.Name = "PainelNotas"
 	painelNotas.AnchorPoint = Vector2.new(1, 0.5)
 	painelNotas.Position = UDim2.new(0.5, -160, 0.5, 0)
-	painelNotas.Size = UDim2.new(0, 290, 0, 380)
+	painelNotas.Size = UDim2.new(0, 262, 0, 330) -- menor; arraste o canto de baixo para aumentar/diminuir
 	painelNotas.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
 	painelNotas.Visible = false
 	painelNotas.Parent = gui
 	Instance.new("UICorner", painelNotas).CornerRadius = UDim.new(0, 14)
+
+	-- Alça de redimensionar (canto de baixo à direita): arraste para deixar o caderno maior ou menor
+	do
+		local alcaNotas = Instance.new("TextButton")
+		alcaNotas.Name = "AlcaNotas"
+		alcaNotas.AnchorPoint = Vector2.new(1, 1)
+		alcaNotas.Position = UDim2.new(1, 0, 1, 0)
+		alcaNotas.Size = UDim2.fromOffset(30, 30)
+		alcaNotas.BackgroundColor3 = Color3.fromRGB(60, 60, 68)
+		alcaNotas.BackgroundTransparency = 0.35
+		alcaNotas.Text = ""
+		alcaNotas.AutoButtonColor = false
+		alcaNotas.ZIndex = 20
+		alcaNotas.Parent = painelNotas
+		Instance.new("UICorner", alcaNotas).CornerRadius = UDim.new(0, 10)
+		for _, d in ipairs({ 5, 10, 15 }) do -- três tracinhos na diagonal (desenhados, sem depender de fonte)
+			local t = Instance.new("Frame")
+			t.AnchorPoint = Vector2.new(0.5, 0.5)
+			t.Position = UDim2.fromOffset(30 - d * 0.7071, 30 - d * 0.7071)
+			t.Size = UDim2.fromOffset(d * 1.3, 2)
+			t.Rotation = -45
+			t.BackgroundColor3 = Color3.new(1, 1, 1)
+			t.BackgroundTransparency = 0.2
+			t.BorderSizePixel = 0
+			t.ZIndex = 21
+			t.Active = false
+			t.Parent = alcaNotas
+		end
+		local tamNotasIni
+		ligarArrasto(alcaNotas,
+			function() tamNotasIni = painelNotas.AbsoluteSize end,
+			function(delta)
+				local tela, pos = tamanhoTela(), painelNotas.AbsolutePosition
+				local w = math.clamp(tamNotasIni.X + delta.X, 200, math.max(200, tela.X - pos.X))
+				local h = math.clamp(tamNotasIni.Y + delta.Y, 230, math.max(230, tela.Y - pos.Y))
+				painelNotas.Size = UDim2.fromOffset(w, h)
+			end
+		)
+	end
 
 	local tituloNotas = Instance.new("TextLabel")
 	tituloNotas.Size = UDim2.new(1, 0, 0, 40)
@@ -4671,11 +4854,12 @@ do -- bloco (libera variáveis locais)
 		table.sort(ordenados, function(a, b) return a.frame.LayoutOrder < b.frame.LayoutOrder end)
 		local textos = {}
 		for _, c in ipairs(ordenados) do textos[#textos + 1] = c.caixa.Text end
-		local ok = pcall(function() writefile(ARQUIVO_NOTAS, HttpService:JSONEncode(textos)) end)
+		local ok, erroSalvar = pcall(function() writefile(ARQUIVO_NOTAS, HttpService:JSONEncode(textos)) end)
 		if ok then
-			mostrarAviso("Salvo ✓", COR_AVISO_VERDE, true)
+			mostrarAviso("Salvo", COR_AVISO_VERDE, true)
 		else
-			mostrarAviso("Não foi possível salvar", COR_AVISO_VERMELHO, false)
+			warn("Anotações: não foi possível salvar: " .. tostring(erroSalvar))
+			mostrarAviso("Não salvou: " .. tostring(erroSalvar):sub(1, 38), COR_AVISO_VERMELHO, false)
 		end
 	end
 
@@ -4710,8 +4894,95 @@ do -- bloco (libera variáveis locais)
 		return f
 	end
 
-	-- A folha tem altura FIXA (calculada pelo texto), então aparece inteira na hora, sem esperar o layout.
+	-- EDITOR GRANDE: o botão ABRIR da folha mostra ela inteira, com rolagem, ocupando o painel todo
+	local editor = Instance.new("Frame")
+	editor.Name = "EditorNota"
+	editor.Position = UDim2.new(0.05, 0, 0, 44)
+	editor.Size = UDim2.new(0.9, 0, 1, -76)
+	editor.BackgroundTransparency = 1
+	editor.Visible = false
+	editor.Parent = painelNotas
+
+	local botaoVoltar = Instance.new("TextButton")
+	botaoVoltar.Size = UDim2.new(1, 0, 0, 32)
+	botaoVoltar.BackgroundColor3 = Color3.fromRGB(60, 70, 105)
+	botaoVoltar.Text = "< VOLTAR PARA A LISTA"
+	botaoVoltar.TextColor3 = Color3.new(1, 1, 1)
+	botaoVoltar.Font = Enum.Font.GothamBold
+	botaoVoltar.TextSize = 13
+	botaoVoltar.Parent = editor
+	Instance.new("UICorner", botaoVoltar).CornerRadius = UDim.new(0, 8)
+
+	local edRolo = Instance.new("ScrollingFrame")
+	edRolo.Position = UDim2.new(0, 0, 0, 38)
+	edRolo.Size = UDim2.new(1, 0, 1, -38)
+	edRolo.BackgroundColor3 = Color3.fromRGB(253, 252, 246)
+	edRolo.BorderSizePixel = 0
+	edRolo.ScrollBarThickness = 5
+	edRolo.ScrollingDirection = Enum.ScrollingDirection.Y
+	edRolo.CanvasSize = UDim2.new()
+	edRolo.ClipsDescendants = true
+	edRolo.Parent = editor
+	Instance.new("UICorner", edRolo).CornerRadius = UDim.new(0, 6)
+
+	local edCaixa = Instance.new("TextBox")
+	edCaixa.Size = UDim2.new(1, -8, 1, 0)
+	edCaixa.BackgroundTransparency = 1
+	edCaixa.Text = ""
+	edCaixa.PlaceholderText = "Escreva aqui..."
+	edCaixa.PlaceholderColor3 = Color3.fromRGB(160, 165, 180)
+	edCaixa.TextColor3 = Color3.fromRGB(35, 40, 70)
+	edCaixa.Font = Enum.Font.PatrickHand
+	edCaixa.TextSize = 20
+	edCaixa.MultiLine = true
+	edCaixa.TextWrapped = true
+	edCaixa.ClearTextOnFocus = false
+	edCaixa.TextXAlignment = Enum.TextXAlignment.Left
+	edCaixa.TextYAlignment = Enum.TextYAlignment.Top
+	edCaixa.Parent = edRolo
+	do
+		local pad = Instance.new("UIPadding")
+		pad.PaddingLeft, pad.PaddingRight, pad.PaddingTop, pad.PaddingBottom = UDim.new(0, 8), UDim.new(0, 8), UDim.new(0, 8), UDim.new(0, 8)
+		pad.Parent = edCaixa
+	end
+
+	local itemAberto -- folha que está aberta no editor
+	local function ajustarEditor()
+		local h = math.max(edRolo.AbsoluteSize.Y, math.ceil(edCaixa.TextBounds.Y) + 48)
+		edCaixa.Size = UDim2.new(1, -8, 0, h)
+		edRolo.CanvasSize = UDim2.fromOffset(0, h)
+		if edCaixa:IsFocused() and edCaixa.CursorPosition > #edCaixa.Text then -- escrevendo no fim: acompanha o texto
+			edRolo.CanvasPosition = Vector2.new(0, math.max(0, h - edRolo.AbsoluteSize.Y))
+		end
+	end
+	edCaixa:GetPropertyChangedSignal("TextBounds"):Connect(ajustarEditor)
+	edRolo:GetPropertyChangedSignal("AbsoluteSize"):Connect(ajustarEditor)
+	edCaixa:GetPropertyChangedSignal("Text"):Connect(function()
+		if itemAberto and itemAberto.caixa.Text ~= edCaixa.Text then itemAberto.caixa.Text = edCaixa.Text end -- salva junto
+	end)
+
+	local function abrirEditor(item)
+		itemAberto = nil
+		edCaixa.Text = item.caixa.Text
+		itemAberto = item
+		botaoNova.Visible = false
+		listaNotas.Visible = false
+		editor.Visible = true
+		edRolo.CanvasPosition = Vector2.new(0, 0)
+		task.defer(ajustarEditor)
+	end
+	local function fecharEditor()
+		if edCaixa:IsFocused() then edCaixa:ReleaseFocus() end
+		itemAberto = nil
+		editor.Visible = false
+		botaoNova.Visible = true
+		listaNotas.Visible = true
+	end
+	botaoVoltar.MouseButton1Click:Connect(fecharEditor)
+
+	-- A folha tem altura limitada: passou disso, o texto rola dentro dela (ou abra no editor grande).
 	local ALTURA_MIN = 120
+	local ALTURA_MAX = 200
 	local function criarCartao(texto)
 		contador += 1
 		local cartao = Instance.new("Frame")
@@ -4748,9 +5019,9 @@ do -- bloco (libera variáveis locais)
 
 		local data = Instance.new("TextLabel") -- espaço de data (decoração)
 		data.Position = UDim2.fromOffset(40, 5)
-		data.Size = UDim2.new(1, -76, 0, 18)
+		data.Size = UDim2.new(1, -140, 0, 18)
 		data.BackgroundTransparency = 1
-		data.Text = "Data:  ____ / ____ / ________"
+		data.Text = "Data: __/__/____"
 		data.TextColor3 = Color3.fromRGB(140, 145, 160)
 		data.Font = Enum.Font.PatrickHand
 		data.TextSize = 14
@@ -4758,9 +5029,21 @@ do -- bloco (libera variáveis locais)
 		data.ZIndex = 2
 		data.Parent = cartao
 
+		-- o texto fica dentro de uma área que rola: texto comprido nunca some
+		local rolo = Instance.new("ScrollingFrame")
+		rolo.Position = UDim2.fromOffset(40, TOPO_TEXTO)
+		rolo.Size = UDim2.new(1, -76, 1, -TOPO_TEXTO)
+		rolo.BackgroundTransparency = 1
+		rolo.BorderSizePixel = 0
+		rolo.ScrollBarThickness = 3
+		rolo.ScrollingDirection = Enum.ScrollingDirection.Y
+		rolo.CanvasSize = UDim2.new()
+		rolo.ZIndex = 2
+		rolo.Parent = cartao
+
 		local caixa = Instance.new("TextBox")
-		caixa.Position = UDim2.fromOffset(40, TOPO_TEXTO)
-		caixa.Size = UDim2.new(1, -76, 1, -TOPO_TEXTO)
+		caixa.Position = UDim2.fromOffset(0, 0)
+		caixa.Size = UDim2.new(1, -6, 1, 0)
 		caixa.BackgroundTransparency = 1
 		caixa.Text = texto or ""
 		caixa.PlaceholderText = "Escreva aqui..."
@@ -4775,7 +5058,7 @@ do -- bloco (libera variáveis locais)
 		caixa.TextXAlignment = Enum.TextXAlignment.Left
 		caixa.TextYAlignment = Enum.TextYAlignment.Top
 		caixa.ZIndex = 2
-		caixa.Parent = cartao
+		caixa.Parent = rolo
 		do
 			local pad = Instance.new("UIPadding")
 			pad.PaddingLeft = UDim.new(0, 2)
@@ -4789,7 +5072,7 @@ do -- bloco (libera variáveis locais)
 		excluir.Position = UDim2.new(1, -4, 0, 4)
 		excluir.Size = UDim2.fromOffset(24, 24)
 		excluir.BackgroundColor3 = COR_OFF
-		excluir.Text = "✕"
+		excluir.Text = "X" -- (o símbolo ✕ aparecia como quadradinho em alguns celulares)
 		excluir.TextColor3 = Color3.new(1, 1, 1)
 		excluir.Font = Enum.Font.GothamBold
 		excluir.TextSize = 13
@@ -4797,12 +5080,33 @@ do -- bloco (libera variáveis locais)
 		excluir.Parent = cartao
 		Instance.new("UICorner", excluir).CornerRadius = UDim.new(0, 6)
 
-		-- a folha cresce junto com o texto
+		local expandir = Instance.new("TextButton")
+		expandir.AnchorPoint = Vector2.new(1, 0)
+		expandir.Position = UDim2.new(1, -32, 0, 4)
+		expandir.Size = UDim2.fromOffset(48, 24)
+		expandir.BackgroundColor3 = Color3.fromRGB(70, 90, 150)
+		expandir.Text = "ABRIR"
+		expandir.TextColor3 = Color3.new(1, 1, 1)
+		expandir.Font = Enum.Font.GothamBold
+		expandir.TextSize = 11
+		expandir.ZIndex = 5
+		expandir.Parent = cartao
+		Instance.new("UICorner", expandir).CornerRadius = UDim.new(0, 6)
+
+		-- a folha cresce junto com o texto até ALTURA_MAX; depois disso o texto rola dentro dela
 		local function reajustar()
-			local h = math.max(ALTURA_MIN, TOPO_TEXTO + caixa.TextBounds.Y + 24)
+			local textoAlt = math.ceil(caixa.TextBounds.Y) + 12
+			local h = math.max(ALTURA_MIN, TOPO_TEXTO + textoAlt + 12)
 			h = math.ceil(h / ESPACO_LINHA) * ESPACO_LINHA + 8 -- fecha na pauta
+			h = math.min(h, ALTURA_MAX)
 			if cartao.Size.Y.Offset ~= h then cartao.Size = UDim2.new(1, -6, 0, h) end
+			local alturaCaixa = math.max(textoAlt, h - TOPO_TEXTO)
+			caixa.Size = UDim2.new(1, -6, 0, alturaCaixa)
+			rolo.CanvasSize = UDim2.fromOffset(0, alturaCaixa)
 			desenhar(h)
+			if caixa:IsFocused() and caixa.CursorPosition > #caixa.Text then -- escrevendo no fim: acompanha o texto
+				rolo.CanvasPosition = Vector2.new(0, math.max(0, alturaCaixa - rolo.AbsoluteSize.Y))
+			end
 		end
 		reajustar()
 		caixa:GetPropertyChangedSignal("TextBounds"):Connect(reajustar)
@@ -4811,6 +5115,10 @@ do -- bloco (libera variáveis locais)
 
 		local item = { frame = cartao, caixa = caixa }
 		cartoes[#cartoes + 1] = item
+		expandir.MouseButton1Click:Connect(function()
+			abrirEditor(item)
+			task.defer(function() edCaixa:CaptureFocus() end)
+		end)
 
 		caixa:GetPropertyChangedSignal("Text"):Connect(agendarSalvar)
 		caixa.FocusLost:Connect(function()
@@ -4821,6 +5129,7 @@ do -- bloco (libera variáveis locais)
 			for i, c in ipairs(cartoes) do
 				if c == item then table.remove(cartoes, i) break end
 			end
+			if itemAberto == item then fecharEditor() end
 			cartao:Destroy()
 			versaoSalvar += 1
 			salvarNotas()
@@ -6038,7 +6347,7 @@ local function iniciarTeclado()
 		local SUPER_ANDAR_TEMPO = 5  -- segundos correndo na velocidade Flash até ativar o SUPER (como o super voo)
 		local SUPER_ANDAR_MULT = 2   -- quantas vezes mais rápido fica no super
 		local SUPER_ANDAR_FOV = 12   -- campo de visão extra no super (sem tremer a tela)
-		local SUPER_TOLERANCIA = 0.5 -- segundos que pode sair da velocidade sem perder a carga
+		local SUPER_TOLERANCIA = 0.8 -- segundos que pode sair da velocidade sem perder a carga (mexer a câmera/analógico não zera)
 		local COR_POEIRA = Color3.fromRGB(190, 185, 175)
 		local COR_ONDA = Color3.fromRGB(215, 228, 255)
 		local fxLigado = true
@@ -6047,6 +6356,18 @@ local function iniciarTeclado()
 		local rp = RaycastParams.new()
 		rp.FilterType = Enum.RaycastFilterType.Exclude
 		rp.RespectCanCollide = true
+
+		-- Barrinha de carga do SUPER da velocidade (igual à do super voo: enche até ativar)
+		local barraVelGui = novo("ScreenGui", { Name = "BarraSuperVel", ResetOnSpawn = false, IgnoreGuiInset = true, DisplayOrder = 2 }, playerGui)
+		local barraVel = novo("Frame", {
+			Name = "BarraSuperVel", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.7),
+			Size = UDim2.fromOffset(130, 8), BackgroundColor3 = Color3.fromRGB(20, 20, 25), BackgroundTransparency = 0.4,
+			BorderSizePixel = 0, Visible = false,
+		}, barraVelGui)
+		novo("UICorner", { CornerRadius = UDim.new(1, 0) }, barraVel)
+		novo("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 1, Transparency = 0.4 }, barraVel)
+		local encheVel = novo("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0 }, barraVel)
+		novo("UICorner", { CornerRadius = UDim.new(1, 0) }, encheVel)
 
 		local function peca(tam, cf, cor, transp, forma)
 			local p = Instance.new("Part")
@@ -6268,7 +6589,7 @@ local function iniciarTeclado()
 
 			-- pulo: ondinha de luz e poeira ao decolar (maior quando o pulo é forte)
 			o.con[#o.con + 1] = hum.StateChanged:Connect(function(_, novo)
-				if novo ~= Enum.HumanoidStateType.Jumping or not fxLigado or estado.wall then return end
+				if novo ~= Enum.HumanoidStateType.Jumping or not fxLigado or estado.wall or MENU.cfg.fxPulo == false then return end
 				local pos, n = chaoAbaixo(raiz)
 				if not pos then return end
 				if forte(hum) then
@@ -6299,6 +6620,7 @@ local function iniciarTeclado()
 				limpar()
 				inclAlvoR, inclAlvoP = 0, 0
 				cargaVel, semFlash, superAndar, superMixVel, estado.superAndarMult = 0, 0, false, 0, 1
+				barraVel.Visible = false
 				return
 			end
 			if not o or o.raiz ~= raiz or not raiz.Parent then
@@ -6313,9 +6635,12 @@ local function iniciarTeclado()
 			local semFisica = estado.fly or estado.vfly or estado.swim
 
 			-- ===== VELOCIDADE: modo Flash (só com valor muito alto) + SUPER (igual ao super voo) =====
-			local flash = velAndar and velAndar >= FLASH_VEL and not semFisica
-				and Vector3.new(vel.X, 0, vel.Z).Magnitude > 30
-			local ehSuper = SUPER.habilitado ~= false
+			-- "correndo" = está empurrando o analógico/teclado e andando de verdade. Não depende da câmera nem de
+			-- andar reto: virar a câmera ou torcer o analógico não para a carga (só a velocidade real importa).
+			local horiz = Vector3.new(vel.X, 0, vel.Z).Magnitude
+			local tentando = hum.MoveDirection.Magnitude > 0.2
+			local flash = velAndar and velAndar >= FLASH_VEL and not semFisica and tentando and horiz > 25
+			local ehSuper = SUPER.habilitado ~= false and MENU.cfg.superVel ~= false
 			if flash and ehSuper then
 				semFlash = 0
 				if not superAndar then
@@ -6331,29 +6656,37 @@ local function iniciarTeclado()
 				end
 			else
 				semFlash = semFlash + dt
-				if semFlash > SUPER_TOLERANCIA then -- parou de verdade: perde a carga e o super acaba
-					cargaVel, superAndar = 0, false
+				if semFlash > SUPER_TOLERANCIA then
+					if superAndar or not ehSuper then -- parou de verdade: o super acaba
+						cargaVel, superAndar = 0, false
+					else -- a carga esvazia devagar (dentro da tolerância ela só fica parada)
+						cargaVel = math.max(0, cargaVel - dt * 2)
+					end
 				end
 			end
+			barraVel.Visible = cargaVel > 0.02 and not superAndar
+			encheVel.Size = UDim2.fromScale(cargaVel, 1)
+			encheVel.BackgroundColor3 = Color3.new(1, 1, 1):Lerp(COR_FLASH_VERM, cargaVel)
+			local flashVis = flash and MENU.cfg.flashVel ~= false -- (config: efeito visual do flash)
 			estado.superAndarMult = superAndar and SUPER_ANDAR_MULT or 1
 			superMixVel = superMixVel + ((superAndar and 1 or 0) - superMixVel) * (1 - math.exp(-dt * 5))
 			if superMixVel < 0.01 then superMixVel = 0 end
 
-			local alvoFlash = flash and (superAndar and 1 or 0.3) or 0
+			local alvoFlash = flashVis and (superAndar and 1 or 0.3) or 0
 			o.nivelFlash = o.nivelFlash + (alvoFlash - o.nivelFlash) * (1 - math.exp(-dt * 6))
 			for _, tr in ipairs(o.trilhas) do
-				tr.Enabled = flash and true or false
+				tr.Enabled = flashVis and true or false
 				local vida = superAndar and 0.55 or 0.35
 				if tr.Lifetime ~= vida then tr.Lifetime = vida end
 			end
-			o.faiscas.Rate = flash and 14 * DISCRETO * (superAndar and 3 or 1) or 0
+			o.faiscas.Rate = flashVis and 14 * DISCRETO * (superAndar and 3 or 1) or 0
 			o.luz.Brightness = 1.4 * o.nivelFlash
 			o.luz.Color = superAndar and COR_FLASH_VERM or COR_FLASH
 			o.dest.FillTransparency = 1 - 0.22 * superMixVel
 			o.dest.OutlineTransparency = 1 - 0.7 * o.nivelFlash
 			o.dest.OutlineColor = superAndar and COR_FLASH_VERM or COR_FLASH_AMAR
 			local intervaloRaio = (superAndar and 0.12 or 0.35) / math.max(DISCRETO, 0.3)
-			if flash and agora - tRaio > intervaloRaio then
+			if flashVis and agora - tRaio > intervaloRaio then
 				tRaio = agora
 				relampago(raiz.Position, superAndar and 1.5 or 1)
 			end
@@ -6369,7 +6702,9 @@ local function iniciarTeclado()
 				if noArAntes then
 					noArAntes = false
 					local queda = topo - y
-					if queda >= QUEDA_MIN and forte(hum) then
+					if MENU.cfg.fxPulo == false then
+						-- (config: efeitos de pulo desligados)
+					elseif queda >= QUEDA_MIN and forte(hum) then
 						aterrissar(raiz, queda)
 					elseif queda >= 4 then -- queda normal: só uma ondinha e um sopro de poeira
 						local pos, n = chaoAbaixo(raiz)
@@ -6390,6 +6725,7 @@ local function iniciarTeclado()
 				and hum.FloorMaterial ~= Enum.Material.Air then
 				modo = 1
 			end
+			if MENU.cfg.fxChakra == false then modo = 0 end
 			local alvo = modo == 2 and 1 or (modo == 1 and 0.7 or 0)
 			nivel = nivel + (alvo - nivel) * (1 - math.exp(-dt * 8))
 			local pos = raiz.Position + up * (o.pe + 0.1)
@@ -6402,18 +6738,37 @@ local function iniciarTeclado()
 			modoAntes = modo
 
 			local opac = nivel * 0.75 * DISCRETO * (modo == 2 and 1.2 or 1) * (1 + 0.2 * math.sin(agora * 3.2))
-			local diam = modo == 2 and 2.2 or 1.9
-			for _, a in ipairs(o.aneis) do
-				if a.parte.Parent then
-					local pulso = 1 + 0.08 * math.sin(agora * 6 + a.fase)
-					a.p.Transparency = 1 - math.clamp(opac, 0, 1)
-					a.p.Size = Vector3.new(0.06, diam * pulso, diam * pulso)
-					a.p.CFrame = a.parte.CFrame * CFrame.new(a.desloc) * CFrame.Angles(0, 0, math.pi / 2) -- cola no pé, deitado ao pé
+			local diam = modo == 2 and 2.0 or 1.7
+			-- Cada anel só aparece com AQUELE pé encostado na superfície, e fica colado nela (não em cima do pé).
+			-- Pé levantado no passo = o anel some; pé apoiado = o anel aparece no chão (ou na parede/teto).
+			rp.FilterDescendantsInstances = { player.Character }
+			for i, a in ipairs(o.aneis) do
+				local alvoVis = 0
+				if a.parte.Parent and nivel > 0.02 then
+					local meia = a.parte.Size.Y / 2
+					local r = workspace:Raycast(a.parte.Position + up * 0.3, -up * (0.3 + meia + 1.2), rp)
+					if r then
+						local folga = r.Distance - 0.3 - meia -- distância da sola do pé até a superfície
+						alvoVis = math.clamp(1 - (folga - 0.25) / 0.45, 0, 1)
+						a.ponto, a.normal = r.Position, r.Normal
+					end
 				end
+				a.vis = (a.vis or 0) + (alvoVis - (a.vis or 0)) * (1 - math.exp(-dt * 18))
+				if a.vis < 0.01 then a.vis = 0 end
+				if a.ponto and a.vis > 0 then
+					local pulso = 1 + 0.08 * math.sin(agora * 6 + a.fase)
+					local n = a.normal
+					local ref = math.abs(n.Y) > 0.9 and Vector3.zAxis or Vector3.yAxis
+					a.p.Transparency = 1 - math.clamp(opac * a.vis, 0, 1)
+					a.p.Size = Vector3.new(0.06, diam * pulso, diam * pulso)
+					a.p.CFrame = CFrame.fromMatrix(a.ponto + n * 0.04, n, n:Cross(ref).Unit) -- eixo do cilindro = normal da superfície
+				else
+					a.p.Transparency = 1
+				end
+				local em, fa = o.chakras[i], o.faiscasP[i]
+				if em then em.Rate = nivel * 8 * DISCRETO * (modo == 2 and 1.4 or 1) * a.vis end
+				if fa then fa.Rate = ((modo == 2 and vel.Magnitude > 4) and 6 * DISCRETO or 0) * a.vis end
 			end
-			for _, e in ipairs(o.chakras) do e.Rate = nivel * 8 * DISCRETO * (modo == 2 and 1.4 or 1) end
-			local taxaFaisca = (modo == 2 and vel.Magnitude > 4) and 6 * DISCRETO or 0
-			for _, e in ipairs(o.faiscasP) do e.Rate = taxaFaisca end
 			-- troca de superfície (chão -> parede -> teto): faísca + câmera inclina de leve e volta
 			if modo == 2 then
 				upRef = upRef:Lerp(up, 1 - math.exp(-dt * 3))
@@ -6615,7 +6970,8 @@ local function iniciarTeclado()
 			local lado = math.min(tela.X, tela.Y) * 0.95
 			local diametro = lado * (1.5 - 0.5 * p)
 			local meiaDiagonal = 0.5 * math.sqrt(tela.X * tela.X + tela.Y * tela.Y)
-			local alfaCamada = 1 - (1 - LUNETA_ESCURO) ^ (1 / LUNETA_CAMADAS)
+			local escuro = (MENU.cfg.zoomEscuro == false) and 0 or LUNETA_ESCURO -- (config: escuro em volta da lente)
+			local alfaCamada = 1 - (1 - escuro) ^ (1 / LUNETA_CAMADAS)
 			for i, a in ipairs(lunetaAneis) do
 				local d = diametro * (1 - (i - 1) / (LUNETA_CAMADAS - 1) * 0.5)
 				a.f.Size = UDim2.fromOffset(d, d)
@@ -6756,47 +7112,31 @@ local function iniciarTeclado()
 
 	do -- bloco (não gasta variáveis locais da função)
 		-- efeito do pulo no ar: dois anéis finos de luz que abrem embaixo dos pés + faíscas caindo (só você vê)
+		local ultimoFJ, aneisFJ = 0, {}
 		local function efeitoFlyJump(raiz, hum)
+			if MENU.cfg.fxPuloInfinito == false then return end
+			local agora = os.clock()
+			if agora - ultimoFJ < 0.4 then return end -- tocar várias vezes seguidas não empilha efeito
+			ultimoFJ = agora
+			for _, a in ipairs(aneisFJ) do if a.Parent then a:Destroy() end end -- tira o anterior antes de criar outro
+			table.clear(aneisFJ)
 			local pe = raiz.Position - Vector3.new(0, hum.HipHeight + raiz.Size.Y / 2 - 0.1, 0)
-			local function anel(tam, final, dur, atraso, cor)
-				task.delay(atraso, function()
-					local p = Instance.new("Part")
-					p.Anchored, p.CanCollide, p.CanQuery, p.CanTouch, p.CastShadow = true, false, false, false, false
-					p.Material = Enum.Material.Neon
-					p.Color = cor
-					p.Shape = Enum.PartType.Cylinder
-					p.Transparency = 0.3
-					p.Size = Vector3.new(0.06, tam, tam)
-					p.CFrame = CFrame.new(pe) * CFrame.Angles(0, 0, math.pi / 2)
-					p.Parent = workspace
-					TweenService:Create(p, TweenInfo.new(dur, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-						{ Size = Vector3.new(0.06, final, final), Transparency = 1 }):Play()
-					task.delay(dur + 0.05, function() p:Destroy() end)
-				end)
+			-- só dois anéis finos, bem rápidos, abrindo embaixo dos pés
+			for _, d in ipairs({ { 0.8, 3.4, 0.28, Color3.fromRGB(190, 235, 255) }, { 0.5, 2.2, 0.22, Color3.fromRGB(255, 255, 255) } }) do
+				local p = Instance.new("Part")
+				p.Anchored, p.CanCollide, p.CanQuery, p.CanTouch, p.CastShadow = true, false, false, false, false
+				p.Material = Enum.Material.Neon
+				p.Color = d[4]
+				p.Shape = Enum.PartType.Cylinder
+				p.Transparency = 0.35
+				p.Size = Vector3.new(0.05, d[1], d[1])
+				p.CFrame = CFrame.new(pe) * CFrame.Angles(0, 0, math.pi / 2)
+				p.Parent = workspace
+				aneisFJ[#aneisFJ + 1] = p
+				TweenService:Create(p, TweenInfo.new(d[3], Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+					{ Size = Vector3.new(0.05, d[2], d[2]), Transparency = 1 }):Play()
+				task.delay(d[3] + 0.05, function() if p.Parent then p:Destroy() end end)
 			end
-			anel(1.2, 5.5, 0.4, 0, Color3.fromRGB(190, 235, 255))
-			anel(0.8, 3.6, 0.35, 0.07, Color3.fromRGB(255, 255, 255))
-
-			local base = Instance.new("Part")
-			base.Anchored, base.CanCollide, base.CanQuery, base.CanTouch = true, false, false, false
-			base.Transparency = 1
-			base.Size = Vector3.one * 0.2
-			base.CFrame = CFrame.new(pe)
-			base.Parent = workspace
-			local e = Instance.new("ParticleEmitter")
-			e.Rate = 0
-			e.Lifetime = NumberRange.new(0.3, 0.55)
-			e.Speed = NumberRange.new(6, 12)
-			e.SpreadAngle = Vector2.new(35, 35)
-			e.EmissionDirection = Enum.NormalId.Bottom
-			e.LightEmission = 1
-			e.Color = ColorSequence.new(Color3.fromRGB(255, 255, 255), Color3.fromRGB(120, 200, 255))
-			e.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.3), NumberSequenceKeypoint.new(1, 0) })
-			e.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.2), NumberSequenceKeypoint.new(1, 1) })
-			e.Drag = 2
-			e.Parent = base
-			e:Emit(14)
-			task.delay(1, function() base:Destroy() end)
 		end
 
 		UserInputService.JumpRequest:Connect(function()
@@ -7982,7 +8322,7 @@ local function iniciarTeclado()
 	do
 		-- >>> COLE AQUI OS LINKS DAS 12 FOTOS (deixe "" nos espaços vazios) <<<
 		local LINKS_GALERIA = {
-			"", "", "", "",
+			"https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSfZYU-2RBNlqL8ZDsRtFJob8ndW6Du7wdpTN2dXFHBU8j1FScLzw1XOPc&s=10", "", "", "",
 			"", "", "", "",
 			"", "", "", "",
 		}
@@ -8436,6 +8776,14 @@ do
 	end
 
 	opcao("super", "FLY: SUPER VOO", function() return SUPER.habilitado ~= false end, function(v) SUPER.habilitado = v end)
+	opcao("flyPose", "FLY: POSE DE HERÓI", function() return POSE_HEROI end, function(v) POSE_HEROI = v end)
+	opcao("flyEfeito", "FLY: EFEITO DE VELOCIDADE", function() return EFEITO_VELOCIDADE end, function(v) EFEITO_VELOCIDADE = v end)
+	opcao("superVel", "SPEED: SUPER VELOCIDADE", function() return CFG.superVel ~= false end, function(v) CFG.superVel = v end)
+	opcao("flashVel", "SPEED: EFEITO FLASH", function() return CFG.flashVel ~= false end, function(v) CFG.flashVel = v end)
+	opcao("fxChakra", "GRUDAR/WALL: BOLINHAS NOS PÉS", function() return CFG.fxChakra ~= false end, function(v) CFG.fxChakra = v end)
+	opcao("fxPulo", "PULO: ONDA E POEIRA", function() return CFG.fxPulo ~= false end, function(v) CFG.fxPulo = v end)
+	opcao("fxPuloInfinito", "PULO INFINITO: EFEITO", function() return CFG.fxPuloInfinito ~= false end, function(v) CFG.fxPuloInfinito = v end)
+	opcao("zoomEscuro", "ZOOM: ESCURO EM VOLTA", function() return CFG.zoomEscuro ~= false end, function(v) CFG.zoomEscuro = v end)
 	opcao("swimEfeitos", "SWIM: EFEITOS", function() return CFG.swimEfeitos end, function(v) CFG.swimEfeitos = v end)
 	opcao("noclipTransp", "NOCLIP: TRANSPARÊNCIA", function() return CFG.noclipTransp end, function(v) CFG.noclipTransp = v end)
 	opcao("barraVida", "ESP: BARRA DE VIDA", function() return CFG.barraVida end, function(v) CFG.barraVida = v end)
@@ -8482,8 +8830,4 @@ player.CharacterAdded:Connect(function()
 	pararVFly()
 	pararSwim()
 	pintarBotao(botaoSwim, "SWIM", false)
-	pintarBotao(botaoFly, "FLY", false)
-	pintarBotao(botaoVFly, "VFLY", false)
-	atualizarSetasVFly()
-	atualizarBotaoVertical()
-end)
+	pintarBotao(
