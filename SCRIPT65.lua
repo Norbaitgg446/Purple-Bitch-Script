@@ -1,4 +1,6 @@
 -- LocalScript
+-- v65: autoclick mede sozinho onde o clique cai; copiar visual limpa tudo que prende você no outro jogador (scripts, soldas, constraints).
+-- v64: arrasto sem pulo e clique no lugar certo (mede o desvio do toque); copiar visual sem soldas do outro jogador (não gruda mais).
 -- v63: autoclick clica direto no botão/ClickDetector embaixo da bolinha (sem calibrar); copiar visual clona mesmo com Archivable desligado.
 -- v62: copiar visual copia TUDO (cabelo, acessórios, corpo, rosto, escala), pulo normal sem efeito, autoclick com calibração do clique + minimizar/redimensionar, sentar em jogador sem tremer a câmera.
 -- v61: sem créditos e sem efeito azul ao sentar, comandos com vários apelidos, botões novos no menu, autoclick com bolinhas, chat log maior, copiar visual com plano B, busca parcial de jogador.
@@ -95,6 +97,17 @@ local function tamanhoTela()
 end
 
 -- Acompanha um dedo/mouse que começou em "alca" e chama aoMover(delta) enquanto ele anda
+-- Posição "crua" do último toque (UserInputService). Os eventos dos botões (GuiObject) dão a posição num sistema
+-- deslocado em relação a ela; a diferença (CONSTS.DELTA) é medida a cada toque e usada no autoclick.
+CONSTS.ultimoU, CONSTS.ultimoUt = nil, 0
+UserInputService.InputBegan:Connect(function(input)
+	local t = input.UserInputType
+	if t == Enum.UserInputType.Touch or t == Enum.UserInputType.MouseButton1 then
+		CONSTS.ultimoU, CONSTS.ultimoUt = Vector2.new(input.Position.X, input.Position.Y), os.clock()
+	end
+end)
+
+-- Acompanha um dedo/mouse que começou em "alca" e chama aoMover(delta) enquanto ele anda
 local function ligarArrasto(alca, aoIniciar, aoMover, aoSoltar)
 	local atual, inicio, moveu = nil, nil, false
 
@@ -104,8 +117,16 @@ local function ligarArrasto(alca, aoIniciar, aoMover, aoSoltar)
 			return
 		end
 		atual = input
-		inicio = Vector2.new(input.Position.X, input.Position.Y)
+		local posGui = Vector2.new(input.Position.X, input.Position.Y)
+		inicio = nil -- definido no 1º movimento, no mesmo sistema de posição dos próximos (senão o item "pula")
 		moveu = false
+		task.defer(function() -- mede o desvio entre a posição do botão e a posição real do toque
+			local u = CONSTS.ultimoU
+			if u and os.clock() - CONSTS.ultimoUt < 0.3 then
+				local d = u - posGui
+				if d.Magnitude < 400 then CONSTS.DELTA = d end
+			end
+		end)
 		if aoIniciar then aoIniciar() end
 
 		input.Changed:Connect(function()
@@ -123,7 +144,12 @@ local function ligarArrasto(alca, aoIniciar, aoMover, aoSoltar)
 			and input.UserInputType == Enum.UserInputType.MouseMovement
 		if not (mesmoDedo or mouse) then return end
 
-		local delta = Vector2.new(input.Position.X, input.Position.Y) - inicio
+		local pos = Vector2.new(input.Position.X, input.Position.Y)
+		if not inicio then
+			inicio = pos
+			return
+		end
+		local delta = pos - inicio
 		if not moveu and delta.Magnitude < CONSTS.LIMITE_ARRASTO then return end
 		moveu = true
 		aoMover(delta)
@@ -7142,7 +7168,108 @@ local function iniciarTeclado()
 
 		-- O clique NÃO usa mais a posição do mouse na tela (no celular ela saía deslocada). Ele é feito direto
 		-- no que está embaixo da bolinha: o botão da tela, o ClickDetector do mundo ou a ferramenta da mão.
-		function AC.garantirCalib(cb) cb() end
+		-- MEDIÇÃO AUTOMÁTICA (sem você fazer nada): põe um quadradinho invisível no lugar da bolinha, move o mouse
+		-- virtual por perto até o quadradinho "sentir" o mouse e descobre onde o clique realmente cai (posição e escala).
+		function AC.medir(cg, palpite)
+			if not AC.vim then
+				local ok, v = pcall(function() return game:GetService("VirtualInputManager") end)
+				AC.vim = ok and v or false
+			end
+			local vim = AC.vim
+			if not (vim and typeof(vim.SendMouseMoveEvent) == "function") then return nil end
+			local sg = Instance.new("ScreenGui")
+			sg.Name = "AutoclickMedir"
+			sg.IgnoreGuiInset = gui.IgnoreGuiInset
+			sg.ResetOnSpawn = false
+			sg.DisplayOrder = 2000000000
+			pcall(function() sg.ScreenInsets = gui.ScreenInsets end)
+			sg.Parent = playerGui
+			local TAM = 100
+			local tile = Instance.new("Frame")
+			tile.AnchorPoint = Vector2.new(0.5, 0.5)
+			tile.Position = UDim2.fromOffset(cg.X, cg.Y)
+			tile.Size = UDim2.fromOffset(TAM, TAM)
+			tile.BackgroundTransparency = 0.99
+			tile.BorderSizePixel = 0
+			tile.Active = true
+			tile.Parent = sg
+			local dentro = false
+			tile.MouseMoved:Connect(function() dentro = true end)
+			local function testar(x, y)
+				dentro = false
+				pcall(function() vim:SendMouseMoveEvent(x, y, game) end)
+				RunService.RenderStepped:Wait()
+				RunService.RenderStepped:Wait()
+				return dentro
+			end
+
+			local pontos = {}
+			for dx = -450, 450, 50 do
+				for dy = -450, 450, 50 do pontos[#pontos + 1] = Vector2.new(dx, dy) end
+			end
+			table.sort(pontos, function(a, b) return (a - palpite).Magnitude < (b - palpite).Magnitude end)
+			local achado
+			for _, o in ipairs(pontos) do
+				local p = cg + o
+				if p.X >= 0 and p.Y >= 0 and testar(p.X, p.Y) then
+					achado = p
+					break
+				end
+			end
+			local resultado
+			if achado then
+				local function borda(dir) -- anda de 4 em 4 até sair do quadradinho
+					local n = 0
+					while n < 80 do
+						local q = achado + dir * 4 * (n + 1)
+						if not testar(q.X, q.Y) then break end
+						n += 1
+					end
+					return n * 4
+				end
+				local esq, dir_ = borda(Vector2.new(-1, 0)), borda(Vector2.new(1, 0))
+				local cima, baixo = borda(Vector2.new(0, -1)), borda(Vector2.new(0, 1))
+				local centro = achado + Vector2.new((dir_ - esq) / 2, (baixo - cima) / 2)
+				local sx, sy = (esq + dir_ + 4) / TAM, (cima + baixo + 4) / TAM
+				if sx < 0.5 or sx > 4 then sx = 1 end
+				if sy < 0.5 or sy > 4 then sy = 1 end
+				resultado = { g0 = cg, u0 = centro, sx = sx, sy = sy }
+			end
+			sg:Destroy()
+			return resultado
+		end
+
+		-- onde o clique virtual tem que cair para acertar o ponto cg (posição da bolinha na tela)
+		function AC.mapear(p, cg)
+			local m = p.map
+			if not m then return cg + (CONSTS.DELTA or Vector2.zero) end
+			local d = cg - m.g0
+			return m.u0 + Vector2.new(d.X * m.sx, d.Y * m.sy)
+		end
+
+		function AC.garantirCalib(cb) -- mede cada bolinha que ainda não foi medida (ou que mudou de lugar) e depois continua
+			if AC.medindo then return end
+			task.spawn(function()
+				AC.medindo = true
+				local avisou = false
+				for _, p in ipairs(AC.pontos) do
+					local cg = p.bolinha.AbsolutePosition + p.bolinha.AbsoluteSize / 2
+					if not (p.map and (p.map.g0 - cg).Magnitude < 2) then
+						if not avisou then
+							avisou = true
+							mostrarToast("Ajustando o clique...", true)
+						end
+						local m = AC.medir(cg, AC.ultimoDv or CONSTS.DELTA or Vector2.new(40, 50))
+						if m then
+							p.map = m
+							AC.ultimoDv = m.u0 - m.g0
+						end
+					end
+				end
+				AC.medindo = false
+				cb()
+			end)
+		end
 
 		local GuiServiceAC = game:GetService("GuiService")
 
@@ -7217,7 +7344,8 @@ local function iniciarTeclado()
 		end
 
 		function AC.clicar(p)
-			local c = p.bolinha.AbsolutePosition + p.bolinha.AbsoluteSize / 2
+			local cg = p.bolinha.AbsolutePosition + p.bolinha.AbsoluteSize / 2 -- centro da bolinha (sistema da tela)
+			local c = AC.mapear(p, cg) -- onde o clique virtual realmente cai
 			if p.modo == "ferramenta" then
 				local tool = player.Character and player.Character:FindFirstChildOfClass("Tool")
 				if tool then
@@ -7226,12 +7354,12 @@ local function iniciarTeclado()
 				end
 			end
 			-- 1) botão da tela embaixo da bolinha (procura de novo se a bolinha mudou de lugar)
-			if p.alvoC ~= c or not (p.alvo and p.alvo.Parent and p.alvo.Visible) or os.clock() - (p.alvoT or 0) > 1 then
-				p.alvo, p.alvoC, p.alvoT = AC.acharBotao(c), c, os.clock()
+			if p.alvoC ~= cg or not (p.alvo and p.alvo.Parent and p.alvo.Visible) or os.clock() - (p.alvoT or 0) > 1 then
+			p.alvo, p.alvoC, p.alvoT = AC.acharBotao(cg), cg, os.clock()
 			end
 			if p.alvo and AC.apertar(p.alvo) then return end
 			-- 2) ClickDetector no mundo
-			if AC.clicarMundo(c) then return end
+			if AC.clicarMundo(cg) then return end
 			-- 3) por último, clique virtual
 			if not AC.vim then
 				local ok, v = pcall(function() return game:GetService("VirtualInputManager") end)
@@ -8643,8 +8771,14 @@ local function iniciarTeclado()
 			pcall(function() o.Archivable = true end)
 			for _, d in ipairs(o:GetDescendants()) do pcall(function() d.Archivable = true end) end
 			local ok, c = pcall(function() return o:Clone() end)
-			return ok and c or nil
-		end
+			if not (ok and c) then return nil end
+			-- a cópia ainda "aponta" para as peças do outro jogador (Weld, Motor, constraints): tira tudo, senão você fica grudado nele
+			for _, d in ipairs(c:GetDescendants()) do
+				if d:IsA("JointInstance") or d:IsA("WeldConstraint") or d:IsA("Constraint") or d:IsA("LuaSourceContainer") or d:IsA("BodyMover") then pcall(function() d:Destroy() end) end
+			end
+			if c:IsA("JointInstance") or c:IsA("WeldConstraint") then return nil end
+			return c
+			end
 
 		-- se o AddAccessory não soldou o acessório, solda na mão pelo Attachment com o mesmo nome
 		function CV.soldar(acc, char)
@@ -8671,6 +8805,42 @@ local function iniciarTeclado()
 						end
 					end
 				end
+			end)
+		end
+
+		-- tira de você qualquer solda/constraint ligada a peças de FORA do seu personagem (é o que te prendia no outro
+		-- jogador) e as soldas de outros jogadores que prendem alguma peça sua
+		function CV.limparGrude()
+			pcall(function()
+				local char = player.Character
+				if not char then return end
+				local function nosso(p) return p == nil or p:IsDescendantOf(char) end
+				for _, d in ipairs(char:GetDescendants()) do
+					local ruim = false
+					if d:IsA("JointInstance") or d:IsA("WeldConstraint") then
+						ruim = not (nosso(d.Part0) and nosso(d.Part1))
+					elseif d:IsA("Constraint") then
+						ruim = not (nosso(d.Attachment0) and nosso(d.Attachment1))
+					end
+					if ruim then pcall(function() d:Destroy() end) end
+				end
+				for _, outro in ipairs(Players:GetPlayers()) do
+					local oc = outro ~= player and outro.Character
+					if oc then
+						for _, d in ipairs(oc:GetDescendants()) do
+							if d:IsA("JointInstance") or d:IsA("WeldConstraint") then
+								local p0, p1 = d.Part0, d.Part1
+								if (p0 and p0:IsDescendantOf(char)) or (p1 and p1:IsDescendantOf(char)) then
+									pcall(function() d:Destroy() end)
+								end
+							end
+						end
+					end
+				end
+				local hum = char:FindFirstChildOfClass("Humanoid")
+				local raiz = hum and hum.RootPart
+				if raiz and raiz.Anchored then raiz.Anchored = false end
+				if hum and hum.Sit and not hum.SeatPart then hum.Sit = false end
 			end)
 		end
 
@@ -8786,6 +8956,9 @@ local function iniciarTeclado()
 			for _, c in ipairs(f.itens) do
 				local ok = pcall(function()
 					local novo = c:Clone()
+					for _, d in ipairs(novo:GetDescendants()) do
+						if d:IsA("JointInstance") or d:IsA("WeldConstraint") or d:IsA("Constraint") or d:IsA("LuaSourceContainer") or d:IsA("BodyMover") then pcall(function() d:Destroy() end) end
+					end
 					if novo:IsA("Accessory") then
 						local h = novo:FindFirstChild("Handle")
 						local solda = h and h:FindFirstChild("AccessoryWeld")
@@ -8847,6 +9020,12 @@ local function iniciarTeclado()
 			local rosto = cab and cab:FindFirstChild("face")
 			if rosto and rosto:IsA("Decal") and f.face then pcall(function() rosto.Texture = f.face end) end
 			if pecas == 0 and corpoOk == 0 and not f.face then return false, "Não achei nada para copiar" end
+			task.spawn(function() -- limpa logo e de novo depois (o jogo pode ligar de volta)
+				for _, t in ipairs({ 0.2, 1, 2.5 }) do
+					task.wait(t)
+					CV.limparGrude()
+				end
+			end)
 			return true, pecas .. " itens, " .. corpoOk .. " do corpo"
 		end
 
