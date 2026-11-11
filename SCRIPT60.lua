@@ -324,14 +324,14 @@ conteudo.AutomaticCanvasSize = Enum.AutomaticSize.Y
 conteudo.Parent = painel
 
 -- CATEGORIAS: lista na lateral esquerda (a categoria escolhida fica destacada em roxo)
-local MENU = { atual = "Movimento", abas = {}, mostrar = nil,
+local MENU = { atual = "Início", abas = {}, mostrar = nil,
 	-- ajustes do sonar do Xray (mudam na categoria Config)
 	sonar = { ligado = true, intervalo = 4, alcance = 120, duracao = 1.8 },
 	-- liga/desliga da categoria Config
 	cfg = { barraVida = true, alertaChams = true, swimEfeitos = true, noclipTransp = true, tpInstantaneo = false, tpToolInstantaneo = false,
 		superVel = true, flashVel = true, fxChakra = true, fxPulo = true, fxPuloInfinito = true, zoomEscuro = true } }
 do -- bloco (libera variáveis locais)
-CONSTS.CATEGORIAS = { "Movimento", "Combate", "Visão", "Jogadores", "Extras", "Config", "Ajuda" }
+CONSTS.CATEGORIAS = { "Início", "Movimento", "Combate", "Visão", "Jogadores", "Extras", "Config", "Ajuda" }
 local LARGURA_LATERAL = 104
 CONSTS.COR_DESTAQUE = Color3.fromRGB(100, 60, 230)
 conteudo.Position = UDim2.new(0, LARGURA_LATERAL + 12, 0, 40)
@@ -630,6 +630,10 @@ do
 		{ t = "BARRA DE COMANDOS", c = "tecla , (vírgula) no PC",
 			d = "A tirinha \"comandos\" no canto da tela (arraste para mover). Toque nela: abre a caixa de digitar com a lista de comandos, que filtra enquanto você digita (toque num comando para completar). Enter, fechar o teclado ou tocar fora fecha. Vários de uma vez, separados por vírgula: fly 80, np. Para ligar use o comando; para desligar, un + comando (ex.: fly e unfly)." },
 		{ t = "AJUDA", c = "ajuda · help · cmds · ?", d = "Abre uma janelinha só com esta lista de ajuda (feche no X)." },
+		{ t = "VÁRIOS COMANDOS DE UMA VEZ", c = "comando1, comando2, comando3",
+			d = "Separe os comandos com vírgula na barra e todos rodam juntos. Exemplo: fly 80, esp, np." },
+		{ t = "CRIAR SEU PRÓPRIO COMANDO", c = "criar · create · crr <nome> = <comandos>   |   uncriar · uncreate · uncrr <nome>",
+			d = "Cria um comando seu que roda vários de uma vez. Exemplo: criar pvp = fly 50, esp, np. Depois é só digitar pvp. uncriar pvp apaga. Só criar mostra os que você já fez. Fica salvo para a próxima vez." },
 
 		{ cab = "MOVIMENTO" },
 		{ t = "VOAR (FLY)", c = "fly · voar [vel]   |   unfly · unvoar",
@@ -653,8 +657,18 @@ do
 		{ t = "EFEITOS", c = "fx · efeitos [0.1 a 1]   |   unfx · unefeitos",
 			d = "Liga e desliga os efeitos discretos: flash da velocidade, pulo, anéis de grudar e paredes. O número muda a intensidade. Cada efeito também liga/desliga separado na categoria Config." },
 		{ t = "SENTAR", c = "sit · sentar", d = "Senta o personagem." },
+		{ t = "SPIN", c = "spin [graus por segundo]   |   unspin",
+			d = "Gira o personagem sem parar. spin 30 = 30 graus por segundo (devagar), spin 720 = duas voltas por segundo; sem número usa 360 (uma volta por segundo); número negativo gira para o outro lado (de 1 a 3600). Rodando, spin 90 só muda a velocidade. Pausa sozinho enquanto você voa (fly/vfly), nada ou está sentado, para não brigar com esses modos, e volta a girar depois. unspin para." },
 
 		{ cab = "JOGADORES" },
+		{ t = "COPIAR VISUAL", c = "cv · copiarvisual <jogador ou ID>   |   uncv · uncopiarvisual",
+			d = "Copia a roupa, o cabelo e o corpo de outro jogador para o seu personagem (só você vê a mudança). Se ele está no servidor e o jogo tem avatar/roupa própria, copia exatamente o que ele está vestindo agora no jogo; se o jogo não tem sistema de skin (ou ele não está no servidor), usa a skin do Roblox dele (digite o nome de usuário ou o ID). O visual copiado continua quando você renasce. uncv volta ao seu visual original. Em alguns jogos (com personagem próprio) não pega." },
+		{ t = "MARCAR JOGADOR", c = "marcar · mark <jogador> [cor]   |   unmarcar · unmark [jogador ou todos]",
+			d = "Destaca um jogador com cor fixa (igual ao chams: contorno e preenchimento, aparece através das paredes) e põe o nome e a distância em cima da cabeça dele. Cores: vermelho, azul, verde, amarelo, rosa, roxo, laranja, ciano, branco (sem cor, ele escolhe uma). Exemplo: marcar fulano azul. Pode marcar vários. unmarcar tira a marca; sem nome mostra os marcados; unmarcar todos limpa. A lista fica salva: se o marcado voltar a entrar num servidor, ele é marcado de novo e você é avisado. É independente do botão CHAMS." },
+		{ t = "MUTAR JOGADOR", c = "mute · mutar <jogador>   |   unmute · unmutar [jogador ou todos]",
+			d = "Esconde o chat de um jogador só para você (ele não fica sabendo). unmute tira o mute; sem nome mostra quem está mutado; unmute todos limpa a lista. A lista fica salva e vale para os próximos jogos. Funciona no chat novo do Roblox; no chat antigo tenta esconder as mensagens da tela (pode falhar em jogos com chat próprio)." },
+		{ t = "INFO DE JOGADOR", c = "info [jogador ou ID]",
+			d = "Abre uma janela com tudo que dá para saber de um jogador: foto, nome de usuário, nome de exibição, ID, data de criação da conta, Premium, time, vida, velocidade, distância, posição, item na mão, acessórios, amigos, seguidores, grupos, mapas criados e a descrição do perfil. Sem nome mostra o seu. Serve também para quem não está no servidor (digite o nome de usuário ou o ID). Os dados do perfil vêm da API do Roblox: se o seu executor não tiver acesso, essas linhas ficam como indisponíveis." },
 		{ t = "TELEPORTAR", c = "tp · ir · teleportar [jogador]",
 			d = "Vai até um jogador (aceita parte do nome) em velocidade supersônica. No menu, digite na busca para filtrar a lista com as distâncias e toque no nome." },
 		{ t = "ESPECTAR", c = "view [jogador]   |   unview",
@@ -668,12 +682,14 @@ do
 			d = "Senta em cima de um jogador: comando + nome (ex.: hsit joao)." },
 
 		{ cab = "VISÃO E COMBATE" },
-		{ t = "VER JOGADORES (ESP)", c = "esp · espectar   |   unesp · unespectar",
+		{ t = "AUTO CLICK", c = "autoclick · ac [1 a 100] [mouse]   |   unautoclick · unac",
+			d = "Clica sozinho várias vezes por segundo (autoclick 10 = 10 cliques por segundo; padrão 10). Com uma ferramenta na mão, ativa a ferramenta; sem ferramenta, usa o clique do executor no ponto onde está o cursor. Escreva mouse (ex.: autoclick 15 mouse) para sempre usar o clique do mouse. Rodando, autoclick 20 só muda a velocidade. unautoclick desliga. Cuidado com o cursor em cima de botões." },
+		{ t = "VER JOGADORES (ESP)",c = "esp · espectar   |   unesp · unespectar",
 			d = "Nome e distância dos jogadores na tela. A barra de vida pode ser desligada em Config." },
 		{ t = "CONTORNO (CHAMS)", c = "cm · contorno   |   uncm · uncontorno",
 			d = "Contorno e preenchimento nos jogadores, visíveis através das paredes." },
 		{ t = "MIRA AUTOMÁTICA", c = "aim · aimbot · mira [tamanho]   |   unaim · unaimbot · unmira",
-			d = "Bolinha verde no centro = alcance (digite o tamanho). Ao travar: na cabeça os tracinhos fecham (vermelho), no tronco abrem (laranja). Botões: ALVO (cabeça/tronco), PAREDE (mirar através de paredes) e TIME (ignorar o seu time)." },
+			d = "Bolinha verde no centro = alcance: a câmera só trava em quem está dentro dela. Digite o tamanho (aim 200 = 200 pixels, de 40 a 900) ou aumente/diminua com + e - (aim +30, aim -30); também dá para editar o número ao lado do botão AIMBOT. Ao travar: na cabeça os tracinhos fecham (vermelho), no tronco abrem (laranja). Botões: ALVO (cabeça/tronco), PAREDE (mirar através de paredes) e TIME (ignorar o seu time)." },
 		{ t = "MAPA TRANSPARENTE (XRAY)", c = "xy · xray [0 a 0.95]   |   unxy · unxray",
 			d = "Deixa o mapa transparente (0 = normal, 0.95 = quase invisível), com um sonar que acende o que passa por ele." },
 		{ t = "CÂMERA TRAVADA (SHIFTLOCK)", c = "sl · shiftlock   |   unsl · unshiftlock",
@@ -692,11 +708,25 @@ do
 			d = "set salva a posição atual; go vai até ela (sem nome mostra a lista). No menu dá para renomear, ver a distância e tocar em IR." },
 		{ t = "ANOTAÇÕES", c = "notas · notes",
 			d = "Caderno com folhas. + NOVA cria; ABRIR mostra a folha inteira, com rolagem; X exclui. Arraste o título para mover e o canto de baixo para mudar o tamanho. Salva sozinho." },
+		{ t = "PING E FPS", c = "ping · fps · ms   |   unping · unms",
+			d = "Mostra uma etiqueta pequena com o ping (ms) e o fps, atualizada a cada segundo. Verde = bom, amarelo = médio, vermelho = ruim. Arraste para mover. O mesmo comando liga e desliga (digitar ping ou fps de novo fecha; unping também). Atenção: unfps NÃO fecha a etiqueta, ele só desfaz o fps1/fps2/fps3 (que deixam o jogo mais leve)." },
+		{ t = "TIMER E CRONÔMETRO", c = "timer · temporizador <tempo>   |   untimer\ncron · cronometro [start | stop | reset]   |   uncron",
+			d = "timer faz uma contagem regressiva numa etiqueta e avisa na tela quando acaba. O tempo pode ser 30 (segundos), 1:30, 2m, 1h30m ou 1m30s; timer sem nada mostra quanto falta e untimer cancela. cron conta para cima: sem nada inicia ou pausa, stop para, start continua, reset zera e para; uncron fecha. As duas etiquetas são arrastáveis." },
+		{ t = "VELOCÍMETRO", c ="velocimetro · vm   |   unvelocimetro · unvm",
+			d = "Etiqueta arrastável com a sua velocidade real em studs por segundo (a que o personagem está de fato andando, voando ou caindo, não a velocidade configurada). O mesmo comando liga e desliga." },
+		{ t = "CHAT LOG", c ="chatlog · log [limpar]   |   unchatlog · unlog",
+			d = "Abre uma janela com as últimas 200 mensagens do chat (hora, quem falou e o texto), com rolagem. O script já guarda as mensagens desde que liga, então o histórico está lá quando você abre. Copiar manda tudo para a área de transferência; Limpar apaga a lista (também: chatlog limpar). Arraste o título para mover." },
+		{ t = "LUZ", c = "luz · light [alcance] [brilho]   |   unluz · unlight",
+			d = "Acende uma luz branca em volta do seu personagem, para lugares escuros (só você vê). luz 40 3 = alcance 40 (de 5 a 60) e brilho 3 (de 0.5 a 10); sem números usa 40 e 3. Rodando, luz 60 muda o alcance. Digitar luz de novo (sem número) ou unluz apaga. A luz volta sozinha quando você renasce. Para clarear o mapa inteiro, use dia." },
+		{ t = "DIA E NOITE", c ="ciclo [minutos por dia]   |   unciclo\ndia   |   undia\nnoite   |   unnoite",
+			d = "Mexe no relógio do jogo só para você. ciclo faz o dia e a noite passarem sozinhos: ciclo 5 = 5 minutos reais por dia completo (padrão 5; de 0.1 a 1440). dia fixa o meio-dia e noite fixa a meia-noite (se o jogo tentar mudar a hora, volta). unciclo, undia ou unnoite param tudo e voltam à hora que o jogo tinha antes. Os efeitos de céu e luz do próprio jogo acompanham a hora." },
 		{ t = "ANTI-AFK", c = "afk   |   unafk", d = "Não ser expulso por ficar parado (começa ligado)." },
 		{ t = "AVISOS DE ENTRADA", c = "avisos   |   unavisos", d = "Mostra na tela quando jogadores entram e saem." },
 		{ t = "FPS", c = "fps1 · fps2 · fps3   |   unfps",
 			d = "Deixa o jogo mais leve. 1 = sem sombras e texturas simples. 2 = o 1 + sem efeitos, animações dos outros e menos distância. 3 = o 2 + tudo liso (lego). unfps volta ao normal." },
 		{ t = "REENTRAR", c = "rj · rejoin", d = "Reentra no servidor." },
+		{ t = "LOW SERVER", c = "lowserver · low",
+			d = "Procura o servidor público mais vazio do jogo (que não seja o atual) e teleporta você para lá. Usa a lista de servidores da API do Roblox: se o seu executor não tiver acesso, avisa que não conseguiu a lista. Só funciona no jogo publicado, e servidores privados não aparecem. O script volta sozinho no servidor novo se o executor tiver queue_on_teleport (igual ao rejoin)." },
 
 		{ cab = "CONFIG" },
 		{ t = "CONFIG: LIGAR/DESLIGAR CADA EFEITO", c = "categoria Config",
@@ -817,6 +847,91 @@ do
 	busca:GetPropertyChangedSignal("Text"):Connect(filtrar)
 end
 
+-- Categoria "Início": link do projeto, créditos e dicas de uso (aparece só nela)
+do
+	local LINK_PROJETO = "https://purplebitchrbx.vercel.app"
+	-- >>> TROQUE AQUI o texto dos créditos (aparece na categoria Início) <<<
+	local CREDITOS_TEXTO = "Projeto: Purple Bitch Script\nCódigo feito com ajuda do Claude (Anthropic)"
+
+	local ini = Instance.new("Frame")
+	ini.Name = "Inicio"
+	ini.LayoutOrder = 3
+	ini.Size = UDim2.new(1, 0, 0, 0)
+	ini.AutomaticSize = Enum.AutomaticSize.Y
+	ini.BackgroundTransparency = 1
+	ini.Visible = false -- só aparece na categoria "Início"
+	ini.Parent = conteudo
+	MENU.inicio = ini
+
+	local lay = Instance.new("UIListLayout")
+	lay.SortOrder = Enum.SortOrder.LayoutOrder
+	lay.Padding = UDim.new(0, 9)
+	lay.Parent = ini
+
+	local ordem = 0
+	local function texto(t, tam, negrito)
+		ordem += 1
+		local l = Instance.new("TextLabel")
+		l.LayoutOrder = ordem
+		l.Size = UDim2.new(1, -8, 0, 0)
+		l.AutomaticSize = Enum.AutomaticSize.Y
+		l.BackgroundTransparency = 1
+		l.TextWrapped = true
+		l.RichText = true
+		l.TextXAlignment = Enum.TextXAlignment.Left
+		l.TextYAlignment = Enum.TextYAlignment.Top
+		l.Font = negrito and Enum.Font.GothamBold or Enum.Font.Gotham
+		l.TextSize = tam or 12
+		l.TextColor3 = Color3.new(1, 1, 1)
+		l.Text = t
+		l.Parent = ini
+		return l
+	end
+
+	texto("BEM-VINDO", 13, true)
+	texto("Este é o guia rápido do script. Todas as funções também funcionam digitando na barra de comandos (digite <b>cmds</b> para ver a lista).")
+
+	-- Link do projeto (toque para copiar)
+	ordem += 1
+	local bLink = Instance.new("TextButton")
+	bLink.LayoutOrder = ordem
+	bLink.Size = UDim2.new(1, -8, 0, 44)
+	bLink.BackgroundColor3 = CONSTS.COR_DESTAQUE
+	bLink.BackgroundTransparency = 0.35
+	bLink.AutoButtonColor = true
+	bLink.Text = "purplebitchrbx.vercel.app"
+	bLink.TextColor3 = Color3.new(1, 1, 1)
+	bLink.Font = Enum.Font.GothamBold
+	bLink.TextSize = 14
+	bLink.Parent = ini
+	Instance.new("UICorner", bLink).CornerRadius = UDim.new(0, 6)
+	local dicaLink = texto("Toque no link acima para copiar", 11)
+	dicaLink.TextColor3 = Color3.fromRGB(200, 185, 255)
+	local versaoLink = 0
+	bLink.MouseButton1Click:Connect(function()
+		local copiar = (typeof(setclipboard) == "function" and setclipboard) or (typeof(toclipboard) == "function" and toclipboard) or nil
+		local ok = copiar and pcall(copiar, LINK_PROJETO)
+		dicaLink.Text = ok and "Link copiado!" or "Seu executor não copia: anote o link acima"
+		versaoLink += 1
+		local minha = versaoLink
+		task.delay(2.5, function()
+			if versaoLink == minha then dicaLink.Text = "Toque no link acima para copiar" end
+		end)
+	end)
+
+	texto("VÁRIOS COMANDOS DE UMA VEZ", 13, true)
+	texto('Separe com vírgula e todos rodam juntos.\nExemplo: <font color="#B9C0FF">fly 80, esp, np</font>')
+
+	texto("CRIE O SEU PRÓPRIO COMANDO", 13, true)
+	texto('Use <b>criar</b> (ou <b>create</b>, <b>crr</b>): nome, sinal de = e os comandos separados por vírgula.\nExemplo: <font color="#B9C0FF">criar pvp = fly 50, esp, np</font>\nDepois é só digitar <font color="#B9C0FF">pvp</font> e os três rodam. Para apagar: <font color="#B9C0FF">uncriar pvp</font>. Fica salvo para a próxima vez.')
+
+	texto("LIGAR E DESLIGAR", 13, true)
+	texto('Para ligar use o comando; para desligar, <b>un</b> + comando (ex.: fly e unfly).')
+
+	texto("CRÉDITOS", 13, true)
+	texto(CREDITOS_TEXTO)
+end
+
 -- Troca de categoria: mostra só os botões dela e destaca a aba
 function MENU.mostrar(nome)
 	MENU.atual = nome
@@ -825,6 +940,7 @@ function MENU.mostrar(nome)
 		if cat then c.Visible = (cat == nome) end
 	end
 	dica.Visible = (nome == "Ajuda")
+	if MENU.inicio then MENU.inicio.Visible = (nome == "Início") end
 	for n, b in pairs(MENU.abas) do
 		b.BackgroundTransparency = (n == nome) and 0.4 or 1
 	end
@@ -1489,7 +1605,7 @@ end -- fim do bloco (libera variáveis locais)
 -- AIMBOT (bolinha verde = alcance; trava a câmera no alvo sem atraso)
 ------------------------------------------------------------
 estado.aim = false
-local definirAimbot
+local definirAimbot, obterTamanhoAim
 
 do
 	local aim = {
@@ -1752,6 +1868,8 @@ do
 		end
 		atualizarMira(parte and alvoAtual or nil)
 	end)
+
+	obterTamanhoAim = function() return aim.tamanho end
 
 	definirAimbot = function(v, tamanho)
 		if tamanho then aplicarTamanho(tamanho) end
@@ -5843,6 +5961,7 @@ end -- fim do bloco (libera variáveis locais)
 -- TECLADO (barra de comandos digitados)
 ------------------------------------------------------------
 local function iniciarTeclado()
+	local HttpService = game:GetService("HttpService") -- (corrigido: o do topo fica dentro de um do...end e não chega aqui; sem isso criar/mute/marcas/API davam nil)
 	local toque = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 	local tecladoLigado = true -- a barra fica sempre no canto da tela
 	local barraAberta = false
@@ -6341,9 +6460,11 @@ local function iniciarTeclado()
 		if ligar and args[1] then
 			tam = tonumber(args[1])
 			if not tam then return false, "Valor inválido: " .. args[1] end
+			local sinal = args[1]:sub(1, 1)
+			if sinal == "+" or sinal == "-" then tam = obterTamanhoAim() + tam end -- aim +30 / aim -30: aumenta/diminui a área
 		end
 		definirAimbot(ligar, tam)
-		return true, "Aimbot " .. (ligar and "ligado" or "desligado")
+		return true, "Aimbot " .. (ligar and ("ligado (área " .. obterTamanhoAim() .. ")") or "desligado")
 	end)
 
 	alternavel({ "sl", "shiftlock" }, "sl ou shiftlock / unsl ou unshiftlock - cadeado de shift lock na tela", function(ligar)
@@ -6382,6 +6503,1612 @@ local function iniciarTeclado()
 		iniciarDash(alvo.Position + Vector3.new(0, 3, 0), { velocidade = DASH_VELOCIDADE_TP, forte = true, instantaneo = MENU.cfg.tpInstantaneo })
 		return true, "TP -> " .. alvoJogador.DisplayName
 	end)
+
+	-- INFO: janela com tudo que dá para saber de um jogador (dados do servidor + API do Roblox).
+	-- Tudo numa tabela só (INFO) por causa do limite de variáveis locais.
+	do
+		local INFO = { versao = 0, itens = {}, ordem = 0 }
+
+		-- baixa um texto: tenta o HttpGet; se falhar, a função request/http_request do executor
+		local function pegarTexto(url)
+			local ok, r = pcall(function() return game:HttpGet(url) end)
+			if ok and type(r) == "string" and r ~= "" then return r end
+			local req = (typeof(request) == "function" and request) or (typeof(http_request) == "function" and http_request) or nil
+			if req then
+				local ok2, resp = pcall(req, { Url = url, Method = "GET" })
+				if ok2 and type(resp) == "table" and type(resp.Body) == "string" and (resp.StatusCode == nil or resp.StatusCode == 200) then
+					return resp.Body
+				end
+			end
+		end
+
+		-- API do Roblox: tenta roblox.com e, se não der, o espelho roproxy.com
+		local function api(sub, caminho)
+			for _, dominio in ipairs({ "roblox.com", "roproxy.com" }) do
+				local t = pegarTexto("https://" .. sub .. "." .. dominio .. caminho)
+				if t then
+					local ok, d = pcall(function() return HttpService:JSONDecode(t) end)
+					if ok and type(d) == "table" and not d.errors then return d end
+				end
+			end
+		end
+
+		function INFO.montar()
+			local tela = tamanhoTela()
+			local w = math.min(360, tela.X - 20)
+			local h = math.min(440, tela.Y - 60)
+			local f = Instance.new("Frame")
+			f.Name = "JanelaInfo"
+			f.Size = UDim2.fromOffset(w, h)
+			f.Position = UDim2.fromOffset((tela.X - w) / 2, math.max(10, (tela.Y - h) / 2))
+			f.BackgroundColor3 = Color3.fromRGB(28, 14, 50)
+			f.ClipsDescendants = true
+			f.ZIndex = 30
+			f.Parent = gui
+			Instance.new("UICorner", f).CornerRadius = UDim.new(0, 8)
+
+			local tit = Instance.new("TextLabel")
+			tit.Size = UDim2.new(1, -90, 0, 30)
+			tit.Position = UDim2.fromOffset(12, 0)
+			tit.BackgroundTransparency = 1
+			tit.Text = "Info"
+			tit.TextColor3 = Color3.new(1, 1, 1)
+			tit.Font = Enum.Font.Gotham
+			tit.TextSize = 16
+			tit.TextXAlignment = Enum.TextXAlignment.Left
+			tit.TextTruncate = Enum.TextTruncate.AtEnd
+			tit.Active = true
+			tit.ZIndex = 31
+			tit.Parent = f
+			tornarMovel(tit, f) -- arraste o título para mover
+
+			local rol = Instance.new("ScrollingFrame")
+			rol.Position = UDim2.fromOffset(10, 34)
+			rol.Size = UDim2.new(1, -20, 1, -42)
+			rol.BackgroundTransparency = 1
+			rol.BorderSizePixel = 0
+			rol.ScrollBarThickness = 2
+			rol.CanvasSize = UDim2.new()
+			rol.AutomaticCanvasSize = Enum.AutomaticSize.Y
+			rol.ZIndex = 31
+			rol.Parent = f
+			local lay = Instance.new("UIListLayout")
+			lay.SortOrder = Enum.SortOrder.LayoutOrder
+			lay.Padding = UDim.new(0, 6)
+			lay.Parent = rol
+
+			local x = MENU.botaoFechar(f)
+			x.ZIndex = 32
+
+			local bCopiar = Instance.new("TextButton")
+			bCopiar.AnchorPoint = Vector2.new(1, 0)
+			bCopiar.Position = UDim2.new(1, -30, 0, 4)
+			bCopiar.Size = UDim2.fromOffset(52, 22)
+			bCopiar.BackgroundColor3 = CONSTS.COR_DESTAQUE
+			bCopiar.BackgroundTransparency = 0.3
+			bCopiar.Text = "Copiar"
+			bCopiar.TextColor3 = Color3.new(1, 1, 1)
+			bCopiar.Font = Enum.Font.Gotham
+			bCopiar.TextSize = 12
+			bCopiar.ZIndex = 32
+			bCopiar.Parent = f
+			Instance.new("UICorner", bCopiar).CornerRadius = UDim.new(0, 4)
+			bCopiar.MouseButton1Click:Connect(function()
+				local linhas = {}
+				for _, e in ipairs(INFO.itens) do
+					linhas[#linhas + 1] = e.cab and ("\n" .. e.rot) or (e.rot .. ": " .. e.val)
+				end
+				local copiar = (typeof(setclipboard) == "function" and setclipboard) or (typeof(toclipboard) == "function" and toclipboard) or nil
+				local ok = copiar and pcall(copiar, table.concat(linhas, "\n"))
+				bCopiar.Text = ok and "Copiado!" or "Sem cópia"
+				task.delay(1.5, function() bCopiar.Text = "Copiar" end)
+			end)
+
+			INFO.f, INFO.tit, INFO.rol = f, tit, rol
+		end
+
+		-- cada linha: rótulo em lilás + valor em branco (RichText, com < > & escapados)
+		local function pintar(e)
+			e.lb.Text = '<font color="#B9C0FF"><b>' .. xml(e.rot) .. ':</b></font> ' .. xml(tostring(e.val))
+		end
+		local function linha(rot, val)
+			INFO.ordem += 1
+			local lb = Instance.new("TextLabel")
+			lb.LayoutOrder = INFO.ordem
+			lb.Size = UDim2.new(1, -8, 0, 0)
+			lb.AutomaticSize = Enum.AutomaticSize.Y
+			lb.BackgroundTransparency = 1
+			lb.TextWrapped = true
+			lb.RichText = true
+			lb.TextXAlignment = Enum.TextXAlignment.Left
+			lb.TextYAlignment = Enum.TextYAlignment.Top
+			lb.Font = Enum.Font.Gotham
+			lb.TextSize = 12
+			lb.TextColor3 = Color3.new(1, 1, 1)
+			lb.ZIndex = 31
+			lb.Parent = INFO.rol
+			local e = { rot = rot, val = val, lb = lb }
+			pintar(e)
+			INFO.itens[#INFO.itens + 1] = e
+			return e
+		end
+		local function cabecalho(texto)
+			INFO.ordem += 1
+			local lb = Instance.new("TextLabel")
+			lb.LayoutOrder = INFO.ordem
+			lb.Size = UDim2.new(1, -8, 0, 20)
+			lb.BackgroundTransparency = 1
+			lb.TextXAlignment = Enum.TextXAlignment.Left
+			lb.Font = Enum.Font.GothamBold
+			lb.TextSize = 13
+			lb.TextColor3 = Color3.fromRGB(255, 120, 170)
+			lb.Text = texto
+			lb.ZIndex = 31
+			lb.Parent = INFO.rol
+			INFO.itens[#INFO.itens + 1] = { cab = true, rot = texto, val = "", lb = lb }
+		end
+		local function mudar(e, val)
+			e.val = val
+			pintar(e)
+		end
+
+		local function dataBR(ts) -- "2015-03-12T18:30:44.123Z" -> "12/03/2015"
+			local a, m, d = tostring(ts):match("(%d+)-(%d+)-(%d+)")
+			if not a then return tostring(ts) end
+			return d .. "/" .. m .. "/" .. a
+		end
+
+		function INFO.abrir(alvo, userId)
+			INFO.versao += 1
+			local minha = INFO.versao
+			if not (INFO.f and INFO.f.Parent) then INFO.montar() end
+			for _, c in ipairs(INFO.rol:GetChildren()) do
+				if not c:IsA("UIListLayout") then c:Destroy() end
+			end
+			INFO.itens, INFO.ordem = {}, 0
+			INFO.f.Visible = true
+			INFO.rol.CanvasPosition = Vector2.new(0, 0)
+			INFO.tit.Text = "Info: " .. (alvo and alvo.DisplayName or tostring(userId))
+
+			-- foto do rosto
+			INFO.ordem += 1
+			local foto = Instance.new("ImageLabel")
+			foto.LayoutOrder = INFO.ordem
+			foto.Size = UDim2.fromOffset(72, 72)
+			foto.BackgroundColor3 = Color3.fromRGB(50, 28, 90)
+			foto.ZIndex = 31
+			foto.Parent = INFO.rol
+			Instance.new("UICorner", foto).CornerRadius = UDim.new(0, 10)
+			task.spawn(function()
+				local ok, img = pcall(function()
+					return Players:GetUserThumbnailAsync(userId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size150x150)
+				end)
+				if ok and img and INFO.versao == minha then foto.Image = img end
+			end)
+
+			-- dados que o próprio jogo mostra (só se a pessoa está no servidor)
+			cabecalho("CONTA")
+			local eNick = linha("Nome de usuário (nick)", alvo and alvo.Name or "carregando...")
+			local eExib = linha("Nome de exibição", alvo and alvo.DisplayName or "carregando...")
+			linha("ID", userId)
+			local eCriada = linha("Criada em", "carregando...")
+			local eVerif = linha("Selo verificado", "carregando...")
+			if alvo then
+				local dias = alvo.AccountAge
+				mudar(eCriada, os.date("%d/%m/%Y", os.time() - dias * 86400) .. " (" .. dias .. " dias, ~" .. string.format("%.1f", dias / 365) .. " anos)")
+				linha("Premium", alvo.MembershipType == Enum.MembershipType.Premium and "sim" or "não")
+				linha("Time", alvo.Team and alvo.Team.Name or "sem time")
+
+				cabecalho("NO SERVIDOR")
+				local char = alvo.Character
+				local hum = char and char:FindFirstChildOfClass("Humanoid")
+				local raiz = char and char:FindFirstChild("HumanoidRootPart")
+				if hum then
+					linha("Vida", string.format("%.0f / %.0f", hum.Health, hum.MaxHealth))
+					linha("Velocidade de andar", string.format("%.1f", hum.WalkSpeed))
+					linha(hum.UseJumpPower and "Força do pulo" or "Altura do pulo", string.format("%.1f", hum.UseJumpPower and hum.JumpPower or hum.JumpHeight))
+					linha("Tipo de corpo", hum.RigType == Enum.HumanoidRigType.R15 and "R15" or "R6")
+					linha("Estado", hum:GetState().Name .. (hum.Sit and " (sentado)" or ""))
+				else
+					linha("Personagem", "não carregado")
+				end
+				if raiz then
+					local minhaRaiz = pegarPersonagem()
+					if minhaRaiz and alvo ~= player then
+						linha("Distância de você", string.format("%.0f studs", (raiz.Position - minhaRaiz.Position).Magnitude))
+					end
+					linha("Posição", string.format("%.0f, %.0f, %.0f", raiz.Position.X, raiz.Position.Y, raiz.Position.Z))
+				end
+				local ferramenta = char and char:FindFirstChildOfClass("Tool")
+				linha("Item na mão", ferramenta and ferramenta.Name or "nenhum")
+				local mochila = alvo:FindFirstChildOfClass("Backpack")
+				if mochila then
+					local nomes = {}
+					for _, t in ipairs(mochila:GetChildren()) do nomes[#nomes + 1] = t.Name end
+					linha("Mochila visível (" .. #nomes .. ")", #nomes > 0 and table.concat(nomes, ", ") or "vazia")
+				else
+					linha("Mochila", "não visível para você")
+				end
+				if char then
+					local acess = {}
+					for _, c in ipairs(char:GetChildren()) do
+						if c:IsA("Accessory") then acess[#acess + 1] = c.Name end
+					end
+					linha("Acessórios (" .. #acess .. ")", #acess > 0 and table.concat(acess, ", ", 1, math.min(#acess, 12)) or "nenhum")
+				end
+			else
+				linha("No servidor", "não (só dados do perfil)")
+			end
+
+			-- dados do perfil (API do Roblox): chegam aos poucos
+			cabecalho("PERFIL")
+			local eAmigos = linha("Amigos", "carregando...")
+			local eSeg = linha("Seguidores", "carregando...")
+			local eSegue = linha("Seguindo", "carregando...")
+			local eBanido = linha("Banido", "carregando...")
+			local eDesc = linha("Descrição", "carregando...")
+			cabecalho("GRUPOS")
+			local eGrupos = linha("Grupos", "carregando...")
+			cabecalho("MAPAS CRIADOS")
+			local eMapas = linha("Mapas", "carregando...")
+
+			task.spawn(function()
+				local nao = "indisponível (sem acesso à API do Roblox)"
+				local function vivo() return INFO.versao == minha end
+
+				local u = api("users", "/v1/users/" .. userId)
+				if not vivo() then return end
+				if u then
+					if u.name then mudar(eNick, u.name) end
+					if u.displayName then mudar(eExib, u.displayName) end
+					mudar(eCriada, u.created and dataBR(u.created) or "?")
+					mudar(eVerif, u.hasVerifiedBadge and "sim" or "não")
+					mudar(eBanido, u.isBanned and "sim" or "não")
+					local d = tostring(u.description or "")
+					mudar(eDesc, d ~= "" and d or "(vazia)")
+					if not alvo then INFO.tit.Text = "Info: " .. (u.displayName or u.name or userId) end
+				else
+					for _, e in ipairs({ eCriada, eVerif, eBanido, eDesc }) do mudar(e, nao) end
+					if not alvo then mudar(eNick, nao) mudar(eExib, nao) end
+				end
+
+				for _, par in ipairs({ { eAmigos, "friends", "/friends/count" }, { eSeg, "friends", "/followers/count" }, { eSegue, "friends", "/followings/count" } }) do
+					local d = api(par[2], "/v1/users/" .. userId .. par[3])
+					if not vivo() then return end
+					mudar(par[1], d and d.count or nao)
+				end
+
+				local g = api("groups", "/v2/users/" .. userId .. "/groups/roles")
+				if not vivo() then return end
+				if g and g.data then
+					local nomes = {}
+					for i, e in ipairs(g.data) do
+						if i > 10 then nomes[#nomes + 1] = "... (+" .. (#g.data - 10) .. ")" break end
+						nomes[#nomes + 1] = (e.group and e.group.name or "?") .. " (" .. (e.role and e.role.name or "?") .. ")"
+					end
+					mudar(eGrupos, #g.data > 0 and (#g.data .. ": " .. table.concat(nomes, ", ")) or "nenhum")
+				else
+					mudar(eGrupos, nao)
+				end
+
+				local m = api("games", "/v2/users/" .. userId .. "/games?accessFilter=2&limit=10&sortOrder=Desc")
+				if not vivo() then return end
+				if m and m.data then
+					local nomes = {}
+					for _, e in ipairs(m.data) do
+						nomes[#nomes + 1] = tostring(e.name) .. (e.placeVisits and (" (" .. e.placeVisits .. " visitas)") or "")
+					end
+					mudar(eMapas, #nomes > 0 and (#nomes .. ": " .. table.concat(nomes, "; ")) or "nenhum público")
+				else
+					mudar(eMapas, nao)
+				end
+			end)
+		end
+
+		comando({ "info" }, "info [jogador ou ID] - janela com tudo sobre um jogador (sem nome = você)", function(args)
+			if #args == 0 then
+				INFO.abrir(player, player.UserId)
+				return true, "Info: você"
+			end
+			local busca = table.concat(args, " ")
+			local alvoJogador = acharJogador(busca)
+			if alvoJogador then
+				INFO.abrir(alvoJogador, alvoJogador.UserId)
+				return true, "Info: " .. alvoJogador.DisplayName
+			end
+			-- fora do servidor: nome de usuário completo ou ID
+			task.spawn(function()
+				local id = tonumber(busca)
+				if not id then
+					local ok, r = pcall(function() return Players:GetUserIdFromNameAsync(busca) end)
+					id = ok and r or nil
+				end
+				if not id then
+					mostrarToast("Jogador não encontrado: " .. busca, false)
+					return
+				end
+				INFO.abrir(Players:GetPlayerByUserId(id), id)
+			end)
+			return true, "Procurando " .. busca .. "..."
+		end)
+	end
+
+	-- PING E FPS: etiqueta pequena e arrastável, atualizada uma vez por segundo. O mesmo comando liga e desliga.
+	do
+		local PF = { etiqueta = nil, conexao = nil }
+
+		local function pegarPing()
+			local ok, v = pcall(function()
+				return game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValue()
+			end)
+			return ok and tonumber(v) or nil
+		end
+
+		local function cor(valor, bom, medio, invertido) -- verde / amarelo / vermelho
+			local ruim
+			if invertido then -- fps: quanto maior, melhor
+				ruim = valor < medio and 2 or (valor < bom and 1 or 0)
+			else -- ping: quanto menor, melhor
+				ruim = valor > medio and 2 or (valor > bom and 1 or 0)
+			end
+			return ({ "#7CFC9A", "#FFD36B", "#FF6B7A" })[ruim + 1]
+		end
+
+		function PF.desligar()
+			if PF.conexao then PF.conexao:Disconnect() PF.conexao = nil end
+			if PF.etiqueta then PF.etiqueta:Destroy() PF.etiqueta = nil end
+		end
+
+		function PF.ligar()
+			if PF.etiqueta and PF.etiqueta.Parent then return end
+			local lb = Instance.new("TextLabel")
+			lb.Name = "PingFps"
+			lb.Size = UDim2.fromOffset(120, 24)
+			lb.Position = UDim2.new(1, -130, 0, 10)
+			lb.BackgroundColor3 = Color3.fromRGB(28, 14, 50)
+			lb.BackgroundTransparency = 0.25
+			lb.RichText = true
+			lb.Text = "..."
+			lb.TextColor3 = Color3.new(1, 1, 1)
+			lb.Font = Enum.Font.GothamBold
+			lb.TextSize = 13
+			lb.Active = true
+			lb.ZIndex = 20
+			lb.Parent = gui
+			Instance.new("UICorner", lb).CornerRadius = UDim.new(0, 6)
+			tornarMovel(lb, lb) -- arraste a etiqueta para mover
+			PF.etiqueta = lb
+
+			local quadros, tempo = 0, 0
+			PF.conexao = RunService.RenderStepped:Connect(function(dt)
+				quadros += 1
+				tempo += dt
+				if tempo < 1 then return end
+				local fps = math.floor(quadros / tempo + 0.5)
+				quadros, tempo = 0, 0
+				local ping = pegarPing()
+				local txtPing = ping and (math.floor(ping + 0.5) .. " ms") or "-- ms"
+				local corPing = ping and cor(ping, 100, 200, false) or "#B9C0FF"
+				lb.Text = '<font color="' .. corPing .. '">' .. txtPing .. '</font>  <font color="'
+					.. cor(fps, 50, 30, true) .. '">' .. fps .. ' fps</font>'
+			end)
+		end
+
+		function PF.alternar()
+			if PF.etiqueta and PF.etiqueta.Parent then -- já estava ligado: o mesmo comando desliga
+				PF.desligar()
+				return true, "Ping e fps desligados"
+			end
+			PF.ligar()
+			return true, "Ping e fps ligados"
+		end
+
+		alternavel({ "ping", "ms" }, "ping ou ms / unping ou unms - etiqueta com ping e fps (arraste para mover)", function(ligar)
+			if ligar then return PF.alternar() end
+			PF.desligar()
+			return true, "Ping e fps desligados"
+		end)
+
+		-- "fps" sozinho também liga/desliga a etiqueta. (Não usa alternavel: "unfps" já é o comando que
+		-- volta o visual normal do fps1/fps2/fps3, então aqui só o próprio "fps" desliga.)
+		comando({ "fps" }, "fps - liga/desliga a etiqueta de ping e fps", function()
+			return PF.alternar()
+		end)
+	end
+
+	-- LUZ: luz branca em volta do personagem, para lugares escuros (só você vê). Volta sozinha quando você renasce.
+	do
+		local LZ = { ligada = false, alcance = 40, brilho = 3, luz = nil, conexao = nil }
+
+		function LZ.aplicar()
+			local raiz = pegarPersonagem()
+			if not raiz then return end
+			if not (LZ.luz and LZ.luz.Parent == raiz) then
+				if LZ.luz then LZ.luz:Destroy() end
+				local l = Instance.new("PointLight")
+				l.Name = "LuzBranca"
+				l.Color = Color3.new(1, 1, 1)
+				l.Shadows = false
+				l.Parent = raiz
+				LZ.luz = l
+			end
+			LZ.luz.Range = LZ.alcance
+			LZ.luz.Brightness = LZ.brilho
+		end
+
+		function LZ.desligar()
+			LZ.ligada = false
+			if LZ.conexao then LZ.conexao:Disconnect() LZ.conexao = nil end
+			if LZ.luz then LZ.luz:Destroy() LZ.luz = nil end
+		end
+
+		function LZ.ligar()
+			LZ.ligada = true
+			LZ.aplicar()
+			if LZ.conexao then return end
+			LZ.conexao = player.CharacterAdded:Connect(function(char) -- renasceu: põe a luz no corpo novo
+				local raiz = char:WaitForChild("HumanoidRootPart", 10)
+				if raiz and LZ.ligada then
+					task.wait(0.2)
+					LZ.aplicar()
+				end
+			end)
+		end
+
+		alternavel({ "luz", "light" }, "luz ou light [alcance] [brilho] / unluz ou unlight - luz branca em volta de você (padrão 40 e 3)", function(ligar, args)
+			if not ligar then
+				if not LZ.ligada then return true, "A luz já estava desligada" end
+				LZ.desligar()
+				return true, "Luz desligada"
+			end
+			if #args == 0 and LZ.ligada then -- o mesmo comando liga e desliga
+				LZ.desligar()
+				return true, "Luz desligada"
+			end
+			if args[1] then
+				local a = tonumber(args[1])
+				if not a or a < 5 or a > 60 then return false, "Alcance: de 5 a 60 (ex.: luz 40)" end
+				LZ.alcance = a
+			end
+			if args[2] then
+				local b = tonumber(args[2])
+				if not b or b < 0.5 or b > 10 then return false, "Brilho: de 0.5 a 10 (ex.: luz 40 3)" end
+				LZ.brilho = b
+			end
+			LZ.ligar()
+			return true, "Luz ligada (alcance " .. LZ.alcance .. ", brilho " .. LZ.brilho .. ")"
+		end)
+	end
+
+	-- DIA/NOITE: ciclo automático do relógio do jogo (ciclo), ou hora fixa (dia / noite). Só no seu cliente.
+	-- O "un" de qualquer um dos três para tudo e volta à hora que o jogo tinha antes.
+	do
+		local Lighting = game:GetService("Lighting")
+		local CD = { conexao = nil, original = nil }
+		local HORA_DIA, HORA_NOITE = 14, 0
+
+		function CD.parar()
+			if CD.conexao then CD.conexao:Disconnect() CD.conexao = nil end
+		end
+
+		function CD.restaurar()
+			local tinha = CD.original ~= nil
+			CD.parar()
+			if tinha then
+				Lighting.ClockTime = CD.original
+				CD.original = nil
+			end
+			return tinha
+		end
+
+		function CD.fixar(hora)
+			if CD.original == nil then CD.original = Lighting.ClockTime end -- guarda a hora do jogo só na primeira vez
+			CD.parar()
+			Lighting.ClockTime = hora
+			CD.conexao = RunService.Heartbeat:Connect(function()
+				if Lighting.ClockTime ~= hora then Lighting.ClockTime = hora end -- o jogo tentou mudar: volta
+			end)
+		end
+
+		function CD.ciclo(minutosPorDia)
+			if CD.original == nil then CD.original = Lighting.ClockTime end
+			CD.parar()
+			local hora = Lighting.ClockTime
+			local porSegundo = 24 / (minutosPorDia * 60) -- horas do jogo que passam a cada segundo real
+			CD.conexao = RunService.Heartbeat:Connect(function(dt)
+				hora = (hora + dt * porSegundo) % 24
+				Lighting.ClockTime = hora
+			end)
+		end
+
+		local function desfazer()
+			return true, CD.restaurar() and "Hora original do jogo restaurada" or "Nada para restaurar"
+		end
+
+		alternavel({ "ciclo" }, "ciclo [minutos por dia] / unciclo - o dia e a noite passam sozinhos (ciclo 5 = 5 min por dia; padrão 5)", function(ligar, args)
+			if not ligar then return desfazer() end
+			local min = 5
+			if args[1] then
+				min = tonumber(args[1])
+				if not min or min < 0.1 or min > 1440 then
+					return false, "Minutos por dia: de 0.1 a 1440 (ex.: ciclo 5)"
+				end
+			end
+			CD.ciclo(min)
+			return true, "Ciclo de dia e noite: " .. min .. " min por dia"
+		end)
+
+		alternavel({ "dia" }, "dia / undia - fixa o dia (só você vê); undia volta à hora do jogo", function(ligar)
+			if not ligar then return desfazer() end
+			CD.fixar(HORA_DIA)
+			return true, "Dia fixo"
+		end)
+
+		alternavel({ "noite" }, "noite / unnoite - fixa a noite (só você vê); unnoite volta à hora do jogo", function(ligar)
+			if not ligar then return desfazer() end
+			CD.fixar(HORA_NOITE)
+			return true, "Noite fixa"
+		end)
+	end
+
+	-- SPIN: gira o personagem sem parar (graus por segundo). Pausa sozinho enquanto o fly, o fly vertical,
+	-- a natação ou o assento estão mandando na rotação (para não brigar com eles) e volta depois.
+	do
+		local SP = { conexao = nil, vel = 360 }
+
+		local function pausado(hum)
+			return estado.fly or estado.vfly or estado.swim or hum.Sit or hum.SeatPart ~= nil
+		end
+
+		function SP.parar()
+			if not SP.conexao then return false end
+			SP.conexao:Disconnect()
+			SP.conexao = nil
+			local _, hum = pegarPersonagem()
+			if hum then hum.AutoRotate = true end
+			return true
+		end
+
+		function SP.iniciar()
+			if SP.conexao then return end
+			SP.conexao = RunService.RenderStepped:Connect(function(dt)
+				local raiz, hum = pegarPersonagem()
+				if not (raiz and hum) then return end -- renascendo: espera
+				if pausado(hum) then
+					hum.AutoRotate = true
+					return
+				end
+				hum.AutoRotate = false -- senão o Humanoid vira o corpo para onde anda e briga com o spin
+				raiz.CFrame = raiz.CFrame * CFrame.Angles(0, math.rad(SP.vel) * math.min(dt, 0.1), 0)
+			end)
+		end
+
+		alternavel({ "spin" }, "spin [graus por segundo] / unspin - gira o personagem (padrão 360; negativo gira para o outro lado)", function(ligar, args)
+			if not ligar then
+				return true, SP.parar() and "Spin desligado" or "Spin já estava desligado"
+			end
+			if args[1] then
+				local n = tonumber(args[1])
+				if not n or n == 0 or math.abs(n) > 3600 then
+					return false, "Velocidade inválida: " .. args[1] .. " (de 1 a 3600 graus por segundo; negativo inverte)"
+				end
+				SP.vel = n
+			end
+			SP.iniciar()
+			local voando = estado.fly or estado.vfly or estado.swim
+			return true, "Spin: " .. SP.vel .. "°/s" .. (voando and " (pausado enquanto voa/nada)" or "")
+		end)
+	end
+
+	-- AUTO CLICK: clica sozinho N vezes por segundo. Com ferramenta na mão, ativa a ferramenta;
+	-- sem ferramenta, usa o clique do executor (mouse1click) ou, se não tiver, o VirtualInputManager.
+	do
+		local AC = { conexao = nil, taxa = 10, forcarMouse = false, acumulado = 0 }
+
+		local function clicarMouse()
+			if typeof(mouse1click) == "function" then
+				return pcall(mouse1click)
+			end
+			return pcall(function() -- plano B: clique simulado no ponto onde está o cursor
+				local VIM = game:GetService("VirtualInputManager")
+				local p = UserInputService:GetMouseLocation()
+				VIM:SendMouseButtonEvent(p.X, p.Y, 0, true, game, 0)
+				VIM:SendMouseButtonEvent(p.X, p.Y, 0, false, game, 0)
+			end)
+		end
+
+		local function clicar()
+			if not AC.forcarMouse then
+				local tool = player.Character and player.Character:FindFirstChildOfClass("Tool")
+				if tool then
+					tool:Activate()
+					return
+				end
+			end
+			clicarMouse()
+		end
+
+		function AC.parar()
+			if AC.conexao then AC.conexao:Disconnect() AC.conexao = nil end
+			AC.acumulado = 0
+		end
+
+		function AC.iniciar()
+			if AC.conexao then return end -- já rodando: só a taxa mudou
+			AC.conexao = RunService.Heartbeat:Connect(function(dt)
+				AC.acumulado += dt * AC.taxa
+				local feitos = 0
+				while AC.acumulado >= 1 and feitos < 5 do -- no máx. 5 por quadro, para não travar
+					AC.acumulado -= 1
+					feitos += 1
+					clicar()
+				end
+				if AC.acumulado > 5 then AC.acumulado = 0 end
+			end)
+		end
+
+		alternavel({ "autoclick", "ac" }, "autoclick ou ac [cliques por segundo] [mouse] / unautoclick ou unac - clica sozinho (padrão 10/s)", function(ligar, args)
+			if not ligar then
+				if not AC.conexao then return true, "Auto click já estava desligado" end
+				AC.parar()
+				return true, "Auto click desligado"
+			end
+			local taxa = AC.taxa
+			AC.forcarMouse = false
+			for _, a in ipairs(args) do
+				local n = tonumber(a)
+				if n then
+					if n < 1 or n > 100 then return false, "Cliques por segundo: de 1 a 100" end
+					taxa = n
+				elseif a:lower() == "mouse" then
+					AC.forcarMouse = true
+				else
+					return false, "Uso: autoclick [1 a 100] [mouse]"
+				end
+			end
+			AC.taxa = taxa
+			AC.iniciar()
+			return true, "Auto click: " .. taxa .. " por segundo" .. (AC.forcarMouse and " (clique do mouse)" or "")
+		end)
+	end
+
+	-- LOW SERVER: vai para o servidor público mais vazio do jogo (que não seja o atual).
+	-- Usa a lista de servidores da API do Roblox (tenta roblox.com e, se não der, o espelho roproxy.com).
+	do
+		local LS = { buscando = false }
+
+		local function baixar(url)
+			local ok, r = pcall(function() return game:HttpGet(url) end)
+			if ok and type(r) == "string" and r ~= "" then return r end
+			local req = (typeof(request) == "function" and request) or (typeof(http_request) == "function" and http_request) or nil
+			if req then
+				local ok2, resp = pcall(req, { Url = url, Method = "GET" })
+				if ok2 and type(resp) == "table" and type(resp.Body) == "string" and (resp.StatusCode == nil or resp.StatusCode == 200) then
+					return resp.Body
+				end
+			end
+		end
+
+		local function listar(cursor)
+			for _, dominio in ipairs({ "roblox.com", "roproxy.com" }) do
+				local url = "https://games." .. dominio .. "/v1/games/" .. game.PlaceId
+					.. "/servers/Public?sortOrder=Asc&limit=100" .. (cursor and ("&cursor=" .. cursor) or "")
+				local t = baixar(url)
+				if t then
+					local ok, d = pcall(function() return HttpService:JSONDecode(t) end)
+					if ok and type(d) == "table" and type(d.data) == "table" then return d end
+				end
+			end
+		end
+
+		-- retorna o servidor escolhido, ou nil + motivo
+		local function escolher()
+			local melhor, listou, cursor = nil, false, nil
+			for _ = 1, 3 do -- a lista vem do menor para o maior; se só tiver o atual, olha a próxima página
+				local d = listar(cursor)
+				if not d then break end
+				listou = true
+				for _, s in ipairs(d.data) do
+					if s.id ~= game.JobId and type(s.playing) == "number" and type(s.maxPlayers) == "number"
+						and s.playing < s.maxPlayers and (not melhor or s.playing < melhor.playing) then
+						melhor = s
+					end
+				end
+				cursor = d.nextPageCursor
+				if melhor or not cursor then break end
+			end
+			if melhor then return melhor end
+			return nil, listou and "Nenhum outro servidor público disponível" or "Não consegui a lista de servidores (o executor pode precisar de acesso à API)"
+		end
+
+		comando({ "lowserver", "low" }, "lowserver ou low - ir para o servidor mais vazio do jogo", function()
+			if game.PlaceId == 0 then return false, "Só funciona no jogo publicado" end
+			if reentrando or LS.buscando then return true, "Já está trocando de servidor..." end
+			LS.buscando = true
+			task.spawn(function()
+				local s, motivo = escolher()
+				if not s then
+					LS.buscando = false
+					mostrarToast(motivo, false)
+					return
+				end
+				mostrarToast("Servidor com " .. s.playing .. " jogador(es) encontrado, indo...", true)
+				reentrando = true
+				mostrarTelaRejoin()
+				local okFila, motivoFila = prepararReexecucao() -- o script volta sozinho no servidor novo (se o executor deixar)
+				if not okFila then warn("Low server sem reexecução: " .. tostring(motivoFila)) end
+				local ok, erro = pcall(function()
+					TeleportService:TeleportToPlaceInstance(game.PlaceId, s.id, player)
+				end)
+				LS.buscando = false
+				if not ok then
+					warn("Low server falhou: " .. tostring(erro))
+					esconderTelaRejoin()
+					reentrando = false
+					mostrarToast("Não foi possível teleportar para o outro servidor", false)
+				end
+			end)
+			return true, "Procurando o servidor mais vazio..."
+		end)
+	end
+
+	-- TIMER E CRONÔMETRO: contagem regressiva (timer) e contagem para cima (cron), cada um numa etiqueta arrastável.
+	do
+		local TC = { timerLb = nil, timerFim = nil, timerDur = 0, versao = 0,
+			cronLb = nil, cronAcum = 0, cronInicio = nil, conexao = nil }
+
+		local function fmt(segundos, decimos) -- 75 -> "01:15" | com décimos: "01:15.3" | com horas: "1:01:15"
+			local unidade = decimos and 10 or 1
+			local t = math.floor(math.max(0, segundos) * unidade)
+			local inteiro = math.floor(t / unidade)
+			local h, m, s = math.floor(inteiro / 3600), math.floor(inteiro % 3600 / 60), inteiro % 60
+			local txt = h > 0 and string.format("%d:%02d:%02d", h, m, s) or string.format("%02d:%02d", m, s)
+			if decimos then txt = txt .. "." .. (t % 10) end
+			return txt
+		end
+
+		-- "30" = 30s | "1:30" = 1min30 | "1:02:03" | "2m" "1h30m" "1m30s" "45s"
+		local function lerTempo(txt)
+			txt = (txt:lower():gsub("[%s]", ""))
+			local n = tonumber(txt)
+			if n then return n end
+			local a, b, c = txt:match("^(%d+):(%d+):(%d+)$")
+			if a then return a * 3600 + b * 60 + c end
+			a, b = txt:match("^(%d+):(%d+)$")
+			if a then return a * 60 + b end
+			local h, m, s = txt:match("^([%d%.]+)h"), txt:match("([%d%.]+)m"), txt:match("([%d%.]+)s")
+			if h or m or s then
+				return (tonumber(h) or 0) * 3600 + (tonumber(m) or 0) * 60 + (tonumber(s) or 0)
+			end
+		end
+
+		local function criarEtiqueta(nome, y)
+			local lb = Instance.new("TextLabel")
+			lb.Name = nome
+			lb.Size = UDim2.fromOffset(120, 24)
+			lb.Position = UDim2.new(1, -130, 0, y)
+			lb.BackgroundColor3 = Color3.fromRGB(28, 14, 50)
+			lb.BackgroundTransparency = 0.25
+			lb.Text = ""
+			lb.TextColor3 = Color3.new(1, 1, 1)
+			lb.Font = Enum.Font.GothamBold
+			lb.TextSize = 13
+			lb.Active = true
+			lb.ZIndex = 20
+			lb.Parent = gui
+			Instance.new("UICorner", lb).CornerRadius = UDim.new(0, 6)
+			tornarMovel(lb, lb) -- arraste a etiqueta para mover
+			return lb
+		end
+
+		local function atualizar()
+			local agora = os.clock()
+			if TC.timerLb and TC.timerFim then
+				local resta = TC.timerFim - agora
+				if resta <= 0 then
+					local lb, minha, dur = TC.timerLb, TC.versao, TC.timerDur
+					TC.timerFim = nil
+					lb.Text = "TIMER 00:00 FIM!"
+					lb.TextColor3 = Color3.fromRGB(255, 107, 122)
+					mostrarToast("Timer acabou! (" .. fmt(dur) .. ")", true)
+					task.delay(5, function() -- some sozinha, a não ser que você tenha iniciado outro timer
+						if TC.versao == minha and TC.timerLb == lb then
+							lb:Destroy()
+							TC.timerLb = nil
+						end
+					end)
+				else
+					TC.timerLb.Text = "TIMER " .. fmt(math.ceil(resta))
+				end
+			end
+			if TC.cronLb then
+				local total = TC.cronAcum + (TC.cronInicio and (agora - TC.cronInicio) or 0)
+				TC.cronLb.Text = "CRON " .. fmt(total, true)
+			end
+		end
+
+		local function garantirLoop()
+			if TC.conexao then return end
+			TC.conexao = RunService.RenderStepped:Connect(function()
+				if not (TC.timerLb or TC.cronLb) then -- nada na tela: para o loop
+					TC.conexao:Disconnect()
+					TC.conexao = nil
+					return
+				end
+				atualizar()
+			end)
+		end
+
+		function TC.pararTimer()
+			TC.versao += 1
+			TC.timerFim = nil
+			if TC.timerLb then TC.timerLb:Destroy() TC.timerLb = nil end
+		end
+
+		function TC.pararCron()
+			TC.cronInicio, TC.cronAcum = nil, 0
+			if TC.cronLb then TC.cronLb:Destroy() TC.cronLb = nil end
+		end
+
+		alternavel({ "timer", "temporizador" }, "timer <tempo> / untimer - contagem regressiva (ex.: timer 30, timer 1:30, timer 2m); avisa no fim", function(ligar, args)
+			if not ligar then
+				if not TC.timerLb then return true, "Nenhum timer ativo" end
+				TC.pararTimer()
+				return true, "Timer cancelado"
+			end
+			local txt = table.concat(args, "")
+			if txt == "" then
+				if TC.timerFim then return true, "Faltam " .. fmt(math.ceil(TC.timerFim - os.clock())) end
+				return false, "Uso: timer <tempo> (ex.: timer 30, timer 1:30, timer 2m)"
+			end
+			local a = txt:lower()
+			if a == "parar" or a == "stop" or a == "cancelar" then
+				TC.pararTimer()
+				return true, "Timer cancelado"
+			end
+			local dur = lerTempo(txt)
+			if not dur or dur <= 0 or dur > 86400 then
+				return false, "Tempo inválido: " .. txt .. " (use 30, 1:30 ou 2m; máximo 24h)"
+			end
+			TC.pararTimer()
+			TC.timerDur, TC.timerFim = dur, os.clock() + dur
+			TC.timerLb = criarEtiqueta("Timer", 70)
+			TC.timerLb.TextColor3 = Color3.new(1, 1, 1)
+			atualizar()
+			garantirLoop()
+			return true, "Timer de " .. fmt(dur) .. " iniciado"
+		end)
+
+		alternavel({ "cron", "cronometro" }, "cron [start|stop|reset] / uncron - cronômetro (sem nada: inicia ou pausa); uncron fecha", function(ligar, args)
+			if not ligar then
+				if not TC.cronLb then return true, "Nenhum cronômetro ativo" end
+				TC.pararCron()
+				return true, "Cronômetro fechado"
+			end
+			local a = args[1] and args[1]:lower()
+			if not TC.cronLb then
+				TC.cronLb = criarEtiqueta("Cronometro", 100)
+				TC.cronAcum, TC.cronInicio = 0, nil
+				garantirLoop()
+			end
+			local rodando = TC.cronInicio ~= nil
+			local msg
+			if a == "reset" or a == "zerar" then
+				TC.cronAcum, TC.cronInicio = 0, nil -- zera e para
+				msg = "Cronômetro zerado"
+			elseif a == "stop" or a == "parar" or a == "pausar" or (a == nil and rodando) then
+				if rodando then
+					TC.cronAcum += os.clock() - TC.cronInicio
+					TC.cronInicio = nil
+				end
+				msg = "Cronômetro parado em " .. fmt(TC.cronAcum, true)
+			elseif a == nil or a == "start" or a == "iniciar" or a == "continuar" then
+				if not rodando then TC.cronInicio = os.clock() end
+				msg = "Cronômetro rodando"
+			else
+				return false, "Uso: cron [start | stop | reset]"
+			end
+			atualizar()
+			return true, msg
+		end)
+	end
+
+	-- VELOCÍMETRO: etiqueta arrastável com a velocidade real do personagem (studs por segundo).
+	do
+		local VM = { etiqueta = nil, conexao = nil }
+
+		function VM.desligar()
+			if VM.conexao then VM.conexao:Disconnect() VM.conexao = nil end
+			if VM.etiqueta then VM.etiqueta:Destroy() VM.etiqueta = nil end
+		end
+
+		function VM.ligar()
+			if VM.etiqueta and VM.etiqueta.Parent then return end
+			local lb = Instance.new("TextLabel")
+			lb.Name = "Velocimetro"
+			lb.Size = UDim2.fromOffset(120, 24)
+			lb.Position = UDim2.new(1, -130, 0, 40)
+			lb.BackgroundColor3 = Color3.fromRGB(28, 14, 50)
+			lb.BackgroundTransparency = 0.25
+			lb.Text = "0 studs/s"
+			lb.TextColor3 = Color3.new(1, 1, 1)
+			lb.Font = Enum.Font.GothamBold
+			lb.TextSize = 13
+			lb.Active = true
+			lb.ZIndex = 20
+			lb.Parent = gui
+			Instance.new("UICorner", lb).CornerRadius = UDim.new(0, 6)
+			tornarMovel(lb, lb) -- arraste a etiqueta para mover
+			VM.etiqueta = lb
+
+			local ultimo = 0
+			VM.conexao = RunService.RenderStepped:Connect(function()
+				local agora = os.clock()
+				if agora - ultimo < 0.1 then return end -- atualiza 10x por segundo (não pisca)
+				ultimo = agora
+				local raiz = pegarPersonagem()
+				if not raiz then lb.Text = "-- studs/s" return end
+				local v = raiz.AssemblyLinearVelocity.Magnitude -- velocidade real, não a configurada
+				lb.Text = math.floor(v + 0.5) .. " studs/s"
+			end)
+		end
+
+		alternavel({ "velocimetro", "vm" }, "velocimetro ou vm / unvelocimetro ou unvm - mostra a sua velocidade real em studs/s", function(ligar)
+			if ligar and not (VM.etiqueta and VM.etiqueta.Parent) then
+				VM.ligar()
+				return true, "Velocímetro ligado"
+			end
+			VM.desligar() -- liga de novo = desliga; un... = desliga
+			return true, "Velocímetro desligado"
+		end)
+	end
+
+	-- CHAT LOG: guarda as últimas 200 mensagens do chat e mostra numa janela com rolagem e botão de copiar.
+	-- Escuta desde que o script liga, então o histórico já existe quando você abre a janela.
+	do
+		local TCS = game:GetService("TextChatService")
+		local LOG = { msgs = {}, max = 200, ordem = 0, f = nil, rol = nil, tit = nil }
+
+		local function textoLimpo(s) -- tira marcações (<b>, <font>...) que o chat novo pode mandar
+			return (tostring(s or ""):gsub("<[^>]+>", ""))
+		end
+
+		local function nomeDe(j)
+			if j.DisplayName == j.Name then return j.Name end
+			return j.DisplayName .. " (@" .. j.Name .. ")"
+		end
+
+		function LOG.pintar(e)
+			e.lb.Text = '<font color="#8A8FB5">' .. e.hora .. '</font> <font color="#B9C0FF"><b>'
+				.. xml(e.quem) .. ':</b></font> ' .. xml(e.texto)
+		end
+
+		function LOG.criarLinha(e)
+			local lb = Instance.new("TextLabel")
+			lb.LayoutOrder = e.ordem
+			lb.Size = UDim2.new(1, -8, 0, 0)
+			lb.AutomaticSize = Enum.AutomaticSize.Y
+			lb.BackgroundTransparency = 1
+			lb.TextWrapped = true
+			lb.RichText = true
+			lb.TextXAlignment = Enum.TextXAlignment.Left
+			lb.TextYAlignment = Enum.TextYAlignment.Top
+			lb.Font = Enum.Font.Gotham
+			lb.TextSize = 12
+			lb.TextColor3 = Color3.new(1, 1, 1)
+			lb.ZIndex = 31
+			lb.Parent = LOG.rol
+			e.lb = lb
+			LOG.pintar(e)
+		end
+
+		function LOG.titulo()
+			if LOG.tit then LOG.tit.Text = "Chat log (" .. #LOG.msgs .. ")" end
+		end
+
+		function LOG.rolarFim()
+			task.delay(0.05, function()
+				local r = LOG.rol
+				if r and r.Parent then
+					r.CanvasPosition = Vector2.new(0, math.max(0, r.AbsoluteCanvasSize.Y - r.AbsoluteWindowSize.Y))
+				end
+			end)
+		end
+
+		function LOG.add(quem, texto)
+			texto = textoLimpo(texto)
+			if texto == "" then return end
+			LOG.ordem += 1
+			local e = { ordem = LOG.ordem, hora = os.date("%H:%M:%S"), quem = quem, texto = texto }
+			LOG.msgs[#LOG.msgs + 1] = e
+			if #LOG.msgs > LOG.max then -- passou de 200: some a mais antiga
+				local velho = table.remove(LOG.msgs, 1)
+				if velho.lb then velho.lb:Destroy() end
+			end
+			if LOG.f and LOG.f.Parent then
+				local r = LOG.rol
+				-- só acompanha as novas mensagens se você já estava no fim da lista
+				local noFim = r.CanvasPosition.Y + r.AbsoluteWindowSize.Y >= r.AbsoluteCanvasSize.Y - 40
+				LOG.criarLinha(e)
+				LOG.titulo()
+				if noFim then LOG.rolarFim() end
+			end
+		end
+
+		function LOG.limpar()
+			for _, e in ipairs(LOG.msgs) do
+				if e.lb then e.lb:Destroy() end
+			end
+			LOG.msgs = {}
+			LOG.titulo()
+		end
+
+		function LOG.montar()
+			local tela = tamanhoTela()
+			local w = math.min(380, tela.X - 20)
+			local h = math.min(400, tela.Y - 60)
+			local f = Instance.new("Frame")
+			f.Name = "JanelaChatLog"
+			f.Size = UDim2.fromOffset(w, h)
+			f.Position = UDim2.fromOffset((tela.X - w) / 2, math.max(10, (tela.Y - h) / 2))
+			f.BackgroundColor3 = Color3.fromRGB(28, 14, 50)
+			f.ClipsDescendants = true
+			f.ZIndex = 30
+			f.Parent = gui
+			Instance.new("UICorner", f).CornerRadius = UDim.new(0, 8)
+
+			local tit = Instance.new("TextLabel")
+			tit.Size = UDim2.new(1, -150, 0, 30)
+			tit.Position = UDim2.fromOffset(12, 0)
+			tit.BackgroundTransparency = 1
+			tit.Text = "Chat log"
+			tit.TextColor3 = Color3.new(1, 1, 1)
+			tit.Font = Enum.Font.Gotham
+			tit.TextSize = 16
+			tit.TextXAlignment = Enum.TextXAlignment.Left
+			tit.TextTruncate = Enum.TextTruncate.AtEnd
+			tit.Active = true
+			tit.ZIndex = 31
+			tit.Parent = f
+			tornarMovel(tit, f) -- arraste o título para mover
+
+			local rol = Instance.new("ScrollingFrame")
+			rol.Position = UDim2.fromOffset(10, 34)
+			rol.Size = UDim2.new(1, -20, 1, -42)
+			rol.BackgroundTransparency = 1
+			rol.BorderSizePixel = 0
+			rol.ScrollBarThickness = 2
+			rol.CanvasSize = UDim2.new()
+			rol.AutomaticCanvasSize = Enum.AutomaticSize.Y
+			rol.ZIndex = 31
+			rol.Parent = f
+			local lay = Instance.new("UIListLayout")
+			lay.SortOrder = Enum.SortOrder.LayoutOrder
+			lay.Padding = UDim.new(0, 4)
+			lay.Parent = rol
+
+			local x = MENU.botaoFechar(f)
+			x.ZIndex = 32
+
+			local function botao(texto, deslocamento)
+				local b = Instance.new("TextButton")
+				b.AnchorPoint = Vector2.new(1, 0)
+				b.Position = UDim2.new(1, deslocamento, 0, 4)
+				b.Size = UDim2.fromOffset(52, 22)
+				b.BackgroundColor3 = CONSTS.COR_DESTAQUE
+				b.BackgroundTransparency = 0.3
+				b.Text = texto
+				b.TextColor3 = Color3.new(1, 1, 1)
+				b.Font = Enum.Font.Gotham
+				b.TextSize = 12
+				b.ZIndex = 32
+				b.Parent = f
+				Instance.new("UICorner", b).CornerRadius = UDim.new(0, 4)
+				return b
+			end
+
+			local bCopiar = botao("Copiar", -30)
+			bCopiar.MouseButton1Click:Connect(function()
+				local linhas = {}
+				for _, e in ipairs(LOG.msgs) do
+					linhas[#linhas + 1] = "[" .. e.hora .. "] " .. e.quem .. ": " .. e.texto
+				end
+				local copiar = (typeof(setclipboard) == "function" and setclipboard) or (typeof(toclipboard) == "function" and toclipboard) or nil
+				local ok = copiar and #linhas > 0 and pcall(copiar, table.concat(linhas, "\n"))
+				bCopiar.Text = ok and "Copiado!" or (#linhas == 0 and "Vazio" or "Sem cópia")
+				task.delay(1.5, function() bCopiar.Text = "Copiar" end)
+			end)
+
+			local bLimpar = botao("Limpar", -86)
+			bLimpar.MouseButton1Click:Connect(LOG.limpar)
+
+			LOG.f, LOG.tit, LOG.rol = f, tit, rol
+			for _, e in ipairs(LOG.msgs) do LOG.criarLinha(e) end
+			LOG.titulo()
+		end
+
+		function LOG.abrir()
+			if not (LOG.f and LOG.f.Parent) then LOG.montar() end
+			LOG.f.Visible = true
+			LOG.titulo()
+			LOG.rolarFim()
+		end
+
+		-- escuta o chat: chat novo (TextChatService) ou chat antigo (Chatted de cada jogador)
+		pcall(function()
+			if TCS.ChatVersion == Enum.ChatVersion.TextChatService then
+				TCS.MessageReceived:Connect(function(msg)
+					local quem = "Sistema"
+					local src = msg.TextSource
+					if src then
+						local j = Players:GetPlayerByUserId(src.UserId)
+						quem = j and nomeDe(j) or src.Name
+					end
+					LOG.add(quem, msg.Text)
+				end)
+			else
+				local function ouvir(j)
+					j.Chatted:Connect(function(m) LOG.add(nomeDe(j), m) end)
+				end
+				for _, j in ipairs(Players:GetPlayers()) do ouvir(j) end
+				Players.PlayerAdded:Connect(ouvir)
+			end
+		end)
+
+		alternavel({ "chatlog", "log" }, "chatlog ou log [limpar] / unchatlog ou unlog - janela com as últimas 200 mensagens do chat", function(ligar, args)
+			if not ligar then
+				if LOG.f then LOG.f.Visible = false end
+				return true, "Chat log fechado"
+			end
+			local a = args[1] and args[1]:lower()
+			if a == "limpar" or a == "clear" then
+				LOG.limpar()
+				return true, "Chat log limpo"
+			end
+			LOG.abrir()
+			return true, #LOG.msgs .. " mensagem(ns) no chat log"
+		end)
+	end
+
+	-- MUTAR: esconde o chat de jogadores (só para você). A lista fica em "mutados.json" (por UserId).
+	do
+		local TCS = game:GetService("TextChatService")
+		local MUTE = { ids = {}, nomes = {}, apelidos = {}, arquivo = "mutados.json", hook = false }
+
+		function MUTE.salvar()
+			if typeof(writefile) ~= "function" then return end
+			local t = {}
+			for id, nome in pairs(MUTE.nomes) do t[tostring(id)] = nome end
+			pcall(function() writefile(MUTE.arquivo, HttpService:JSONEncode(t)) end)
+		end
+
+		-- chat antigo: esconde na tela a mensagem de quem está mutado (procura o botão com o nome de quem falou)
+		local function cuidarMensagemAntiga(f)
+			task.wait(0.05) -- espera os textos da mensagem preencherem
+			if not f.Parent then return end
+			for _, d in ipairs(f:GetDescendants()) do
+				if d:IsA("TextButton") then
+					local nome = d.Text:gsub("[%[%]:%s]", ""):lower()
+					if MUTE.apelidos[nome] then
+						f.Visible = false
+						return
+					end
+				end
+			end
+		end
+
+		function MUTE.ligarHook() -- instala o filtro só na primeira vez que alguém é mutado
+			if MUTE.hook then return end
+			MUTE.hook = true
+			pcall(function()
+				if TCS.ChatVersion == Enum.ChatVersion.TextChatService then
+					-- (isto troca o OnIncomingMessage do jogo, se ele usar um; só enquanto o script estiver ligado)
+					TCS.OnIncomingMessage = function(msg)
+						local props = Instance.new("TextChatMessageProperties")
+						local src = msg.TextSource
+						if src and MUTE.ids[src.UserId] then props.Text = "" end
+						return props
+					end
+				else
+					local chat = playerGui:FindFirstChild("Chat")
+					local rolagemChat = chat and chat:FindFirstChild("Scroller", true)
+					if rolagemChat then
+						rolagemChat.ChildAdded:Connect(function(f) task.spawn(cuidarMensagemAntiga, f) end)
+						for _, f in ipairs(rolagemChat:GetChildren()) do task.spawn(cuidarMensagemAntiga, f) end
+					end
+				end
+			end)
+		end
+
+		function MUTE.adicionar(id, nome, exibicao)
+			MUTE.ids[id] = true
+			MUTE.nomes[id] = nome
+			MUTE.apelidos[nome:lower()] = true
+			if exibicao then MUTE.apelidos[exibicao:lower()] = true end
+			MUTE.ligarHook()
+			MUTE.salvar()
+		end
+
+		function MUTE.remover(id)
+			local nome = MUTE.nomes[id]
+			MUTE.ids[id], MUTE.nomes[id] = nil, nil
+			if nome then MUTE.apelidos[nome:lower()] = nil end
+			local j = Players:GetPlayerByUserId(id)
+			if j then MUTE.apelidos[j.DisplayName:lower()] = nil end
+			MUTE.salvar()
+		end
+
+		pcall(function() -- carrega a lista salva
+			if typeof(isfile) == "function" and typeof(readfile) == "function" and isfile(MUTE.arquivo) then
+				for id, nome in pairs(HttpService:JSONDecode(readfile(MUTE.arquivo))) do
+					id = tonumber(id)
+					if id and type(nome) == "string" then
+						local j = Players:GetPlayerByUserId(id)
+						MUTE.adicionar(id, nome, j and j.DisplayName)
+					end
+				end
+			end
+		end)
+
+		-- quem entra no servidor já mutado tem o nome de exibição registrado também
+		Players.PlayerAdded:Connect(function(j)
+			if MUTE.ids[j.UserId] then MUTE.apelidos[j.DisplayName:lower()] = true end
+		end)
+
+		alternavel({ "mute", "mutar" }, "mute ou mutar <jogador> / unmute ou unmutar [jogador ou todos] - esconde o chat de um jogador (só para você)", function(ligar, args)
+			local busca = table.concat(args, " ")
+			if ligar then
+				if busca == "" then return false, "Uso: mute <jogador>" end
+				local alvoJogador = acharJogador(busca)
+				if not alvoJogador then return false, "Jogador não encontrado: " .. busca end
+				if MUTE.ids[alvoJogador.UserId] then return true, alvoJogador.DisplayName .. " já está mutado" end
+				MUTE.adicionar(alvoJogador.UserId, alvoJogador.Name, alvoJogador.DisplayName)
+				return true, "Mutado: " .. alvoJogador.DisplayName
+			end
+
+			-- unmute
+			local nomes = {}
+			for _, nome in pairs(MUTE.nomes) do nomes[#nomes + 1] = nome end
+			table.sort(nomes)
+			if busca == "" then
+				if #nomes == 0 then return true, "Ninguém está mutado" end
+				return true, "Mutados: " .. table.concat(nomes, ", ")
+			end
+			local b = busca:lower()
+			if b == "todos" or b == "all" then
+				local qtd = #nomes
+				for id in pairs(table.clone(MUTE.ids)) do MUTE.remover(id) end
+				return true, qtd > 0 and ("Mute removido de " .. qtd .. " jogador(es)") or "Ninguém está mutado"
+			end
+			for id, nome in pairs(MUTE.nomes) do
+				if nome:lower():find(b, 1, true) then
+					MUTE.remover(id)
+					return true, "Mute removido: " .. nome
+				end
+			end
+			local alvoJogador = acharJogador(busca)
+			if alvoJogador and MUTE.ids[alvoJogador.UserId] then
+				MUTE.remover(alvoJogador.UserId)
+				return true, "Mute removido: " .. alvoJogador.DisplayName
+			end
+			return false, "Esse jogador não está mutado: " .. busca
+		end)
+	end
+
+	-- MARCAR: destaca jogadores com cor fixa (contorno + preenchimento através das paredes, como o chams)
+	-- e põe nome + distância na cabeça. Independe do CHAMS ligado/desligado.
+	-- A lista fica em "marcados.json" (por UserId) e vale para os próximos jogos.
+	do
+		local MARCA = { lista = {}, objetos = {}, conex = {}, arquivo = "marcados.json", prox = 0, loop = false }
+		local CORES = {
+			vermelho = Color3.fromRGB(255, 60, 60), azul = Color3.fromRGB(70, 140, 255), verde = Color3.fromRGB(70, 225, 110),
+			amarelo = Color3.fromRGB(255, 230, 60), rosa = Color3.fromRGB(255, 100, 200), roxo = Color3.fromRGB(160, 90, 255),
+			laranja = Color3.fromRGB(255, 150, 40), ciano = Color3.fromRGB(60, 230, 230), branco = Color3.fromRGB(255, 255, 255),
+		}
+		local ORDEM = { "vermelho", "azul", "verde", "amarelo", "rosa", "roxo", "laranja", "ciano", "branco" }
+		local EN = { red = "vermelho", blue = "azul", green = "verde", yellow = "amarelo", pink = "rosa", purple = "roxo", orange = "laranja", cyan = "ciano", white = "branco" }
+
+		local function nomeCor(t)
+			t = t:lower()
+			t = EN[t] or t
+			if CORES[t] then return t end
+		end
+
+		function MARCA.salvar()
+			if typeof(writefile) ~= "function" then return end
+			local t = {}
+			for id, d in pairs(MARCA.lista) do t[tostring(id)] = { nome = d.nome, exib = d.exib, cor = d.cor } end
+			pcall(function() writefile(MARCA.arquivo, HttpService:JSONEncode(t)) end)
+		end
+
+		function MARCA.limpar(p)
+			local o = MARCA.objetos[p]
+			if not o then return end
+			MARCA.objetos[p] = nil
+			if o.h then o.h:Destroy() end
+			if o.bb then o.bb:Destroy() end
+		end
+
+		function MARCA.aplicar(p) -- (re)cria o destaque no personagem atual do jogador
+			MARCA.limpar(p)
+			local dados = MARCA.lista[p.UserId]
+			local char = p.Character
+			if not (dados and char and p ~= player) then return end
+			local cor = CORES[dados.cor] or CORES.vermelho
+
+			local h = Instance.new("Highlight")
+			h.Name = "Marca"
+			h.FillColor, h.OutlineColor = cor, cor
+			h.FillTransparency, h.OutlineTransparency = 0.55, 0
+			h.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop -- aparece através das paredes
+			h.Parent = char
+			local o = { h = h }
+			MARCA.objetos[p] = o
+
+			task.spawn(function()
+				local cabeca = char:WaitForChild("Head", 5)
+				if not cabeca or MARCA.objetos[p] ~= o then return end
+				local bb = Instance.new("BillboardGui")
+				bb.Name = "MarcaNome"
+				bb.Adornee = cabeca
+				bb.AlwaysOnTop = true
+				bb.Size = UDim2.fromOffset(160, 22)
+				bb.StudsOffset = Vector3.new(0, 2.6, 0)
+				bb.Parent = cabeca
+				local lb = Instance.new("TextLabel")
+				lb.Size = UDim2.fromScale(1, 1)
+				lb.BackgroundTransparency = 1
+				lb.Font = Enum.Font.GothamBold
+				lb.TextSize = 14
+				lb.TextColor3 = cor
+				lb.TextStrokeTransparency = 0.4
+				lb.Text = dados.exib or dados.nome or p.DisplayName
+				lb.Parent = bb
+				o.bb, o.label = bb, lb
+			end)
+		end
+
+		function MARCA.ligarLoop() -- atualiza a distância no nome (4x por segundo)
+			if MARCA.loop then return end
+			MARCA.loop = true
+			local acum = 0
+			RunService.Heartbeat:Connect(function(dt)
+				acum += dt
+				if acum < 0.25 then return end
+				acum = 0
+				local minha = pegarPersonagem()
+				for p, o in pairs(MARCA.objetos) do
+					if o.label and o.label.Parent then
+						local d = MARCA.lista[p.UserId]
+						local txt = (d and (d.exib or d.nome)) or p.DisplayName
+						local raiz = p.Character and p.Character:FindFirstChild("HumanoidRootPart")
+						if raiz and minha then
+							txt = txt .. " · " .. string.format("%.0f", (raiz.Position - minha.Position).Magnitude) .. " st"
+						end
+						o.label.Text = txt
+					end
+				end
+			end)
+		end
+
+		function MARCA.conectar(p) -- liga o destaque a um jogador que está na lista (refaz a cada respawn)
+			if p == player or not MARCA.lista[p.UserId] then return end
+			if MARCA.conex[p] then MARCA.conex[p]:Disconnect() end
+			MARCA.conex[p] = p.CharacterAdded:Connect(function() task.defer(MARCA.aplicar, p) end)
+			MARCA.aplicar(p)
+			MARCA.ligarLoop()
+		end
+
+		function MARCA.marcar(p, corNome)
+			MARCA.lista[p.UserId] = { nome = p.Name, exib = p.DisplayName, cor = corNome }
+			MARCA.conectar(p)
+			MARCA.salvar()
+		end
+
+		function MARCA.desmarcar(id)
+			MARCA.lista[id] = nil
+			local p = Players:GetPlayerByUserId(id)
+			if p then
+				if MARCA.conex[p] then
+					MARCA.conex[p]:Disconnect()
+					MARCA.conex[p] = nil
+				end
+				MARCA.limpar(p)
+			end
+			MARCA.salvar()
+		end
+
+		function MARCA.resumo() -- "fulano (azul), beltrano (verde)"
+			local itens = {}
+			for _, d in pairs(MARCA.lista) do itens[#itens + 1] = (d.exib or d.nome) .. " (" .. d.cor .. ")" end
+			table.sort(itens)
+			return itens
+		end
+
+		pcall(function() -- carrega a lista salva
+			if typeof(isfile) == "function" and typeof(readfile) == "function" and isfile(MARCA.arquivo) then
+				for id, d in pairs(HttpService:JSONDecode(readfile(MARCA.arquivo))) do
+					id = tonumber(id)
+					if id and type(d) == "table" and type(d.nome) == "string" then
+						MARCA.lista[id] = { nome = d.nome, exib = d.exib, cor = nomeCor(tostring(d.cor)) or "vermelho" }
+					end
+				end
+			end
+		end)
+		for _, j in ipairs(Players:GetPlayers()) do MARCA.conectar(j) end
+		Players.PlayerAdded:Connect(function(j)
+			local d = MARCA.lista[j.UserId]
+			if not d then return end
+			d.exib = j.DisplayName
+			MARCA.conectar(j)
+			mostrarToast("Marcado entrou: " .. j.DisplayName, true)
+		end)
+		Players.PlayerRemoving:Connect(function(j)
+			MARCA.limpar(j)
+			if MARCA.conex[j] then
+				MARCA.conex[j]:Disconnect()
+				MARCA.conex[j] = nil
+			end
+		end)
+
+		alternavel({ "marcar", "mark" }, "marcar ou mark <jogador> [cor] / unmarcar ou unmark [jogador ou todos] - destaca um jogador com cor fixa e nome", function(ligar, args)
+			if ligar then
+				if #args == 0 then
+					local itens = MARCA.resumo()
+					if #itens == 0 then return true, "Uso: marcar <jogador> [cor]  (cores: " .. table.concat(ORDEM, ", ") .. ")" end
+					return true, "Marcados: " .. table.concat(itens, ", ")
+				end
+				local busca = args
+				local corNome
+				if #args >= 2 then
+					corNome = nomeCor(args[#args])
+					if corNome then busca = { table.unpack(args, 1, #args - 1) } end
+				end
+				local alvoJogador = acharJogador(table.concat(busca, " "))
+				if not alvoJogador then return false, "Jogador não encontrado: " .. table.concat(busca, " ") end
+				if not corNome then
+					MARCA.prox = MARCA.prox % #ORDEM + 1
+					corNome = ORDEM[MARCA.prox]
+				end
+				MARCA.marcar(alvoJogador, corNome)
+				return true, "Marcado: " .. alvoJogador.DisplayName .. " (" .. corNome .. ")"
+			end
+
+			-- unmarcar
+			local busca = table.concat(args, " ")
+			if busca == "" then
+				local itens = MARCA.resumo()
+				if #itens == 0 then return true, "Ninguém está marcado" end
+				return true, "Marcados: " .. table.concat(itens, ", ")
+			end
+			local b = busca:lower()
+			if b == "todos" or b == "all" then
+				local qtd = 0
+				for id in pairs(table.clone(MARCA.lista)) do
+					MARCA.desmarcar(id)
+					qtd += 1
+				end
+				return true, qtd > 0 and ("Marca removida de " .. qtd .. " jogador(es)") or "Ninguém está marcado"
+			end
+			for id, d in pairs(MARCA.lista) do
+				if d.nome:lower():find(b, 1, true) or (d.exib and d.exib:lower():find(b, 1, true)) then
+					MARCA.desmarcar(id)
+					return true, "Marca removida: " .. (d.exib or d.nome)
+				end
+			end
+			return false, "Esse jogador não está marcado: " .. busca
+		end)
+	end
+
+	-- COPIAR VISUAL: aplica no seu personagem a aparência de outro jogador (só no seu cliente).
+	-- Guarda o seu visual original para o "uncv" e reaplica o visual copiado quando você renasce.
+	do
+		local CV = { original = nil, atual = nil }
+
+		function CV.aplicar(desc)
+			local _, hum = pegarPersonagem()
+			if not (hum and desc) then return false end
+			return (pcall(function() hum:ApplyDescription(desc) end))
+		end
+
+		-- O jogo tem sistema de skin/avatar? Se o personagem do jogador está "pelado" (sem roupa, sem
+		-- acessório, sem rosto/cabelo) ele provavelmente é um modelo próprio do jogo, sem avatar
+		-- personalizável -> aí o certo é copiar a skin do Roblox da pessoa.
+		function CV.semVisualNoJogo(desc, char)
+			local ok, vazio = pcall(function()
+				if desc.Shirt ~= 0 or desc.Pants ~= 0 or desc.GraphicTShirt ~= 0 then return false end
+				if #desc:GetAccessories(true) > 0 then return false end
+				if char then
+					for _, o in ipairs(char:GetChildren()) do
+						if o:IsA("Accessory") or o:IsA("Shirt") or o:IsA("Pants") or o:IsA("ShirtGraphic") then
+							return false
+						end
+					end
+				end
+				return true
+			end)
+			return (not ok) or vazio
+		end
+
+		function CV.copiar(desc)
+			local _, hum = pegarPersonagem()
+			if not hum then return false, "Personagem indisponível" end
+			if not CV.original then -- guarda o seu visual só na primeira cópia
+				local ok, d = pcall(function() return hum:GetAppliedDescription() end)
+				if ok then CV.original = d end
+			end
+			CV.atual = desc
+			if not CV.aplicar(desc) then return false, "Não foi possível aplicar o visual" end
+			return true
+		end
+
+		player.CharacterAdded:Connect(function(char) -- renasceu: aplica o visual copiado de novo
+			if not CV.atual then return end
+			local hum = char:WaitForChild("Humanoid", 10)
+			if not hum then return end
+			task.wait(0.5)
+			if CV.atual then pcall(function() hum:ApplyDescription(CV.atual) end) end
+		end)
+
+		alternavel({ "cv", "copiarvisual" }, "cv ou copiarvisual <jogador ou ID> / uncv ou uncopiarvisual - copia o visual de um jogador (só você vê) / volta ao seu", function(ligar, args)
+			if not ligar then
+				if not CV.original then return true, "Você não copiou nenhum visual" end
+				local original = CV.original
+				CV.atual, CV.original = nil, nil
+				task.spawn(function() CV.aplicar(original) end)
+				return true, "Visual original restaurado"
+			end
+			if #args == 0 then return false, "Uso: cv <jogador ou ID>" end
+			local busca = table.concat(args, " ")
+			local alvoJogador = acharJogador(busca)
+
+			task.spawn(function()
+				local desc, nome, origem, reserva
+				if alvoJogador then
+					nome = alvoJogador.DisplayName
+					local h = alvoJogador.Character and alvoJogador.Character:FindFirstChildOfClass("Humanoid")
+					if h then -- o que ele está vestindo agora NO JOGO
+						local ok, d = pcall(function() return h:GetAppliedDescription() end)
+						if ok and d then
+							if CV.semVisualNoJogo(d, alvoJogador.Character) then
+								reserva = d -- jogo sem sistema de skin: usa a skin do Roblox (abaixo)
+							else
+								desc, origem = d, "do jogo"
+							end
+						end
+					end
+				end
+				if not desc then -- skin do Roblox (jogo sem skin própria, jogador fora do servidor ou sem personagem)
+					origem = "do Roblox"
+					local id = alvoJogador and alvoJogador.UserId or tonumber(busca)
+					if not id then
+						local ok, r = pcall(function() return Players:GetUserIdFromNameAsync(busca) end)
+						id = ok and r or nil
+					end
+					local d
+					if id then
+						local ok, r = pcall(function() return Players:GetHumanoidDescriptionFromUserId(id) end)
+						if ok then d = r end
+					end
+					if d then
+						desc = d
+					elseif reserva then -- não deu pra pegar a skin do Roblox: usa o que tinha no jogo
+						desc, origem = reserva, "do jogo"
+					elseif not id then
+						mostrarToast("Jogador não encontrado: " .. busca, false)
+						return
+					else
+						mostrarToast("Não consegui pegar o visual desse jogador", false)
+						return
+					end
+					nome = nome or busca
+				end
+				local ok, msg = CV.copiar(desc)
+				mostrarToast(ok and ("Visual copiado (" .. origem .. "): " .. nome) or msg, ok)
+			end)
+			return true, "Copiando visual..."
+		end)
+	end
 
 	alternavel({ "view" }, "view <jogador> / unview - ver pela câmera de um jogador", function(ligar, args)
 		if not ligar then
@@ -9155,6 +10882,75 @@ local function iniciarTeclado()
 	----------------------------------------------------------
 	-- Executar o que foi digitado
 	----------------------------------------------------------
+	-- COMANDOS CRIADOS PELO USUÁRIO (criar pvp = fly 50, esp). Tudo numa tabela só (limite de variáveis locais).
+	-- Fica salvo em "comandos_criados.json" (writefile do executor; sem ele vale só até fechar o jogo).
+	local CRI = { lista = {}, entrada = {}, prof = 0, arquivo = "comandos_criados.json",
+		nomes = { criar = true, create = true, crr = true } }
+
+	function CRI.salvar()
+		if typeof(writefile) ~= "function" then return end
+		pcall(function() writefile(CRI.arquivo, HttpService:JSONEncode(CRI.lista)) end)
+	end
+
+	function CRI.registrar(nome, corpo)
+		CRI.lista[nome] = corpo
+		local desc = nome .. " - seu comando: " .. corpo
+		if CRI.entrada[nome] then
+			CRI.entrada[nome].desc = desc
+		else
+			local e = { nomes = { nome }, desc = desc }
+			CRI.entrada[nome] = e
+			entradas[#entradas + 1] = e
+		end
+	end
+
+	function CRI.apagar(nome)
+		if not CRI.lista[nome] then return false end
+		CRI.lista[nome] = nil
+		local e = CRI.entrada[nome]
+		if e then
+			CRI.entrada[nome] = nil
+			local i = table.find(entradas, e)
+			if i then table.remove(entradas, i) end
+		end
+		CRI.salvar()
+		return true
+	end
+
+	function CRI.criar(nome, corpo)
+		if not nome:match("^[%w_]+$") then return false, "Nome inválido (use só letras, números e _)" end
+		if comandos[nome] and not CRI.lista[nome] then return false, "Já existe um comando com o nome " .. nome end
+		corpo = corpo:match("^%s*(.-)%s*$")
+		if corpo == "" then return false, "Uso: criar <nome> = <comandos>" end
+		CRI.registrar(nome, corpo)
+		CRI.salvar()
+		return true, "Comando criado: " .. nome
+	end
+
+	pcall(function() -- carrega os comandos salvos
+		if typeof(isfile) == "function" and typeof(readfile) == "function" and isfile(CRI.arquivo) then
+			for nome, corpo in pairs(HttpService:JSONDecode(readfile(CRI.arquivo))) do
+				if type(nome) == "string" and type(corpo) == "string" and nome:match("^[%w_]+$") and not comandos[nome] then
+					CRI.registrar(nome, corpo)
+				end
+			end
+		end
+	end)
+
+	comando({ "criar", "create", "crr" }, "criar <nome> = <comandos> - cria seu comando (ex.: criar pvp = fly 50, esp)", function(args)
+		local nomes = {}
+		for n in pairs(CRI.lista) do nomes[#nomes + 1] = n end
+		table.sort(nomes)
+		if #nomes == 0 then return true, "Uso: criar pvp = fly 50, esp, np" end
+		return true, "Seus comandos: " .. table.concat(nomes, ", ")
+	end)
+	comando({ "uncriar", "uncreate", "uncrr" }, "uncriar <nome> - apaga um comando que você criou", function(args)
+		local nome = args[1] and args[1]:lower()
+		if not nome then return false, "Uso: uncriar <nome>" end
+		if not CRI.apagar(nome) then return false, "Você não criou o comando " .. nome end
+		return true, "Comando apagado: " .. nome
+	end)
+
 	local function executarComando(trecho)
 		local partes = {}
 		for p in trecho:gmatch("%S+") do partes[#partes + 1] = p end
@@ -9162,6 +10958,18 @@ local function iniciarTeclado()
 
 		local nome = (table.remove(partes, 1):lower():gsub("^/", ""))
 		local f = comandos[nome]
+		if not f and CRI.lista[nome] then -- comando criado por você: roda cada comando da lista
+			if CRI.prof >= 5 then return false, "Comando criado chama a si mesmo demais: " .. nome end
+			CRI.prof += 1
+			local tudoCerto, msgs = true, {}
+			for sub in CRI.lista[nome]:gmatch("[^,]+") do
+				local ok, msg = executarComando(sub)
+				if msg then msgs[#msgs + 1] = msg end
+				if ok == false then tudoCerto = false end
+			end
+			CRI.prof -= 1
+			return tudoCerto, (#msgs > 0) and table.concat(msgs, "\n") or nil
+		end
 		if not f then
 			return false, "Comando desconhecido: " .. nome .. " (digite cmds)"
 		end
@@ -9178,6 +10986,14 @@ local function iniciarTeclado()
 	local function executarLinha(texto)
 		texto = texto:match("^%s*(.-)%s*$")
 		if texto == "" then return false end
+
+		local cmdCriar, nomeNovo, corpoNovo = texto:match("^/?(%a+)%s+([^%s=,]+)%s*=%s*(.+)$")
+		if cmdCriar and CRI.nomes[cmdCriar:lower()] then
+			local ok, msg = CRI.criar(nomeNovo:lower(), corpoNovo)
+			mostrarToast(msg, ok)
+			if ok then caixaCmd.Text = "" end
+			return false
+		end
 
 		local mensagens, tudoCerto = {}, true
 		for trecho in texto:gmatch("[^,]+") do
