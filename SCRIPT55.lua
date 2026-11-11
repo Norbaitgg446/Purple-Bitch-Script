@@ -66,6 +66,16 @@ gui.ResetOnSpawn = false
 gui.IgnoreGuiInset = true
 gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 gui.Parent = playerGui
+pcall(function() gui.AutoLocalize = false end) -- o Roblox não pode "traduzir" os textos do menu
+-- UIStroke em cima de texto vira contorno NA LETRA (efeito neon); aqui força a ser só a borda da caixa
+gui.DescendantAdded:Connect(function(d)
+	if d:IsA("UIStroke") then
+		local pai = d.Parent
+		if pai and (pai:IsA("TextLabel") or pai:IsA("TextButton") or pai:IsA("TextBox")) then
+			d.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+		end
+	end
+end)
 
 ------------------------------------------------------------
 -- ARRASTAR / REDIMENSIONAR (mouse e toque)
@@ -422,6 +432,29 @@ function VIDRO.aplicar(b, ligado)
 	if contorno then contorno:Destroy() end -- sem borda
 end
 
+-- Botão X no canto de cima de um painel (fecha o painel; "aoFechar" é opcional)
+function MENU.botaoFechar(alvo, aoFechar)
+	local x = Instance.new("TextButton")
+	x.Name = "Fechar"
+	x.AnchorPoint = Vector2.new(1, 0)
+	x.Position = UDim2.new(1, -4, 0, 4)
+	x.Size = UDim2.fromOffset(22, 22)
+	x.BackgroundColor3 = Color3.fromRGB(40, 40, 58)
+	x.BackgroundTransparency = 0.3
+	x.BorderSizePixel = 0
+	x.Text = "X"
+	x.TextColor3 = Color3.new(1, 1, 1)
+	x.Font = Enum.Font.Gotham
+	x.TextSize = 13
+	x.AutoButtonColor = true
+	x.ZIndex = 5
+	x.Parent = alvo
+	x.MouseButton1Click:Connect(function()
+		if aoFechar then aoFechar() else alvo.Visible = false end
+	end)
+	return x
+end
+
 -- LISTA: uma coluna, todas as linhas do mesmo tamanho, uma embaixo da outra.
 -- O 1º número de criarLinha é só a ordem na grade (menor = primeiro).
 local ALTURA_BOTAO = 36
@@ -592,11 +625,11 @@ do
 	-- t = nome da função | c = comandos (todos os apelidos; "un" + comando desliga) | d = o que faz
 	local AJUDA = {
 		{ cab = "COMO USAR" },
-		{ t = "MENU E PAINEL", c = "menu · m",
-			d = "O menu não aparece sozinho: digite menu na barra de comandos para mostrar o botão MENU e abrir o painel. Depois, toque no botão MENU (ou digite menu de novo) para abrir e fechar. Arraste o título do painel (ou o botão MENU) para mover; arraste o canto de baixo à direita para mudar o tamanho. Escolha a categoria na lateral. Alguns botões têm uma caixinha ao lado: digite a velocidade, o valor ou o nome do jogador e ligue o botão." },
+		{ t = "MENU E PAINEL", c = "menu · m   |   unmenu · unm",
+			d = "O menu não aparece sozinho: digite menu na barra de comandos para mostrar o botão MENU e abrir o painel (unmenu esconde tudo de novo). Depois, toque no botão MENU (ou digite menu de novo) para abrir e fechar. Arraste o título do painel (ou o botão MENU) para mover; arraste o canto de baixo à direita para mudar o tamanho. Escolha a categoria na lateral. Alguns botões têm uma caixinha ao lado: digite a velocidade, o valor ou o nome do jogador e ligue o botão." },
 		{ t = "BARRA DE COMANDOS", c = "tecla , (vírgula) no PC",
-			d = "A tirinha > comandos no canto da tela (arraste para mover). Toque nela: abre a caixa de digitar com a lista de comandos, que filtra enquanto você digita (toque num comando para completar). Enter, fechar o teclado ou tocar fora fecha. Vários de uma vez, separados por vírgula: fly 80, np. Para ligar use o comando; para desligar, un + comando (ex.: fly e unfly)." },
-		{ t = "AJUDA NA BARRA", c = "cmds · help · ajuda · ?", d = "Mostra a lista completa de comandos na barra." },
+			d = "A tirinha \"comandos\" no canto da tela (arraste para mover). Toque nela: abre a caixa de digitar com a lista de comandos, que filtra enquanto você digita (toque num comando para completar). Enter, fechar o teclado ou tocar fora fecha. Vários de uma vez, separados por vírgula: fly 80, np. Para ligar use o comando; para desligar, un + comando (ex.: fly e unfly)." },
+		{ t = "AJUDA", c = "ajuda · help · cmds · ?", d = "Abre uma janelinha só com esta lista de ajuda (feche no X)." },
 
 		{ cab = "MOVIMENTO" },
 		{ t = "VOAR (FLY)", c = "fly · voar [vel]   |   unfly · unvoar",
@@ -694,6 +727,102 @@ do
 		itens[#itens + 1] = { l = l, cab = e.cab ~= nil, txt = string.lower((e.t or "") .. " " .. (e.c or "") .. " " .. (e.d or "")) }
 	end
 
+	-- Janela solta do comando ajuda/help/cmds/?: o fundo do menu e SÓ a lista, sem categorias nem botões
+	local janelaAjuda
+	function MENU.abrirAjuda()
+		if janelaAjuda and janelaAjuda.Parent then
+			janelaAjuda.Visible = true
+			return
+		end
+		local tela = tamanhoTela()
+		local w = math.min(460, tela.X - 20)
+		local h = math.min(330, tela.Y - 60)
+		local f = Instance.new("Frame")
+		f.Name = "JanelaAjuda"
+		f.Size = UDim2.fromOffset(w, h)
+		f.Position = UDim2.fromOffset((tela.X - w) / 2, math.max(10, (tela.Y - h) / 2))
+		f.BackgroundColor3 = Color3.fromRGB(24, 24, 36)
+		f.ClipsDescendants = true
+		f.ZIndex = 30
+		f.Parent = gui
+		Instance.new("UICorner", f).CornerRadius = UDim.new(0, 8)
+		janelaAjuda = f
+
+		-- mesma foto de fundo do menu
+		local foto = Instance.new("ImageLabel")
+		foto.Size = UDim2.fromScale(1, 1)
+		foto.BackgroundTransparency = 1
+		foto.ScaleType = Enum.ScaleType.Crop
+		foto.ImageTransparency = 0.15
+		foto.ZIndex = 30
+		foto.Parent = f
+		Instance.new("UICorner", foto).CornerRadius = UDim.new(0, 8)
+		task.spawn(function()
+			for _ = 1, 20 do
+				pcall(proximaFotoFundo)
+				local fb = painel:FindFirstChild("FotoFundo")
+				if fb and fb.Image ~= "" and fb.Image ~= "rbxassetid://0" then
+					foto.Image = fb.Image
+					return
+				end
+				task.wait(0.5)
+			end
+		end)
+
+		local tit = Instance.new("TextLabel")
+		tit.Size = UDim2.new(1, -34, 0, 30)
+		tit.Position = UDim2.fromOffset(12, 0)
+		tit.BackgroundTransparency = 1
+		tit.Text = "Ajuda"
+		tit.TextColor3 = Color3.new(1, 1, 1)
+		tit.Font = Enum.Font.Gotham
+		tit.TextSize = 16
+		tit.TextXAlignment = Enum.TextXAlignment.Left
+		tit.Active = true
+		tit.ZIndex = 31
+		tit.Parent = f
+		tornarMovel(tit, f) -- arraste o título para mover
+
+		local rol = Instance.new("ScrollingFrame")
+		rol.Position = UDim2.fromOffset(10, 34)
+		rol.Size = UDim2.new(1, -20, 1, -42)
+		rol.BackgroundTransparency = 1
+		rol.BorderSizePixel = 0
+		rol.ScrollBarThickness = 2
+		rol.CanvasSize = UDim2.new()
+		rol.AutomaticCanvasSize = Enum.AutomaticSize.Y
+		rol.ZIndex = 31
+		rol.Parent = f
+		local lay = Instance.new("UIListLayout")
+		lay.SortOrder = Enum.SortOrder.LayoutOrder
+		lay.Padding = UDim.new(0, 9)
+		lay.Parent = rol
+		for i, e in ipairs(AJUDA) do
+			local l = Instance.new("TextLabel")
+			l.LayoutOrder = i
+			l.Size = UDim2.new(1, -8, 0, 0)
+			l.AutomaticSize = Enum.AutomaticSize.Y
+			l.BackgroundTransparency = 1
+			l.TextWrapped = true
+			l.RichText = true
+			l.TextXAlignment = Enum.TextXAlignment.Left
+			l.TextYAlignment = Enum.TextYAlignment.Top
+			l.Font = Enum.Font.Gotham
+			l.TextSize = 12
+			l.TextColor3 = Color3.new(1, 1, 1)
+			if e.cab then
+				l.TextSize = 13
+				l.Text = "<b>" .. e.cab .. "</b>"
+			else
+				l.Text = "<b>" .. e.t .. '</b>\n<font color="#B9C0FF">' .. e.c .. "</font>\n" .. e.d
+			end
+			l.Parent = rol
+		end
+
+		local x = MENU.botaoFechar(f)
+		x.ZIndex = 32
+	end
+
 	local function filtrar()
 		local q = string.lower(busca.Text):match("^%s*(.-)%s*$") or ""
 		for _, it in ipairs(itens) do
@@ -749,6 +878,22 @@ function MENU.mostrarBotao() -- chamada pelo comando "menu" (só na primeira vez
 		BackgroundTransparency = 0,
 		TextTransparency = 0,
 	}):Play()
+end
+
+------------------------------------------------------------
+-- ESCONDER O BOTÃO MENU (comando unmenu)
+------------------------------------------------------------
+function MENU.esconderBotao()
+	if not MENU.botaoMostrado then return end
+	MENU.botaoMostrado = false
+	TweenService:Create(botao, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+		Size = UDim2.new(0, 0, 0, 0),
+		BackgroundTransparency = 1,
+		TextTransparency = 1,
+	}):Play()
+	task.delay(0.3, function()
+		if not MENU.botaoMostrado then botao.Visible = false end
+	end)
 end
 
 ------------------------------------------------------------
@@ -2813,6 +2958,7 @@ tituloSpawn.TextSize = 15
 tituloSpawn.Active = true
 tituloSpawn.Parent = painelSpawn
 tornarMovel(tituloSpawn, painelSpawn)
+MENU.botaoFechar(painelSpawn)
 
 local botaoCriarSpawn = Instance.new("TextButton")
 botaoCriarSpawn.Position = UDim2.new(0.05, 0, 0, 32)
@@ -3070,6 +3216,7 @@ tituloTP.TextSize = 20
 tituloTP.Active = true
 tituloTP.Parent = painelTP
 tornarMovel(tituloTP, painelTP)
+MENU.botaoFechar(painelTP)
 
 local listaTP = Instance.new("ScrollingFrame")
 listaTP.Position = UDim2.new(0.05, 0, 0, 50)
@@ -3271,6 +3418,7 @@ do
 	tituloView.Active = true
 	tituloView.Parent = painelView
 	tornarMovel(tituloView, painelView)
+	MENU.botaoFechar(painelView)
 
 	local buscaView = Instance.new("TextBox")
 	buscaView.Name = "BuscaView"
@@ -4772,6 +4920,7 @@ do -- bloco (libera variáveis locais)
 	tituloNotas.Active = true
 	tituloNotas.Parent = painelNotas
 	tornarMovel(tituloNotas, painelNotas)
+	MENU.botaoFechar(painelNotas, function() if painelNotas.Visible and MENU.notas then MENU.notas() end end)
 
 	local botaoNova = Instance.new("TextButton")
 	botaoNova.Position = UDim2.new(0.05, 0, 0, 44)
@@ -5722,8 +5871,8 @@ local function iniciarTeclado()
 	local entradas = {} -- { nomes = {...}, desc = "..." } -> usado para filtrar/completar a lista
 	local manterBarra = false -- true = o comando pediu para a barra continuar aberta (cmds)
 	local comandos = {} -- [palavra] = function(args) -> sucesso, mensagem
-	local LARGURA_FECHADA, ALTURA_FECHADA = 108, 26 -- tira quando fechada
-	local LARGURA_PAINEL = 300 -- painel aberto (caixa + lista juntos)
+	local LARGURA_FECHADA, ALTURA_FECHADA = 160, 22 -- tira quando fechada (larga e fina)
+	local LARGURA_PAINEL = 340 -- painel aberto (caixa + lista juntos)
 	local ALTURA_CAIXA, ALTURA_LINHA, MAX_LINHAS = 28, 27, 7
 	local tAbriu = 0 -- quando a barra abriu (ignora perda de foco logo no começo)
 	local tocandoPainel = false -- dedo/mouse apertando dentro do painel (não fecha)
@@ -5741,7 +5890,7 @@ local function iniciarTeclado()
 	local cmdFrame = novo("Frame", {
 		Name = "BarraComandos",
 		AnchorPoint = Vector2.new(1, 1),
-		Position = toque and UDim2.new(1, -130, 1, -6) or UDim2.new(1, -16, 1, -16), -- no celular fica ao lado do botão de pulo
+		Position = toque and UDim2.new(1, -130, 1, 0) or UDim2.new(1, 0, 1, 0), -- colada no canto de baixo (no celular fica ao lado do botão de pulo)
 		Size = UDim2.fromOffset(LARGURA_FECHADA, ALTURA_FECHADA),
 		BackgroundTransparency = 1,
 		Visible = true,
@@ -5769,12 +5918,12 @@ local function iniciarTeclado()
 		BackgroundTransparency = 0.05,
 		AutoButtonColor = false,
 		Text = "comandos",
-		TextColor3 = Color3.new(0, 0, 0),
+		TextColor3 = Color3.new(1, 1, 1),
 		Font = Enum.Font.GothamMedium,
 		TextSize = 12,
 	}, cmdFrame)
 	-- (sem UIGradient no fundo da tira: ele também pintaria o texto do botão)
-	efeitoBorda(novo("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 1.5, Transparency = 0.15 }, icone), 5)
+	efeitoBorda(novo("UIStroke", { Color = Color3.new(1, 1, 1), Thickness = 1.5, Transparency = 0.15, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, icone), 5)
 
 	-- Painel único: caixa de digitar em cima e a lista de comandos logo abaixo
 	local painelCmd = novo("Frame", {
@@ -5809,7 +5958,7 @@ local function iniciarTeclado()
 		TextXAlignment = Enum.TextXAlignment.Left,
 		ClearTextOnFocus = false,
 	}, painelCmd)
-	novo("UIStroke", { Color = Color3.fromRGB(150, 90, 255), Thickness = 1, Transparency = 0.55 }, caixaCmd)
+	novo("UIStroke", { Color = Color3.fromRGB(150, 90, 255), Thickness = 1, Transparency = 0.55, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, caixaCmd)
 	novo("UIPadding", { PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8) }, caixaCmd)
 	-- iOS: sem a caixa de texto nativa (o quadrado branco); digita direto na barra
 	pcall(function() caixaCmd.ShowNativeInput = false end)
@@ -6015,8 +6164,8 @@ local function iniciarTeclado()
 		local tela = tamanhoTela()
 		local fundo = cmdFrame.AbsolutePosition.Y + cmdFrame.AbsoluteSize.Y -- base da tira
 		local direita = cmdFrame.AbsolutePosition.X + cmdFrame.AbsoluteSize.X
-		direita = math.clamp(direita, LARGURA_PAINEL + 4, tela.X - 4)
-		fundo = math.min(fundo, tela.Y - 4)
+		direita = math.clamp(direita, LARGURA_PAINEL, tela.X)
+		fundo = math.min(fundo, tela.Y)
 
 		local okV, visivel = pcall(function() return UserInputService.OnScreenKeyboardVisible end)
 		if okV and visivel then
@@ -6086,7 +6235,7 @@ local function iniciarTeclado()
 		function() origemX = cmdFrame.AbsolutePosition.X end,
 		function(delta)
 			local tela, tam, a = tamanhoTela(), cmdFrame.AbsoluteSize, cmdFrame.AnchorPoint
-			local x = math.clamp(origemX + delta.X, 4, math.max(4, tela.X - tam.X - 4))
+			local x = math.clamp(origemX + delta.X, 0, math.max(0, tela.X - tam.X))
 			local p = cmdFrame.Position
 			cmdFrame.Position = UDim2.new(0, x + a.X * tam.X, p.Y.Scale, p.Y.Offset)
 			if barraAberta then ajustarPainel() end
@@ -8378,8 +8527,18 @@ local function iniciarTeclado()
 		return true, aberto and "Menu aberto" or "Menu fechado"
 	end)
 
-	comando({ "cmds", "help", "ajuda", "?" }, "cmds, help ou ajuda - mostrar a lista completa", function()
-		manterBarra = true
+	comando({ "unmenu", "unm" }, "unmenu ou unm - esconder o menu e o botão MENU", function()
+		if aberto then alternarPainel() end
+		MENU.esconderBotao()
+		for _, n in ipairs({ "PainelSpawns", "PainelTP", "PainelView" }) do
+			local o = gui:FindFirstChild(n)
+			if o then o.Visible = false end
+		end
+		return true, "Menu removido"
+	end)
+
+	comando({ "cmds", "help", "ajuda", "?" }, "ajuda, help, cmds ou ? - abrir a janela com a lista de ajuda", function()
+		MENU.abrirAjuda()
 		return true
 	end)
 
@@ -9130,6 +9289,7 @@ do
 
 	local g = Instance.new("ScreenGui")
 	g.Name = "AvisoInicial"
+	pcall(function() g.AutoLocalize = false end) -- sem tradução automática do texto
 	g.ResetOnSpawn = false
 	g.IgnoreGuiInset = true
 	g.DisplayOrder = 100
