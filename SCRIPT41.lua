@@ -4713,6 +4713,7 @@ end
 -- Salva em "anotacoes.json" com o writefile do executor (vale para todos os jogos).
 -- Sem writefile/readfile, as notas ficam só até fechar o jogo.
 do -- bloco (libera variáveis locais)
+	local HttpService = game:GetService("HttpService") -- (corrigido: antes estava fora do escopo aqui e as notas não salvavam/carregavam)
 	local ARQUIVO_NOTAS = "anotacoes.json"
 	local ATRASO_SALVAR = 0.8 -- segundos parado de digitar até salvar sozinho
 
@@ -8830,4 +8831,8 @@ player.CharacterAdded:Connect(function()
 	pararVFly()
 	pararSwim()
 	pintarBotao(botaoSwim, "SWIM", false)
-	pintarBotao(
+	pintarBotao(botaoFly, "FLY", false)
+	pintarBotao(botaoVFly, "VFLY", false)
+	atualizarSetasVFly()
+	atualizarBotaoVertical()
+end)
