@@ -1,4 +1,5 @@
 -- LocalScript
+-- v61: sem créditos e sem efeito azul ao sentar, comandos com vários apelidos, botões novos no menu, autoclick com bolinhas, chat log maior, copiar visual com plano B, busca parcial de jogador.
 -- v38: barrinha no super velocidade (carrega mesmo mexendo a câmera), anéis dos pés só com o pé no chão, pulo infinito sem empilhar,
 --      anotações com rolagem/editor grande/redimensionável, ajuda completa com busca, novas opções em Config.
 -- Onde colocar: StarterGui (ou StarterPlayer > StarterPlayerScripts)
@@ -630,6 +631,10 @@ do
 		{ t = "BARRA DE COMANDOS", c = "tecla , (vírgula) no PC",
 			d = "A tirinha \"comandos\" no canto da tela (arraste para mover). Toque nela: abre a caixa de digitar com a lista de comandos, que filtra enquanto você digita (toque num comando para completar). Enter, fechar o teclado ou tocar fora fecha. Vários de uma vez, separados por vírgula: fly 80, np. Para ligar use o comando; para desligar, un + comando (ex.: fly e unfly)." },
 		{ t = "AJUDA", c = "ajuda · help · cmds · ?", d = "Abre uma janelinha só com esta lista de ajuda (feche no X)." },
+		{ t = "APELIDOS DOS COMANDOS", c = "vários nomes para o mesmo comando",
+			d = "Todo comando tem abreviação, nome em inglês e nome em português: por exemplo câmera livre = freecam · fc · cl · cameralivre; sentar na cabeça = hsit · hcit · headsit · sentarcabeca; chat log = chatlog · log · historico · history. Na barra de comandos, digite um pedaço de qualquer um deles e a lista mostra o comando. Para desligar, un + o mesmo nome que você usou (ex.: uncl)." },
+		{ t = "NOME DO JOGADOR", c = "tp joao · cv jo · hsit jv · view @fulano",
+			d = "Você não precisa digitar o nome inteiro nem o ID. Vale o nome de usuário ou o nome de exibição, só o começo (jo = João), um pedaço do meio, as iniciais das palavras (jv = João Victor) ou as letras em sequência. Maiúsculas, @, espaço e _ são ignorados. Se vários combinarem, vale o de nome mais curto." },
 		{ t = "VÁRIOS COMANDOS DE UMA VEZ", c = "comando1, comando2, comando3",
 			d = "Separe os comandos com vírgula na barra e todos rodam juntos. Exemplo: fly 80, esp, np." },
 		{ t = "CRIAR SEU PRÓPRIO COMANDO", c = "criar · create · crr <nome> = <comandos>   |   uncriar · uncreate · uncrr <nome>",
@@ -661,8 +666,8 @@ do
 			d = "Gira o personagem sem parar. spin 30 = 30 graus por segundo (devagar), spin 720 = duas voltas por segundo; sem número usa 360 (uma volta por segundo); número negativo gira para o outro lado (de 1 a 3600). Rodando, spin 90 só muda a velocidade. Pausa sozinho enquanto você voa (fly/vfly), nada ou está sentado, para não brigar com esses modos, e volta a girar depois. unspin para." },
 
 		{ cab = "JOGADORES" },
-		{ t = "COPIAR VISUAL", c = "cv · copiarvisual <jogador ou ID>   |   uncv · uncopiarvisual",
-			d = "Copia a roupa, o cabelo e o corpo de outro jogador para o seu personagem (só você vê a mudança). Se ele está no servidor e o jogo tem avatar/roupa própria, copia exatamente o que ele está vestindo agora no jogo; se o jogo não tem sistema de skin (ou ele não está no servidor), usa a skin do Roblox dele (digite o nome de usuário ou o ID). O visual copiado continua quando você renasce. uncv volta ao seu visual original. Em alguns jogos (com personagem próprio) não pega." },
+		{ t = "COPIAR VISUAL", c = "cv · copiarvisual · copiarskin · copyavatar · skin · avatar <jogador ou ID>   |   uncv · uncopiarvisual",
+			d = "Copia a roupa, o cabelo e o corpo de outro jogador para o seu personagem (só você vê a mudança). Se ele está no servidor e o jogo tem avatar/roupa própria, copia exatamente o que ele está vestindo agora no jogo; se o jogo não tem sistema de skin (ou ele não está no servidor), usa a skin do Roblox dele (digite o nome de usuário ou o ID). O visual copiado continua quando você renasce. uncv volta ao seu visual original. Se o Roblox não deixar aplicar o visual completo, o script copia direto as roupas, os acessórios, as cores e o rosto dele. Em alguns jogos (com personagem próprio) pode pegar só parte." },
 		{ t = "MARCAR JOGADOR", c = "marcar · mark <jogador> [cor]   |   unmarcar · unmark [jogador ou todos]",
 			d = "Destaca um jogador com cor fixa (igual ao chams: contorno e preenchimento, aparece através das paredes) e põe o nome e a distância em cima da cabeça dele. Cores: vermelho, azul, verde, amarelo, rosa, roxo, laranja, ciano, branco (sem cor, ele escolhe uma). Exemplo: marcar fulano azul. Pode marcar vários. unmarcar tira a marca; sem nome mostra os marcados; unmarcar todos limpa. A lista fica salva: se o marcado voltar a entrar num servidor, ele é marcado de novo e você é avisado. É independente do botão CHAMS." },
 		{ t = "MUTAR JOGADOR", c = "mute · mutar <jogador>   |   unmute · unmutar [jogador ou todos]",
@@ -678,12 +683,12 @@ do
 		{ t = "ORBITAR JOGADOR", c = "orbitar · orbit · obt [jogador] [velocidade] [distância]   |   unorbitar · unorbit · unobt",
 			d = "Gira em volta de um jogador atravessando paredes. Velocidade em graus por segundo, distância em studs." },
 		{ t = "SENTAR EM JOGADOR",
-			c = "hsit · headsit · sentarcabeca  (cabeça)\nbsit · backsit · sentarcostas  (costas)\nssit · shouldersit · sentarombro  (ombro)\nfsit · frontsit · sentarfrente  (de frente)\nPara sair: un + comando (ex.: unhsit) ou pular",
+			c = "hsit · hcit · headsit · sentarcabeca  (cabeça)\nbsit · backsit · sentarcostas  (costas)\nssit · shouldersit · sentarombro  (ombro)\nfsit · frontsit · sentarfrente  (de frente)\nPara sair: un + comando (ex.: unhsit) ou pular",
 			d = "Senta em cima de um jogador: comando + nome (ex.: hsit joao)." },
 
 		{ cab = "VISÃO E COMBATE" },
-		{ t = "AUTO CLICK", c = "autoclick · ac [1 a 100] [mouse]   |   unautoclick · unac",
-			d = "Clica sozinho várias vezes por segundo (autoclick 10 = 10 cliques por segundo; padrão 10). Com uma ferramenta na mão, ativa a ferramenta; sem ferramenta, usa o clique do executor no ponto onde está o cursor. Escreva mouse (ex.: autoclick 15 mouse) para sempre usar o clique do mouse. Rodando, autoclick 20 só muda a velocidade. unautoclick desliga. Cuidado com o cursor em cima de botões." },
+		{ t = "AUTO CLICK", c = "autoclick · ac · autoclicker · clicker · clique   |   unautoclick · unac\nac novo · ac iniciar · ac parar · ac limpar",
+			d = "Funciona como os apps de autoclique do celular. O comando abre um painelzinho com o botão + Criar autoclick: cada autoclick vira uma bolinha numerada na tela. Arraste a bolinha até o ponto onde quer que ele clique. Cada bolinha tem a sua configuração: cliques por segundo (0.1 a 100), total de cliques (0 = sem limite), timer em segundos (0 = sem limite) e o modo (Mouse, Toque ou Ferramenta, que ativa o item da mão). Dá pra criar quantas bolinhas quiser, ligar uma a uma (▶ Iniciar) ou todas juntas, e remover no ✕. Enquanto clica, a bolinha fica verde e o clique atravessa ela. O X do painel só esconde o painel (as bolinhas continuam); ac abre de novo; unac para tudo e remove as bolinhas. Atalhos: ac 15 já cria com 15 cliques por segundo; ac 15 toque escolhe o modo." },
 		{ t = "VER JOGADORES (ESP)",c = "esp · espectar   |   unesp · unespectar",
 			d = "Nome e distância dos jogadores na tela. A barra de vida pode ser desligada em Config." },
 		{ t = "CONTORNO (CHAMS)", c = "cm · contorno   |   uncm · uncontorno",
@@ -696,7 +701,7 @@ do
 			d = "Mostra o cadeado na tela (arraste para mover). Azul = travado, branco = solto. O botão de setas embaixo troca o ombro da câmera." },
 		{ t = "ZOOM LUNETA", c = "zoom [1.5 a 100]   |   unzoom",
 			d = "Aproxima como uma luneta de pirata, em 1ª pessoa, com o escuro em volta da lente (dá para desligar em Config). A roda do mouse ajusta o aumento." },
-		{ t = "CÂMERA LIVRE", c = "freecam · fc · camera · câmera [vel]   |   unfreecam · unfc · uncamera · uncâmera",
+		{ t = "CÂMERA LIVRE", c = "freecam · fc · cl · camera · câmera · cameralivre [vel]   |   unfreecam · unfc · uncl · uncamera · uncâmera",
 			d = "Câmera solta, com o personagem parado." },
 		{ t = "RÉGUA", c = "regua · ruler   |   unregua · unruler",
 			d = "Toque em 2 pontos e veja a distância em studs." },
@@ -714,8 +719,8 @@ do
 			d = "timer faz uma contagem regressiva numa etiqueta e avisa na tela quando acaba. O tempo pode ser 30 (segundos), 1:30, 2m, 1h30m ou 1m30s; timer sem nada mostra quanto falta e untimer cancela. cron conta para cima: sem nada inicia ou pausa, stop para, start continua, reset zera e para; uncron fecha. As duas etiquetas são arrastáveis." },
 		{ t = "VELOCÍMETRO", c ="velocimetro · vm   |   unvelocimetro · unvm",
 			d = "Etiqueta arrastável com a sua velocidade real em studs por segundo (a que o personagem está de fato andando, voando ou caindo, não a velocidade configurada). O mesmo comando liga e desliga." },
-		{ t = "CHAT LOG", c ="chatlog · log [limpar]   |   unchatlog · unlog",
-			d = "Abre uma janela com as últimas 200 mensagens do chat (hora, quem falou e o texto), com rolagem. O script já guarda as mensagens desde que liga, então o histórico está lá quando você abre. Copiar manda tudo para a área de transferência; Limpar apaga a lista (também: chatlog limpar). Arraste o título para mover." },
+		{ t = "CHAT LOG", c ="chatlog · log · chat · historico · histórico · historicomensagens · history [limpar]   |   unchatlog · unlog",
+			d = "Abre uma janela com as últimas 1000 mensagens do chat (hora, quem falou e o texto), com rolagem. O script guarda as mensagens desde que liga e, ao abrir, também puxa as mais antigas que ainda estão na janela do chat do jogo (essas aparecem com hora --:--:--). Copiar manda tudo para a área de transferência; Limpar apaga a lista (também: chatlog limpar). Arraste o título para mover." },
 		{ t = "LUZ", c = "luz · light [alcance] [brilho]   |   unluz · unlight",
 			d = "Acende uma luz branca em volta do seu personagem, para lugares escuros (só você vê). luz 40 3 = alcance 40 (de 5 a 60) e brilho 3 (de 0.5 a 10); sem números usa 40 e 3. Rodando, luz 60 muda o alcance. Digitar luz de novo (sem número) ou unluz apaga. A luz volta sozinha quando você renasce. Para clarear o mapa inteiro, use dia." },
 		{ t = "DIA E NOITE", c ="ciclo [minutos por dia]   |   unciclo\ndia   |   undia\nnoite   |   unnoite",
@@ -850,9 +855,6 @@ end
 -- Categoria "Início": link do projeto, créditos e dicas de uso (aparece só nela)
 do
 	local LINK_PROJETO = "https://purplebitchrbx.vercel.app"
-	-- >>> TROQUE AQUI o texto dos créditos (aparece na categoria Início) <<<
-	local CREDITOS_TEXTO = "Projeto: Purple Bitch Script\nCódigo feito com ajuda do Claude (Anthropic)"
-
 	local ini = Instance.new("Frame")
 	ini.Name = "Inicio"
 	ini.LayoutOrder = 3
@@ -927,9 +929,6 @@ do
 
 	texto("LIGAR E DESLIGAR", 13, true)
 	texto('Para ligar use o comando; para desligar, <b>un</b> + comando (ex.: fly e unfly).')
-
-	texto("CRÉDITOS", 13, true)
-	texto(CREDITOS_TEXTO)
 end
 
 -- Troca de categoria: mostra só os botões dela e destaca a aba
@@ -6478,17 +6477,46 @@ local function iniciarTeclado()
 	end)
 
 	-- Procura jogador: nome exato, começo do nome, ou parte do nome
+	-- Acha um jogador por nome PARCIAL (não precisa digitar inteiro). Aceita, nesta ordem:
+	-- nome igual > começa com o que digitou > contém o que digitou > iniciais das palavras (ex.: "jv" = João Victor)
+	-- > letras em sequência (ex.: "jvc" acha "JoaoVictorCosta") > ID numérico. Ignora maiúsculas, "@", espaços e "_".
 	local function acharJogador(busca)
-		busca = busca:lower()
+		busca = tostring(busca or ""):lower():gsub("^%s+", ""):gsub("%s+$", ""):gsub("^@", "")
+		if busca == "" then return nil end
+		local solto = busca:gsub("[%s_%-%.]", "") -- sem espaço, _ , - e .
+		local function limpar(s) return (s:lower():gsub("[%s_%-%.]", "")) end
+		local function iniciais(s) -- "João_Victor Costa" -> "jvc"; "JoaoVictor" -> "jv" (maiúsculas também separam)
+			local r = ""
+			for pal in s:gsub("(%l)(%u)", "%1 %2"):gmatch("[^%s_%-%.]+") do r = r .. pal:sub(1, 1):lower() end
+			return r
+		end
+		local function sequencia(texto, pad) -- as letras de "pad" aparecem em ordem dentro de "texto"
+			local pos = 1
+			for ch in pad:gmatch(".") do
+				local a = texto:find(ch, pos, true)
+				if not a then return false end
+				pos = a + 1
+			end
+			return true
+		end
+		local function nomes(p) return { p.Name, p.DisplayName } end
 		local regras = {
-			function(p) return p.Name:lower() == busca or p.DisplayName:lower() == busca end,
-			function(p) return p.Name:lower():sub(1, #busca) == busca or p.DisplayName:lower():sub(1, #busca) == busca end,
-			function(p) return p.Name:lower():find(busca, 1, true) or p.DisplayName:lower():find(busca, 1, true) end,
+			function(p) for _, n in ipairs(nomes(p)) do if n:lower() == busca or limpar(n) == solto then return true end end end,
+			function(p) for _, n in ipairs(nomes(p)) do if limpar(n):sub(1, #solto) == solto then return true end end end,
+			function(p) for _, n in ipairs(nomes(p)) do if limpar(n):find(solto, 1, true) then return true end end end,
+			function(p) if #solto >= 2 then for _, n in ipairs(nomes(p)) do if iniciais(n):sub(1, #solto) == solto then return true end end end end,
+			function(p) if #solto >= 3 then for _, n in ipairs(nomes(p)) do if sequencia(limpar(n), solto) then return true end end end end,
+			function(p) return tostring(p.UserId) == busca end,
 		}
 		for _, regra in ipairs(regras) do
+			local melhor
 			for _, p in ipairs(Players:GetPlayers()) do
-				if p ~= player and regra(p) then return p end
+				if p ~= player and regra(p) then
+					-- vários combinam: fica o de nome mais curto (o mais parecido com o que foi digitado)
+					if not melhor or #p.DisplayName < #melhor.DisplayName then melhor = p end
+				end
 			end
+			if melhor then return melhor end
 		end
 	end
 
@@ -7100,75 +7128,406 @@ local function iniciarTeclado()
 		end)
 	end
 
-	-- AUTO CLICK: clica sozinho N vezes por segundo. Com ferramenta na mão, ativa a ferramenta;
-	-- sem ferramenta, usa o clique do executor (mouse1click) ou, se não tiver, o VirtualInputManager.
+	-- AUTO CLICK (estilo app de celular): o comando abre um painel com "+ Criar autoclick". Cada autoclick é uma
+	-- bolinha na tela: arraste até onde quer que ele clique. Cada bolinha tem a sua configuração (cliques por
+	-- segundo, total de cliques, timer e modo) e você pode criar várias e ligar uma a uma ou todas juntas.
+	-- Enquanto uma bolinha clica ela fica "fantasma" (o clique atravessa) e não dá pra arrastar: pare antes.
 	do
-		local AC = { conexao = nil, taxa = 10, forcarMouse = false, acumulado = 0 }
+		local AC = { pontos = {}, proximo = 0, painel = nil, lista = nil, conexao = nil, padraoCps = 10, vim = nil }
+		AC.modos = { "mouse", "toque", "ferramenta" }
+		AC.nomeModo = { mouse = "Mouse", toque = "Toque", ferramenta = "Ferramenta" }
+		AC.corParado, AC.corRodando = Color3.fromRGB(100, 60, 230), Color3.fromRGB(70, 200, 120)
 
-		local function clicarMouse()
-			if typeof(mouse1click) == "function" then
-				return pcall(mouse1click)
-			end
-			return pcall(function() -- plano B: clique simulado no ponto onde está o cursor
-				local VIM = game:GetService("VirtualInputManager")
-				local p = UserInputService:GetMouseLocation()
-				VIM:SendMouseButtonEvent(p.X, p.Y, 0, true, game, 0)
-				VIM:SendMouseButtonEvent(p.X, p.Y, 0, false, game, 0)
-			end)
-		end
-
-		local function clicar()
-			if not AC.forcarMouse then
+		-- clique de verdade no ponto (x, y) da tela
+		function AC.clicar(p)
+			local c = p.bolinha.AbsolutePosition + p.bolinha.AbsoluteSize / 2
+			if p.modo == "ferramenta" then
 				local tool = player.Character and player.Character:FindFirstChildOfClass("Tool")
 				if tool then
 					tool:Activate()
 					return
 				end
 			end
-			clicarMouse()
-		end
-
-		function AC.parar()
-			if AC.conexao then AC.conexao:Disconnect() AC.conexao = nil end
-			AC.acumulado = 0
-		end
-
-		function AC.iniciar()
-			if AC.conexao then return end -- já rodando: só a taxa mudou
-			AC.conexao = RunService.Heartbeat:Connect(function(dt)
-				AC.acumulado += dt * AC.taxa
-				local feitos = 0
-				while AC.acumulado >= 1 and feitos < 5 do -- no máx. 5 por quadro, para não travar
-					AC.acumulado -= 1
-					feitos += 1
-					clicar()
-				end
-				if AC.acumulado > 5 then AC.acumulado = 0 end
-			end)
-		end
-
-		alternavel({ "autoclick", "ac" }, "autoclick ou ac [cliques por segundo] [mouse] / unautoclick ou unac - clica sozinho (padrão 10/s)", function(ligar, args)
-			if not ligar then
-				if not AC.conexao then return true, "Auto click já estava desligado" end
-				AC.parar()
-				return true, "Auto click desligado"
+			if not AC.vim then
+				local ok, v = pcall(function() return game:GetService("VirtualInputManager") end)
+				AC.vim = ok and v or false
 			end
-			local taxa = AC.taxa
-			AC.forcarMouse = false
+			if AC.vim then
+				local ok
+				if p.modo == "toque" then
+					ok = pcall(function()
+						AC.vim:SendTouchEvent(p.id, 0, c.X, c.Y)
+						AC.vim:SendTouchEvent(p.id, 2, c.X, c.Y)
+					end)
+				else
+					ok = pcall(function()
+						AC.vim:SendMouseButtonEvent(c.X, c.Y, 0, true, game, 0)
+						AC.vim:SendMouseButtonEvent(c.X, c.Y, 0, false, game, 0)
+					end)
+				end
+				if ok then return end
+			end
+			-- plano B: funções do executor (movem o cursor de verdade até a bolinha)
+			if typeof(mousemoveabs) == "function" then pcall(mousemoveabs, c.X, c.Y) end
+			if typeof(mouse1click) == "function" then pcall(mouse1click) end
+		end
+
+		function AC.pintar(p)
+			p.bolinha.BackgroundColor3 = p.ligado and AC.corRodando or AC.corParado
+			p.bolinha.Active = not p.ligado -- rodando: não segura o clique
+			pcall(function() p.bolinha.Interactable = not p.ligado end)
+			if p.btnLigar then
+				p.btnLigar.Text = p.ligado and "■ Parar" or "▶ Iniciar"
+				p.btnLigar.BackgroundColor3 = p.ligado and Color3.fromRGB(255, 110, 110) or Color3.fromRGB(110, 235, 150)
+			end
+		end
+
+		function AC.algumRodando()
+			for _, p in ipairs(AC.pontos) do
+				if p.ligado then return true end
+			end
+			return false
+		end
+
+		function AC.passo(dt)
+			local agora = os.clock()
+			for _, p in ipairs(AC.pontos) do
+				if p.ligado then
+					if p.tempo > 0 and agora - p.inicio >= p.tempo then
+						AC.parar(p)
+					else
+						p.acum += dt * p.cps
+						local feitos = 0
+						while p.ligado and p.acum >= 1 and feitos < 5 do -- no máx. 5 por quadro, para não travar
+							p.acum -= 1
+							feitos += 1
+							AC.clicar(p)
+							p.feitos += 1
+							if p.maximo > 0 and p.feitos >= p.maximo then AC.parar(p) end
+						end
+						if p.acum > 5 then p.acum = 0 end
+					end
+				end
+			end
+			if not AC.algumRodando() and AC.conexao then
+				AC.conexao:Disconnect()
+				AC.conexao = nil
+			end
+		end
+
+		function AC.parar(p)
+			p.ligado = false
+			AC.pintar(p)
+		end
+
+		-- lê as caixinhas do cartão; devolve nil se algum número for inválido
+		function AC.ler(p)
+			local cps = tonumber(p.caixaCps.Text)
+			local maximo = tonumber(p.caixaMax.Text) or 0
+			local tempo = tonumber(p.caixaTempo.Text) or 0
+			if not cps or cps < 0.1 or cps > 100 then return false, "Cliques por segundo: de 0.1 a 100" end
+			if maximo < 0 or tempo < 0 then return false, "Total e tempo: 0 (sem limite) ou mais" end
+			p.cps, p.maximo, p.tempo = cps, math.floor(maximo), tempo
+			return true
+		end
+
+		function AC.iniciar(p)
+			local ok, msg = AC.ler(p)
+			if not ok then
+				mostrarToast(msg, false)
+				return false
+			end
+			p.ligado, p.feitos, p.acum, p.inicio = true, 0, 1, os.clock() -- acum = 1: o 1º clique é na hora
+			AC.pintar(p)
+			if not AC.conexao then AC.conexao = RunService.Heartbeat:Connect(AC.passo) end
+			return true
+		end
+
+		function AC.pararTodos()
+			for _, p in ipairs(AC.pontos) do
+				if p.ligado then AC.parar(p) end
+			end
+		end
+
+		function AC.remover(p)
+			if p.ligado then AC.parar(p) end
+			local i = table.find(AC.pontos, p)
+			if i then table.remove(AC.pontos, i) end
+			if p.bolinha then p.bolinha:Destroy() end
+			if p.cartao then p.cartao:Destroy() end
+		end
+
+		function AC.limparTudo()
+			for i = #AC.pontos, 1, -1 do AC.remover(AC.pontos[i]) end
+			if AC.conexao then AC.conexao:Disconnect() AC.conexao = nil end
+		end
+
+		-- caixinha pequena com legenda em cima
+		function AC.caixa(pai, x, w, legenda, texto)
+			local lg = Instance.new("TextLabel")
+			lg.Position = UDim2.new(x, 0, 0, 2)
+			lg.Size = UDim2.new(w, -3, 0, 11)
+			lg.BackgroundTransparency = 1
+			lg.Text = legenda
+			lg.TextColor3 = Color3.fromRGB(200, 185, 255)
+			lg.Font = Enum.Font.Gotham
+			lg.TextSize = 9
+			lg.Parent = pai
+			local cx = Instance.new("TextBox")
+			cx.Position = UDim2.new(x, 0, 0, 14)
+			cx.Size = UDim2.new(w, -3, 0, 24)
+			cx.BackgroundColor3 = Color3.new(1, 1, 1)
+			cx.BackgroundTransparency = 0.88
+			cx.Text = texto
+			cx.TextColor3 = Color3.new(1, 1, 1)
+			cx.Font = Enum.Font.Gotham
+			cx.TextSize = 13
+			cx.ClearTextOnFocus = false
+			cx.Parent = pai
+			Instance.new("UICorner", cx).CornerRadius = UDim.new(0, 6)
+			return cx
+		end
+
+		function AC.botao(pai, x, w, texto, cor)
+			local b = Instance.new("TextButton")
+			b.Position = UDim2.new(x, 0, 0, 44)
+			b.Size = UDim2.new(w, -3, 0, 24)
+			b.Text = texto
+			b.Font = Enum.Font.GothamMedium
+			b.TextSize = 11
+			b.AutoButtonColor = true
+			VIDRO.vidroSpawn(b, cor, 0.62)
+			b.Parent = pai
+			Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6)
+			return b
+		end
+
+		function AC.criar(cps, modo)
+			AC.proximo += 1
+			local tela = tamanhoTela()
+			local p = { id = AC.proximo, cps = cps or AC.padraoCps, maximo = 0, tempo = 0, modo = modo or "mouse", ligado = false, feitos = 0, acum = 0, inicio = 0 }
+
+			-- a bolinha na tela
+			local b = Instance.new("TextLabel")
+			b.Name = "AutoclickBolinha" .. p.id
+			b.AnchorPoint = Vector2.new(0.5, 0.5)
+			b.Size = UDim2.fromOffset(46, 46)
+			local desloca = ((#AC.pontos) % 6) * 54
+			b.Position = UDim2.fromOffset(math.clamp(tela.X / 2 - 135 + desloca, 30, tela.X - 30), tela.Y / 2)
+			b.BackgroundColor3 = AC.corParado
+			b.BackgroundTransparency = 0.25
+			b.Text = tostring(p.id)
+			b.TextColor3 = Color3.new(1, 1, 1)
+			b.Font = Enum.Font.GothamBold
+			b.TextSize = 18
+			b.Active = true
+			b.ZIndex = 40
+			b.Parent = gui
+			Instance.new("UICorner", b).CornerRadius = UDim.new(1, 0)
+			local borda = Instance.new("UIStroke")
+			borda.Color = Color3.new(1, 1, 1)
+			borda.Thickness = 2
+			borda.Transparency = 0.2
+			borda.Parent = b
+			tornarMovel(b, b)
+			p.bolinha = b
+
+			-- o cartão de configuração no painel
+			local c = Instance.new("Frame")
+			c.LayoutOrder = p.id
+			c.Size = UDim2.new(1, -4, 0, 74)
+			c.BackgroundColor3 = Color3.new(1, 1, 1)
+			c.BackgroundTransparency = 0.92
+			c.Parent = AC.lista
+			Instance.new("UICorner", c).CornerRadius = UDim.new(0, 8)
+			p.cartao = c
+
+			local num = Instance.new("TextLabel")
+			num.Position = UDim2.fromOffset(6, 14)
+			num.Size = UDim2.fromOffset(24, 24)
+			num.BackgroundColor3 = AC.corParado
+			num.BackgroundTransparency = 0.3
+			num.Text = tostring(p.id)
+			num.TextColor3 = Color3.new(1, 1, 1)
+			num.Font = Enum.Font.GothamBold
+			num.TextSize = 13
+			num.Parent = c
+			Instance.new("UICorner", num).CornerRadius = UDim.new(1, 0)
+
+			local area = Instance.new("Frame") -- o resto do cartão (à direita do número)
+			area.Position = UDim2.fromOffset(36, 0)
+			area.Size = UDim2.new(1, -40, 1, 0)
+			area.BackgroundTransparency = 1
+			area.Parent = c
+			p.caixaCps = AC.caixa(area, 0, 0.34, "cliques/seg", tostring(p.cps))
+			p.caixaMax = AC.caixa(area, 0.34, 0.33, "total (0=∞)", "0")
+			p.caixaTempo = AC.caixa(area, 0.67, 0.33, "tempo s (0=∞)", "0")
+			local bModo = AC.botao(area, 0, 0.36, AC.nomeModo[p.modo], Color3.fromRGB(150, 130, 255))
+			p.btnLigar = AC.botao(area, 0.36, 0.38, "▶ Iniciar", Color3.fromRGB(110, 235, 150))
+			local bTirar = AC.botao(area, 0.74, 0.26, "✕", Color3.fromRGB(255, 110, 110))
+
+			for _, cx in ipairs({ p.caixaCps, p.caixaMax, p.caixaTempo }) do -- mudou o número com ele rodando: vale na hora
+				cx.FocusLost:Connect(function()
+					if not p.ligado then return end
+					local ok, msg = AC.ler(p)
+					if not ok then mostrarToast(msg, false) end
+				end)
+			end
+			bModo.MouseButton1Click:Connect(function() -- troca o modo: mouse > toque > ferramenta
+				local i = table.find(AC.modos, p.modo) or 1
+				p.modo = AC.modos[i % #AC.modos + 1]
+				bModo.Text = AC.nomeModo[p.modo]
+			end)
+			p.btnLigar.MouseButton1Click:Connect(function()
+				if p.ligado then AC.parar(p) else AC.iniciar(p) end
+			end)
+			bTirar.MouseButton1Click:Connect(function() AC.remover(p) end)
+
+			AC.pontos[#AC.pontos + 1] = p
+			AC.pintar(p)
+			return p
+		end
+
+		function AC.montar()
+			local f = Instance.new("Frame")
+			f.Name = "PainelAutoclick"
+			f.AnchorPoint = Vector2.new(0, 0.5)
+			f.Position = UDim2.new(0.5, 160, 0.5, 0)
+			f.Size = UDim2.fromOffset(268, 330)
+			f.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+			f.BackgroundTransparency = 0.18
+			f.ZIndex = 30
+			f.Parent = gui
+			Instance.new("UICorner", f).CornerRadius = UDim.new(0, 12)
+			local contorno = Instance.new("UIStroke")
+			contorno.Color = Color3.new(1, 1, 1)
+			contorno.Thickness = 1.2
+			contorno.Transparency = 0.55
+			contorno.Parent = f
+
+			local tit = Instance.new("TextLabel")
+			tit.Size = UDim2.new(1, 0, 0, 28)
+			tit.BackgroundTransparency = 1
+			tit.Text = "Autoclick"
+			tit.TextColor3 = Color3.new(1, 1, 1)
+			tit.Font = Enum.Font.GothamBold
+			tit.TextSize = 15
+			tit.Active = true
+			tit.ZIndex = 31
+			tit.Parent = f
+			tornarMovel(tit, f)
+			MENU.botaoFechar(f).ZIndex = 32 -- só esconde o painel; as bolinhas continuam
+
+			local function botaoTopo(x, y, w, texto, cor)
+				local b = Instance.new("TextButton")
+				b.Position = UDim2.new(x, 0, 0, y)
+				b.Size = UDim2.new(w, 0, 0, 26)
+				b.Text = texto
+				b.Font = Enum.Font.GothamMedium
+				b.TextSize = 12
+				b.AutoButtonColor = true
+				b.ZIndex = 31
+				VIDRO.vidroSpawn(b, cor, 0.62)
+				b.Parent = f
+				Instance.new("UICorner", b).CornerRadius = UDim.new(0, 8)
+				return b
+			end
+			botaoTopo(0.04, 32, 0.92, "+ Criar autoclick", Color3.fromRGB(110, 235, 150)).MouseButton1Click:Connect(function()
+				AC.criar()
+			end)
+			botaoTopo(0.04, 62, 0.45, "▶ Iniciar todos", Color3.fromRGB(150, 130, 255)).MouseButton1Click:Connect(function()
+				for _, p in ipairs(AC.pontos) do
+					if not p.ligado then AC.iniciar(p) end
+				end
+			end)
+			botaoTopo(0.51, 62, 0.45, "■ Parar todos", Color3.fromRGB(255, 110, 110)).MouseButton1Click:Connect(AC.pararTodos)
+
+			local dica = Instance.new("TextLabel")
+			dica.Position = UDim2.fromOffset(10, 92)
+			dica.Size = UDim2.new(1, -20, 0, 24)
+			dica.BackgroundTransparency = 1
+			dica.Text = "Arraste a bolinha até onde quer clicar. Cada uma tem a sua configuração."
+			dica.TextColor3 = Color3.fromRGB(200, 185, 255)
+			dica.Font = Enum.Font.Gotham
+			dica.TextSize = 10
+			dica.TextWrapped = true
+			dica.ZIndex = 31
+			dica.Parent = f
+
+			local lista = Instance.new("ScrollingFrame")
+			lista.Position = UDim2.new(0.03, 0, 0, 120)
+			lista.Size = UDim2.new(0.94, 0, 1, -128)
+			lista.BackgroundTransparency = 1
+			lista.BorderSizePixel = 0
+			lista.ScrollBarThickness = 3
+			lista.CanvasSize = UDim2.new()
+			lista.AutomaticCanvasSize = Enum.AutomaticSize.Y
+			lista.ZIndex = 31
+			lista.Parent = f
+			local lay = Instance.new("UIListLayout")
+			lay.Padding = UDim.new(0, 5)
+			lay.SortOrder = Enum.SortOrder.LayoutOrder
+			lay.Parent = lista
+
+			AC.painel, AC.lista = f, lista
+			for _, p in ipairs(AC.pontos) do p.cartao.Parent = lista end
+		end
+
+		function AC.mostrar()
+			if not (AC.painel and AC.painel.Parent) then AC.montar() end
+			AC.painel.Visible = true
+		end
+
+		function AC.abrir()
+			AC.mostrar()
+			if #AC.pontos == 0 then AC.criar() end -- já nasce com uma bolinha
+		end
+
+		alternavel({ "autoclick", "ac" }, "autoclick ou ac / unautoclick ou unac - painel de autoclick com bolinhas na tela (cada uma com cliques/seg, total, timer e modo)", function(ligar, args)
+			if not ligar then
+				AC.limparTudo()
+				if AC.painel then AC.painel.Visible = false end
+				return true, "Autoclick desligado (bolinhas removidas)"
+			end
+			local a1 = args[1] and args[1]:lower()
+			if a1 == "iniciar" or a1 == "start" or a1 == "play" or a1 == "ligar" then
+				AC.abrir()
+				for _, p in ipairs(AC.pontos) do
+					if not p.ligado then AC.iniciar(p) end
+				end
+				return true, "Autoclick iniciado"
+			elseif a1 == "parar" or a1 == "stop" or a1 == "pausar" or a1 == "pause" then
+				AC.pararTodos()
+				return true, "Autoclick parado"
+			elseif a1 == "novo" or a1 == "criar" or a1 == "add" or a1 == "new" then
+				AC.mostrar()
+				AC.criar(tonumber(args[2]))
+				return true, "Bolinha criada: arraste até onde quer clicar"
+			elseif a1 == "limpar" or a1 == "clear" then
+				AC.limparTudo()
+				return true, "Bolinhas removidas"
+			end
+			local cps, modo
 			for _, a in ipairs(args) do
 				local n = tonumber(a)
 				if n then
-					if n < 1 or n > 100 then return false, "Cliques por segundo: de 1 a 100" end
-					taxa = n
-				elseif a:lower() == "mouse" then
-					AC.forcarMouse = true
+					if n < 0.1 or n > 100 then return false, "Cliques por segundo: de 0.1 a 100" end
+					cps = n
+				elseif AC.nomeModo[a:lower()] then
+					modo = a:lower()
 				else
-					return false, "Uso: autoclick [1 a 100] [mouse]"
+					return false, "Uso: autoclick [cliques por segundo] [mouse|toque|ferramenta] | novo | iniciar | parar | limpar"
 				end
 			end
-			AC.taxa = taxa
-			AC.iniciar()
-			return true, "Auto click: " .. taxa .. " por segundo" .. (AC.forcarMouse and " (clique do mouse)" or "")
+			if cps then AC.padraoCps = cps end
+			if #AC.pontos == 0 and (cps or modo) then -- primeira bolinha já com as opções digitadas
+				AC.mostrar()
+				AC.criar(cps, modo)
+			else
+				AC.abrir()
+				if cps or modo then AC.criar(cps, modo) end
+			end
+			return true, "Autoclick: arraste a bolinha até onde quer clicar e toque em Iniciar"
 		end)
 	end
 
@@ -7463,11 +7822,11 @@ local function iniciarTeclado()
 		end)
 	end
 
-	-- CHAT LOG: guarda as últimas 200 mensagens do chat e mostra numa janela com rolagem e botão de copiar.
+	-- CHAT LOG: guarda as últimas 1000 mensagens do chat (e puxa as antigas que ainda estão na janela do chat) e mostra numa janela com rolagem e botão de copiar.
 	-- Escuta desde que o script liga, então o histórico já existe quando você abre a janela.
 	do
 		local TCS = game:GetService("TextChatService")
-		local LOG = { msgs = {}, max = 200, ordem = 0, f = nil, rol = nil, tit = nil }
+		local LOG = { msgs = {}, max = 1000, ordem = 0, menor = 0, f = nil, rol = nil, tit = nil }
 
 		local function textoLimpo(s) -- tira marcações (<b>, <font>...) que o chat novo pode mandar
 			return (tostring(s or ""):gsub("<[^>]+>", ""))
@@ -7521,7 +7880,7 @@ local function iniciarTeclado()
 			LOG.ordem += 1
 			local e = { ordem = LOG.ordem, hora = os.date("%H:%M:%S"), quem = quem, texto = texto }
 			LOG.msgs[#LOG.msgs + 1] = e
-			if #LOG.msgs > LOG.max then -- passou de 200: some a mais antiga
+			if #LOG.msgs > LOG.max then -- passou do limite: some a mais antiga
 				local velho = table.remove(LOG.msgs, 1)
 				if velho.lb then velho.lb:Destroy() end
 			end
@@ -7536,11 +7895,94 @@ local function iniciarTeclado()
 		end
 
 		function LOG.limpar()
+			LOG.limpou = true
 			for _, e in ipairs(LOG.msgs) do
 				if e.lb then e.lb:Destroy() end
 			end
 			LOG.msgs = {}
 			LOG.titulo()
+		end
+
+		-- Lê o que já está escrito na janela do chat do jogo (mensagens de antes do script ligar ou que já
+		-- saíram da tela) e põe no começo do log. Chat novo (ExperienceChat) e chat antigo (Chat).
+		function LOG.lerChat()
+			local achadas = {}
+			pcall(function()
+				local CG = game:GetService("CoreGui")
+				local chat = CG:FindFirstChild("ExperienceChat")
+				if chat then
+					local tmp = {}
+					for _, d in ipairs(chat:GetDescendants()) do
+						if d.Name == "TextMessage" and d:IsA("GuiObject") then
+							local pre, corpo = d:FindFirstChild("PrefixText"), d:FindFirstChild("BodyText")
+							if corpo and corpo:IsA("GuiObject") then
+								local quem = pre and textoLimpo(pre.Text):gsub("[:%s]+$", "") or ""
+								tmp[#tmp + 1] = { y = d.AbsolutePosition.Y, quem = quem ~= "" and quem or "Sistema", texto = textoLimpo(corpo.Text) }
+							end
+						end
+					end
+					table.sort(tmp, function(a, b) return a.y < b.y end)
+					for _, t in ipairs(tmp) do achadas[#achadas + 1] = t end
+				end
+			end)
+			pcall(function()
+				local rolo = playerGui:FindFirstChild("Chat")
+				rolo = rolo and rolo:FindFirstChild("Frame", true)
+				local scroller = rolo and rolo:FindFirstChild("Scroller", true)
+				if scroller and #achadas == 0 then
+					local tmp = {}
+					for _, linha in ipairs(scroller:GetChildren()) do
+						if linha:IsA("GuiObject") then
+							local quem, texto = "", ""
+							for _, d in ipairs(linha:GetDescendants()) do
+								if d:IsA("TextButton") then quem = textoLimpo(d.Text):gsub("[:%[%]%s]+$", "")
+								elseif d:IsA("TextLabel") then texto = textoLimpo(d.Text):gsub("^%s+", "") end
+							end
+							if texto ~= "" then
+								tmp[#tmp + 1] = { y = linha.AbsolutePosition.Y, quem = quem ~= "" and quem or "Sistema", texto = texto }
+							end
+						end
+					end
+					table.sort(tmp, function(a, b) return a.y < b.y end)
+					for _, t in ipairs(tmp) do achadas[#achadas + 1] = t end
+				end
+			end)
+			return achadas
+		end
+
+		function LOG.semear()
+			if LOG.limpou then return 0 end -- depois de Limpar, não traz as antigas de volta
+			local achadas = LOG.lerChat()
+			if #achadas == 0 then return 0 end
+			local tenho = {} -- o que já está no log (para não repetir)
+			for _, e in ipairs(LOG.msgs) do
+				local k = e.quem .. "|" .. e.texto
+				tenho[k] = (tenho[k] or 0) + 1
+			end
+			local novas = {}
+			for i = #achadas, 1, -1 do -- de trás pra frente: as mais novas casam com as que já tenho
+				local a = achadas[i]
+				local k = a.quem .. "|" .. a.texto
+				if (tenho[k] or 0) > 0 then
+					tenho[k] -= 1
+				else
+					table.insert(novas, 1, a)
+				end
+			end
+			if #novas == 0 then return 0 end
+			local n = #novas
+			for i, a in ipairs(novas) do
+				local e = { ordem = LOG.menor - (n - i + 1), hora = "--:--:--", quem = a.quem, texto = a.texto }
+				table.insert(LOG.msgs, i, e)
+				if LOG.f and LOG.f.Parent then LOG.criarLinha(e) end
+			end
+			LOG.menor -= n
+			while #LOG.msgs > LOG.max do -- passou do limite: some a mais antiga
+				local velho = table.remove(LOG.msgs, 1)
+				if velho.lb then velho.lb:Destroy() end
+			end
+			LOG.titulo()
+			return n
 		end
 
 		function LOG.montar()
@@ -7629,6 +8071,7 @@ local function iniciarTeclado()
 
 		function LOG.abrir()
 			if not (LOG.f and LOG.f.Parent) then LOG.montar() end
+			pcall(LOG.semear) -- puxa as antigas que ainda estão na janela do chat
 			LOG.f.Visible = true
 			LOG.titulo()
 			LOG.rolarFim()
@@ -7655,7 +8098,15 @@ local function iniciarTeclado()
 			end
 		end)
 
-		alternavel({ "chatlog", "log" }, "chatlog ou log [limpar] / unchatlog ou unlog - janela com as últimas 200 mensagens do chat", function(ligar, args)
+		task.spawn(function() -- logo que o script liga: guarda o que já estava no chat
+			for _ = 1, 10 do
+				if #LOG.lerChat() > 0 then break end
+				task.wait(0.5)
+			end
+			pcall(LOG.semear)
+		end)
+
+		alternavel({ "chatlog", "log" }, "chatlog ou log [limpar] / unchatlog ou unlog - janela com as últimas 1000 mensagens do chat", function(ligar, args)
 			if not ligar then
 				if LOG.f then LOG.f.Visible = false end
 				return true, "Chat log fechado"
@@ -8001,19 +8452,110 @@ local function iniciarTeclado()
 	end
 
 	-- COPIAR VISUAL: aplica no seu personagem a aparência de outro jogador (só no seu cliente).
-	-- Guarda o seu visual original para o "uncv" e reaplica o visual copiado quando você renasce.
+	-- Tem 2 jeitos: (1) ApplyDescription (copia tudo, inclusive corpo) e, se o jogo/executor não deixar,
+	-- (2) cópia direta: clona roupas, acessórios, cores e rosto do personagem dele (ou baixa os itens do avatar
+	-- do Roblox com game:GetObjects). Guarda o seu visual para o "uncv" e reaplica o copiado quando você renasce.
 	do
-		local CV = { original = nil, atual = nil }
+		local CV = { original = nil, atual = nil, copia = nil, origFoto = nil, modo = nil }
 
-		function CV.aplicar(desc)
-			local _, hum = pegarPersonagem()
-			if not (hum and desc) then return false end
-			return (pcall(function() hum:ApplyDescription(desc) end))
+		local function ehItem(o) -- o que conta como "visual" do personagem
+			return o:IsA("Accessory") or o:IsA("Shirt") or o:IsA("Pants") or o:IsA("ShirtGraphic") or o:IsA("BodyColors")
 		end
 
-		-- O jogo tem sistema de skin/avatar? Se o personagem do jogador está "pelado" (sem roupa, sem
-		-- acessório, sem rosto/cabelo) ele provavelmente é um modelo próprio do jogo, sem avatar
-		-- personalizável -> aí o certo é copiar a skin do Roblox da pessoa.
+		-- "foto" do visual de um personagem: clones das peças + rosto + cor de cada parte do corpo
+		function CV.foto(char)
+			local f = { itens = {}, face = nil, cores = {} }
+			for _, o in ipairs(char:GetChildren()) do
+				if ehItem(o) then
+					local ok, c = pcall(function() return o:Clone() end)
+					if ok and c then f.itens[#f.itens + 1] = c end
+				elseif o:IsA("BasePart") and o.Name ~= "HumanoidRootPart" then
+					f.cores[o.Name] = o.Color
+				end
+			end
+			local cab = char:FindFirstChild("Head")
+			local rosto = cab and cab:FindFirstChild("face")
+			if rosto and rosto:IsA("Decal") then f.face = rosto.Texture end
+			return f
+		end
+
+		-- baixa um item do catálogo (executor: game:GetObjects). Pode devolver o item direto ou dentro de um Model.
+		function CV.carregar(id)
+			local ok, r = pcall(function() return game:GetObjects("rbxassetid://" .. tostring(id)) end)
+			local o = ok and type(r) == "table" and r[1] or nil
+			if not o then return nil end
+			if ehItem(o) or o:IsA("Decal") then return o end
+			for _, d in ipairs(o:GetDescendants()) do
+				if ehItem(d) or d:IsA("Decal") then return d end
+			end
+		end
+
+		-- "foto" a partir de uma HumanoidDescription (avatar do Roblox, mesmo de quem não está no servidor)
+		function CV.fotoDeDescricao(desc)
+			local f = { itens = {}, face = nil, cores = {} }
+			local function add(id)
+				if type(id) ~= "number" or id == 0 then return end
+				local o = CV.carregar(id)
+				if o and ehItem(o) then f.itens[#f.itens + 1] = o end
+			end
+			pcall(function() add(desc.Shirt) end)
+			pcall(function() add(desc.Pants) end)
+			pcall(function() add(desc.GraphicTShirt) end)
+			pcall(function()
+				for _, a in ipairs(desc:GetAccessories(true)) do add(a.AssetId) end
+			end)
+			pcall(function()
+				if desc.Face and desc.Face ~= 0 then
+					local d = CV.carregar(desc.Face)
+					if d and d:IsA("Decal") then f.face = d.Texture end
+				end
+			end)
+			pcall(function()
+				local bc = Instance.new("BodyColors")
+				bc.HeadColor3, bc.TorsoColor3 = desc.HeadColor, desc.TorsoColor
+				bc.LeftArmColor3, bc.RightArmColor3 = desc.LeftArmColor, desc.RightArmColor
+				bc.LeftLegColor3, bc.RightLegColor3 = desc.LeftLegColor, desc.RightLegColor
+				f.itens[#f.itens + 1] = bc
+			end)
+			return f
+		end
+
+		-- veste a "foto" no seu personagem (troca roupas, acessórios, cores e rosto)
+		function CV.aplicarFoto(f)
+			local char = player.Character
+			local hum = char and char:FindFirstChildOfClass("Humanoid")
+			if not (char and hum and f) then return false, "Personagem indisponível" end
+			local pecas = 0
+			for _, o in ipairs(char:GetChildren()) do
+				if ehItem(o) then o:Destroy() end
+			end
+			for _, c in ipairs(f.itens) do
+				local ok = pcall(function()
+					local novo = c:Clone()
+					if novo:IsA("Accessory") then
+						local h = novo:FindFirstChild("Handle")
+						local solda = h and h:FindFirstChild("AccessoryWeld")
+						if solda then solda:Destroy() end -- o Roblox cria uma nova ao colocar
+						hum:AddAccessory(novo)
+					else
+						novo.Parent = char
+					end
+				end)
+				if ok then pecas += 1 end
+			end
+			for nome, cor in pairs(f.cores) do -- cor de cada parte (quando não veio BodyColors)
+				local p = char:FindFirstChild(nome)
+				if p and p:IsA("BasePart") then pcall(function() p.Color = cor end) end
+			end
+			local cab = char:FindFirstChild("Head")
+			local rosto = cab and cab:FindFirstChild("face")
+			if rosto and rosto:IsA("Decal") and f.face then pcall(function() rosto.Texture = f.face end) end
+			if pecas == 0 and not f.face then return false, "Não achei roupas nem acessórios para copiar" end
+			return true
+		end
+
+		-- o jogo tem sistema de skin/avatar? Se o personagem do jogador está "pelado" (sem roupa, sem
+		-- acessório) ele provavelmente é um modelo próprio do jogo -> aí o certo é copiar a skin do Roblox da pessoa.
 		function CV.semVisualNoJogo(desc, char)
 			local ok, vazio = pcall(function()
 				if desc.Shirt ~= 0 or desc.Pants ~= 0 or desc.GraphicTShirt ~= 0 then return false end
@@ -8030,32 +8572,64 @@ local function iniciarTeclado()
 			return (not ok) or vazio
 		end
 
-		function CV.copiar(desc)
-			local _, hum = pegarPersonagem()
+		-- Copia. "origem" = { desc = HumanoidDescription ou nil, foto = foto ou nil }
+		-- Tenta ApplyDescription primeiro (pega o corpo todo); se falhar, usa a cópia direta.
+		function CV.copiar(origem)
+			local char = player.Character
+			local hum = char and char:FindFirstChildOfClass("Humanoid")
 			if not hum then return false, "Personagem indisponível" end
-			if not CV.original then -- guarda o seu visual só na primeira cópia
+			if not CV.original and not CV.origFoto then -- guarda o seu visual só na primeira cópia
 				local ok, d = pcall(function() return hum:GetAppliedDescription() end)
 				if ok then CV.original = d end
+				CV.origFoto = CV.foto(char)
 			end
-			CV.atual = desc
-			if not CV.aplicar(desc) then return false, "Não foi possível aplicar o visual" end
+			if origem.desc then
+				local ok = pcall(function() hum:ApplyDescription(origem.desc) end)
+				if ok then
+					CV.atual, CV.copia, CV.modo = origem.desc, nil, "desc"
+					return true
+				end
+			end
+			local foto = origem.foto
+			if not foto and origem.desc then foto = CV.fotoDeDescricao(origem.desc) end
+			if not foto then return false, "Não foi possível pegar o visual" end
+			local ok, erro = CV.aplicarFoto(foto)
+			if not ok then return false, erro end
+			CV.atual, CV.copia, CV.modo = nil, foto, "foto"
 			return true
 		end
 
+		function CV.restaurar()
+			local original, origFoto, modo = CV.original, CV.origFoto, CV.modo
+			CV.atual, CV.copia, CV.original, CV.origFoto, CV.modo = nil, nil, nil, nil, nil
+			task.spawn(function()
+				local _, hum = pegarPersonagem()
+				if not hum then return end
+				local feito = false
+				if modo == "desc" and original then
+					feito = (pcall(function() hum:ApplyDescription(original) end))
+				end
+				if not feito and origFoto then CV.aplicarFoto(origFoto) end
+			end)
+		end
+
 		player.CharacterAdded:Connect(function(char) -- renasceu: aplica o visual copiado de novo
-			if not CV.atual then return end
+			if not (CV.atual or CV.copia) then return end
 			local hum = char:WaitForChild("Humanoid", 10)
 			if not hum then return end
-			task.wait(0.5)
-			if CV.atual then pcall(function() hum:ApplyDescription(CV.atual) end) end
+			char:WaitForChild("Head", 10)
+			task.wait(1.5) -- o jogo/Roblox termina de vestir o personagem antes
+			if CV.atual then
+				local ok = pcall(function() hum:ApplyDescription(CV.atual) end)
+				if ok then return end
+			end
+			if CV.copia then CV.aplicarFoto(CV.copia) end
 		end)
 
 		alternavel({ "cv", "copiarvisual" }, "cv ou copiarvisual <jogador ou ID> / uncv ou uncopiarvisual - copia o visual de um jogador (só você vê) / volta ao seu", function(ligar, args)
 			if not ligar then
-				if not CV.original then return true, "Você não copiou nenhum visual" end
-				local original = CV.original
-				CV.atual, CV.original = nil, nil
-				task.spawn(function() CV.aplicar(original) end)
+				if not (CV.original or CV.origFoto or CV.atual or CV.copia) then return true, "Você não copiou nenhum visual" end
+				CV.restaurar()
 				return true, "Visual original restaurado"
 			end
 			if #args == 0 then return false, "Uso: cv <jogador ou ID>" end
@@ -8063,48 +8637,49 @@ local function iniciarTeclado()
 			local alvoJogador = acharJogador(busca)
 
 			task.spawn(function()
-				local desc, nome, origem, reserva
+				local origem, nome, rotulo = nil, nil, nil
+				local reserva -- o que ele veste no jogo, caso não dê pra pegar a skin do Roblox
 				if alvoJogador then
 					nome = alvoJogador.DisplayName
-					local h = alvoJogador.Character and alvoJogador.Character:FindFirstChildOfClass("Humanoid")
+					local alvoChar = alvoJogador.Character
+					local h = alvoChar and alvoChar:FindFirstChildOfClass("Humanoid")
 					if h then -- o que ele está vestindo agora NO JOGO
 						local ok, d = pcall(function() return h:GetAppliedDescription() end)
-						if ok and d then
-							if CV.semVisualNoJogo(d, alvoJogador.Character) then
-								reserva = d -- jogo sem sistema de skin: usa a skin do Roblox (abaixo)
-							else
-								desc, origem = d, "do jogo"
-							end
+						local foto = CV.foto(alvoChar)
+						local temPecas = #foto.itens > 0
+						if ok and d and not CV.semVisualNoJogo(d, alvoChar) then
+							origem, rotulo = { desc = d, foto = temPecas and foto or nil }, "do jogo"
+						elseif temPecas then
+							origem, rotulo = { foto = foto }, "do jogo"
+						else
+							reserva = ok and d or nil -- jogo sem sistema de skin: usa a skin do Roblox (abaixo)
 						end
 					end
 				end
-				if not desc then -- skin do Roblox (jogo sem skin própria, jogador fora do servidor ou sem personagem)
-					origem = "do Roblox"
+				if not origem then -- skin do Roblox (jogador fora do servidor, sem personagem ou jogo sem skin)
+					rotulo = "do Roblox"
 					local id = alvoJogador and alvoJogador.UserId or tonumber(busca)
 					if not id then
 						local ok, r = pcall(function() return Players:GetUserIdFromNameAsync(busca) end)
 						id = ok and r or nil
 					end
-					local d
-					if id then
-						local ok, r = pcall(function() return Players:GetHumanoidDescriptionFromUserId(id) end)
-						if ok then d = r end
-					end
-					if d then
-						desc = d
-					elseif reserva then -- não deu pra pegar a skin do Roblox: usa o que tinha no jogo
-						desc, origem = reserva, "do jogo"
-					elseif not id then
+					if not id then
 						mostrarToast("Jogador não encontrado: " .. busca, false)
 						return
+					end
+					local ok, d = pcall(function() return Players:GetHumanoidDescriptionFromUserId(id) end)
+					if ok and d then
+						origem = { desc = d }
+					elseif reserva then
+						origem, rotulo = { desc = reserva }, "do jogo"
 					else
 						mostrarToast("Não consegui pegar o visual desse jogador", false)
 						return
 					end
 					nome = nome or busca
 				end
-				local ok, msg = CV.copiar(desc)
-				mostrarToast(ok and ("Visual copiado (" .. origem .. "): " .. nome) or msg, ok)
+				local ok, msg = CV.copiar(origem)
+				mostrarToast(ok and ("Visual copiado (" .. rotulo .. "): " .. nome) or ("Não copiou: " .. tostring(msg)), ok)
 			end)
 			return true, "Copiando visual..."
 		end)
@@ -10084,7 +10659,7 @@ local function iniciarTeclado()
 	end
 
 	-- SENTAR EM JOGADOR (cabeça, costas, ombro, frente): você sobe flutuando, paira um instante no ar,
-	-- desce e senta com um "pop" (onda de luz + quicada). Depois vai junto com ele.
+	-- desce e senta com uma quicada (sem efeito azul). Depois vai junto com ele.
 	-- Só sai se ele reiniciar (ou morrer/sair do servidor) ou se você pular.
 	local SOM_POP_ID = "" -- opcional: cole aqui um "rbxassetid://..." de som curto para tocar no pop
 	local SENTAR_ALTURA = 7   -- altura do voo acima do ponto de sentar (studs)
@@ -10133,21 +10708,9 @@ local function iniciarTeclado()
 	local function saiRapido(t) return 1 - (1 - t) * (1 - t) end
 	local function entraRapido(t) return t * t end
 
-	-- onda de luz no chão do pop (só você vê)
+	-- fim da quicada (a onda azul no chão foi removida; só toca o som, se você colou um em SOM_POP_ID)
 	local function efeitoPop(pos)
 		pcall(function()
-			local anel = Instance.new("Part")
-			anel.Anchored, anel.CanCollide, anel.CanQuery, anel.CanTouch = true, false, false, false
-			anel.Material = Enum.Material.Neon
-			anel.Color = Color3.fromRGB(120, 210, 255)
-			anel.Shape = Enum.PartType.Cylinder
-			anel.Size = Vector3.new(0.15, 1, 1)
-			anel.CFrame = CFrame.new(pos) * CFrame.Angles(0, 0, math.pi / 2)
-			anel.Parent = workspace
-			local info = TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-			TweenService:Create(anel, info, { Size = Vector3.new(0.15, 7, 7), Transparency = 1 }):Play()
-			task.delay(0.5, function() anel:Destroy() end)
-
 			if SOM_POP_ID ~= "" then
 				local som = Instance.new("Sound")
 				som.SoundId = SOM_POP_ID
@@ -10720,6 +11283,23 @@ local function iniciarTeclado()
 		MENU.trad.FPS1 = "FPS LEVE"
 		MENU.trad.FPS2 = "FPS MÉDIO"
 		MENU.trad.FPS3 = "FPS MÁXIMO"
+		MENU.trad.SPIN = "GIRAR"
+		MENU.trad.LUZ = "LUZ BRANCA"
+		MENU.trad.CICLO = "CICLO DIA/NOITE"
+		MENU.trad.DIA = "FIXAR DIA"
+		MENU.trad.NOITE = "FIXAR NOITE"
+		MENU.trad.FX = "EFEITOS"
+		MENU.trad.PING = "PING E FPS"
+		MENU.trad.VM = "VELOCÍMETRO"
+		MENU.trad.TIMER = "TIMER"
+		MENU.trad.CRON = "CRONÔMETRO"
+		MENU.trad.MUTE = "MUTAR JOGADOR"
+		MENU.trad.MARCAR = "MARCAR JOGADOR"
+		MENU.trad.CV = "COPIAR VISUAL"
+		MENU.trad.INFO = "INFO DO JOGADOR"
+		MENU.trad.LOW = "SERVIDOR VAZIO"
+		MENU.trad.CHATLOG = "CHAT LOG"
+		MENU.trad.AUTOCLICK = "AUTOCLICK"
 
 		MENU.categoria.SPEED = "Movimento"
 		MENU.categoria.JUMP = "Movimento"
@@ -10739,6 +11319,23 @@ local function iniciarTeclado()
 		MENU.categoria.FPS1 = "Extras"
 		MENU.categoria.FPS2 = "Extras"
 		MENU.categoria.FPS3 = "Extras"
+		MENU.categoria.SPIN = "Movimento"
+		MENU.categoria.LUZ = "Visão"
+		MENU.categoria.CICLO = "Visão"
+		MENU.categoria.DIA = "Visão"
+		MENU.categoria.NOITE = "Visão"
+		MENU.categoria.FX = "Extras"
+		MENU.categoria.PING = "Extras"
+		MENU.categoria.VM = "Extras"
+		MENU.categoria.TIMER = "Extras"
+		MENU.categoria.CRON = "Extras"
+		MENU.categoria.MUTE = "Jogadores"
+		MENU.categoria.MARCAR = "Jogadores"
+		MENU.categoria.CV = "Jogadores"
+		MENU.categoria.INFO = "Jogadores"
+		MENU.categoria.LOW = "Extras"
+		MENU.categoria.CHATLOG = "Extras"
+		MENU.categoria.AUTOCLICK = "Extras"
 
 		-- quebra o texto da caixinha em palavras (os argumentos do comando)
 		local function separar(caixa)
@@ -10779,6 +11376,19 @@ local function iniciarTeclado()
 			{ nome = "FSIT", ordem = 38, nomes = { "fsit", "frontsit", "sentarfrente" }, caixa = "", dica = "jogador", grupo = "sentar" },
 			{ nome = "AFK", ordem = 30, nomes = { "afk" }, ligado = true }, -- o anti-AFK já começa ligado
 			{ nome = "AVISOS", ordem = 31, nomes = { "avisos" } },
+			{ nome = "SPIN", ordem = 40, nomes = { "spin" }, caixa = "360", dica = "graus/s", vivo = true },
+			{ nome = "LUZ", ordem = 41, nomes = { "luz", "light" }, caixa = "40 3", dica = "alcance brilho", vivo = true },
+			{ nome = "CICLO", ordem = 42, nomes = { "ciclo" }, caixa = "5", dica = "min/dia" },
+			{ nome = "DIA", ordem = 43, nomes = { "dia" } },
+			{ nome = "NOITE", ordem = 44, nomes = { "noite" } },
+			{ nome = "FX", ordem = 45, nomes = { "fx", "efeitos" }, caixa = "", dica = "0.1 a 1" },
+			{ nome = "PING", ordem = 46, nomes = { "ping", "ms" } },
+			{ nome = "VM", ordem = 47, nomes = { "velocimetro", "vm" } },
+			{ nome = "TIMER", ordem = 48, nomes = { "timer", "temporizador" }, caixa = "30", dica = "tempo" },
+			{ nome = "CRON", ordem = 49, nomes = { "cron", "cronometro" } },
+			{ nome = "MUTE", ordem = 50, nomes = { "mute", "mutar" }, caixa = "", dica = "jogador", unCaixa = true },
+			{ nome = "MARCAR", ordem = 51, nomes = { "marcar", "mark" }, caixa = "", dica = "jogador cor", unCaixa = true },
+			{ nome = "CV", ordem = 52, nomes = { "cv", "copiarvisual" }, caixa = "", dica = "jogador" },
 		}
 
 		for _, it in ipairs(lista) do
@@ -10825,7 +11435,7 @@ local function iniciarTeclado()
 
 			b.MouseButton1Click:Connect(function()
 				if it.ligado then
-					chamar("un" .. it.nomes[1], {})
+					chamar("un" .. it.nomes[1], it.unCaixa and separar(caixa) or {})
 				else
 					chamar(it.nomes[1], separar(caixa))
 				end
@@ -10877,6 +11487,27 @@ local function iniciarTeclado()
 		local botaoSentar = criarLinha(35, "SIT", false)
 		botaoSentar.Text = "SENTAR"
 		botaoSentar.MouseButton1Click:Connect(function() chamar("sit", {}) end)
+
+		-- AÇÕES (sem liga/desliga): abrem uma janela ou fazem uma coisa só. A caixinha (se tiver) é o argumento.
+		local acoes = {
+			{ nome = "INFO", ordem = 60, cmd = "info", caixa = "", dica = "jogador" },
+			{ nome = "LOW", ordem = 61, cmd = "low" },
+			{ nome = "CHATLOG", ordem = 62, cmd = "chatlog" },
+			{ nome = "AUTOCLICK", ordem = 63, cmd = "autoclick" },
+		}
+		for _, a in ipairs(acoes) do
+			local b, caixa = criarLinha(a.ordem, a.nome, a.caixa ~= nil, a.caixa)
+			b.Text = MENU.trad[a.nome]
+			if caixa then
+				caixa.PlaceholderText = a.dica
+				caixa.TextScaled = true
+				local lim = Instance.new("UITextSizeConstraint")
+				lim.MaxTextSize = 15
+				lim.MinTextSize = 8
+				lim.Parent = caixa
+			end
+			b.MouseButton1Click:Connect(function() chamar(a.cmd, caixa and separar(caixa) or {}) end)
+		end
 	end
 
 	----------------------------------------------------------
@@ -10950,6 +11581,98 @@ local function iniciarTeclado()
 		if not CRI.apagar(nome) then return false, "Você não criou o comando " .. nome end
 		return true, "Comando apagado: " .. nome
 	end)
+
+	----------------------------------------------------------
+	-- APELIDOS EXTRAS dos comandos (abreviações, português e inglês por extenso).
+	-- Cada linha: comando original = { apelidos... }. "un" + apelido desliga (quando o original liga/desliga).
+	-- Para criar mais, é só somar nomes na lista do comando. Apelido que já existe é ignorado.
+	----------------------------------------------------------
+	;(function()
+		local MAPA = {
+			fly = { "flight", "voo", "fl", "levitar", "voarlivre" },
+			vf = { "vfly", "vehiclefly", "voarveiculo", "voocarro", "vv", "carrovoar" },
+			swim = { "nado", "nadando", "swimair", "nadarnoar" },
+			np = { "nc", "clip", "atravessar", "atravessarparede", "ghost", "fantasma", "semcolisao", "nocollision" },
+			xy = { "raiox", "xr", "transparente", "mapatransparente", "seethrough", "xrayvision" },
+			esp = { "ver", "nomes", "verjogadores", "players", "playeresp", "names", "wallhack" },
+			cm = { "chams", "outline", "borda", "bordas", "contornos", "highlightall" },
+			aim = { "aimlock", "lockaim", "miraauto", "mirar", "ab", "mirarautomatica", "autoaim" },
+			sl = { "shift", "lockcam", "travar", "cameratravada", "câmeratravada", "camlock", "cadeado" },
+			tptool = { "tptools", "ferramentatp", "teletool", "clicktp", "ctp", "tpclick", "teleporttool" },
+			tp = { "teleport", "goto", "tele", "to", "ira", "vaipara", "irpara", "irate" },
+			info = { "i", "dados", "infos", "perfil", "profile", "userinfo", "playerinfo", "infojogador", "stats" },
+			ping = { "latencia", "latência", "pg", "pingfps", "fpsping", "lag" },
+			luz = { "luzes", "lanterna", "lantern", "lamp", "lampada", "lâmpada", "torch", "brilho", "glow" },
+			ciclo = { "cycle", "daynight", "diaenoite", "diaenoitecorrendo", "dn", "cicloautomatico" },
+			dia = { "day", "manha", "manhã", "meiodia", "noon", "sol", "sun" },
+			noite = { "night", "madrugada", "escuro", "midnight", "lua", "moon" },
+			spin = { "girar", "gira", "rodar", "giro", "rotate", "rotacionar", "sp", "beyblade", "tornado" },
+			autoclick = { "autoclicker", "autoclique", "autocliquer", "autoclic", "clicker", "clique", "cliqueauto", "click", "aclick", "acl", "autoc", "cliques", "autotap", "tap" },
+			low = { "lowserver", "servidorvazio", "serverlow", "emptyserver", "lowserv", "vazio", "servervazio", "menoscheio", "lowplayers" },
+			timer = { "tm", "countdown", "contagem", "regressiva", "contagemregressiva", "temporizar", "alarme", "alarm" },
+			cron = { "stopwatch", "crono", "chrono", "cr", "cronometrar" },
+			vm = { "speedometer", "speedo", "kmh", "veloc", "velo", "velocimetro2", "mph", "studs" },
+			chatlog = { "chat", "historico", "histórico", "historicomsg", "historicomsgs", "historicomensagem", "historicomensagens", "historicodemensagem", "historicodemensagens", "msglog", "msgs", "mensagens", "chathistory", "history", "logchat", "chatloger", "logs", "cht", "oldchat", "chatantigo" },
+			mute = { "silenciar", "silenciarchat", "calar", "ocultar", "hidechat", "mt", "shut", "shutup", "mudo", "muteplayer" },
+			marcar = { "marcador", "tag", "destacar", "highlight", "hl", "mk", "marcarjogador", "markplayer" },
+			cv = { "copiaravatar", "copyavatar", "copyskin", "copiarskin", "copiarroupa", "copyvisual", "copyoutfit", "copyoutfit", "roupa", "skin", "visual", "avatar", "copiar", "copy", "outfit", "copiarpersonagem", "copychar", "copycharacter", "copiarchar", "clonaravatar", "morph", "disfarce", "disguise" },
+			view = { "spectate", "spec", "assistir", "vercamera", "camdojogador", "vw", "espiar", "watch", "viewplayer", "cameraplayer" },
+			set = { "salvar", "save", "savespawn", "setspawn", "spawn", "setloc", "salvarlocal", "salvarposicao", "setpos", "savepos", "addspawn" },
+			go = { "gospawn", "irspawn", "loc", "local", "spawnir", "irlocal", "gotospawn", "loadpos", "irspawns" },
+			rj = { "reentrar", "reconectar", "reconnect", "rejoinserver", "reentrarservidor", "reiniciarserver", "rejoinserv" },
+			sit = { "sitdown", "sentado", "sentarse", "sentarme", "sitme", "sent" },
+			notas = { "nota", "note", "notepad", "bloco", "anotacoes", "anotações", "anotar", "caderno", "blocodenotas", "memo" },
+			grudar = { "stick", "glue", "sticky", "grude", "grudarchao", "grudarnochao", "plataforma", "stickyfloor" },
+			wall = { "wallwalk", "spiderman", "andarparede", "andarparedes", "wallclimb", "climb", "escalar", "wk", "ceiling", "teto", "wallrun" },
+			speed = { "ws", "walkspeed", "vel", "correr", "run", "rapido", "rápido", "spd", "velocidadeandar", "andarrapido", "sprint" },
+			jump = { "jp", "jumppower", "jumpheight", "pular", "forcapulo", "forçapulo", "jmp", "jpower", "superpulo", "superjump", "pulos" },
+			fx = { "effects", "efeito", "effect", "visualfx", "fxs", "efeitosvisuais" },
+			afk = { "antiafk", "naoafk", "antiidle", "idle", "naoexpulsar", "antikick" },
+			zoom = { "luneta", "lupa", "telescope", "binoculos", "binóculos", "zm", "scope", "mirazoom", "aproximar", "binoculars" },
+			avisos = { "joinalerts", "alertas", "avisosentrada", "notificacoes", "notificações", "notify", "joinlog", "entradas", "joins", "avisosjogadores" },
+			flyjump = { "infjump", "infinitejump", "pulinfinito", "pulosinfinitos", "pulainfinito", "multijump", "doublejump", "airjump", "infj", "pulodoble", "pulonoar" },
+			fps1 = { "leve", "lowgfx", "boost1", "fpsleve", "gfxlow" },
+			fps2 = { "medio", "médio", "boost2", "fpsmedio", "fpsmédio", "gfxmedium" },
+			fps3 = { "maximo", "máximo", "lego", "boost3", "fpsmaximo", "fpsmáximo", "gfxmax", "potato", "batata" },
+			unfps = { "fpsnormal", "gfxnormal", "unboost", "restaurargrafico", "restaurargráfico", "visualnormal" },
+			regua = { "medir", "measure", "distancia", "distância", "distance", "rg", "trena", "fita", "metro", "rule", "medirdistancia" },
+			freecam = { "cl", "cameralivre", "camlivre", "câmeralivre", "livre", "cam", "free", "freecamera", "fcam", "ccl", "camera2", "voarcamera", "droncam", "drone" },
+			seguir = { "seg", "segue", "fw", "perseguir", "acompanhar", "stalk", "followplayer", "seguirjogador", "grudarjogador" },
+			orbitar = { "orb", "circular", "rodear", "circle", "orbitarjogador", "ot", "orbitplayer", "girarcom", "rodearjogador" },
+			hsit = { "hcit", "sentarcabeça", "sentarnacabeca", "sentarnacabeça", "cabecasit", "cabeca", "cabeça", "head", "hs", "sitcabeca", "sitcabeça", "sentarcab", "headsit2", "sithead", "sitonhead", "sentarnahead" },
+			bsit = { "carona", "costas", "back", "piggyback", "piggy", "bs", "sentarnascostas", "sitcostas", "piggybacksit", "sitback", "sitonback", "cavalinho" },
+			ssit = { "ombro", "shoulder", "ss", "sentarnoombro", "sentarnoombro", "sitombro", "sitshoulder", "shouldersit2", "sitonshoulder", "ombros" },
+			fsit = { "frente", "front", "fs", "colo", "lapsit", "sentarnocolo", "sentardefrente", "sitfrente", "sitfront", "sitonlap", "frontal" },
+			menu = { "painel", "gui", "abrirmenu", "openmenu", "mostrarmenu", "showmenu", "hubmenu" },
+			unmenu = { "fecharmenu", "closemenu", "esconder", "hide", "hidemenu", "esconderMenu", "escondermenu" },
+			cmds = { "comandos", "commands", "lista", "list", "cmd", "ajudas", "comando", "listacomandos", "commandlist" },
+			criar = { "novocomando", "newcmd", "makecmd", "createcmd", "macro" },
+			uncriar = { "apagarcomando", "delcmd", "removecmd", "deletecmd", "delmacro" },
+		}
+		for canon, apelidos in pairs(MAPA) do
+			local f, fun = comandos[canon], comandos["un" .. canon]
+			if f then
+				local entrada
+				for _, e in ipairs(entradas) do
+					if table.find(e.nomes, canon) then
+						entrada = e
+						break
+					end
+				end
+				for _, a in ipairs(apelidos) do
+					a = a:lower()
+					if not comandos[a] and not CRI.lista[a] then
+						comandos[a] = f
+						if entrada then entrada.nomes[#entrada.nomes + 1] = a end
+					end
+					if fun and not comandos["un" .. a] and not CRI.lista["un" .. a] then
+						comandos["un" .. a] = fun
+						if entrada then entrada.nomes[#entrada.nomes + 1] = "un" .. a end
+					end
+				end
+			end
+		end
+	end)()
 
 	local function executarComando(trecho)
 		local partes = {}
