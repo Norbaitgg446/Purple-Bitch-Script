@@ -1,4 +1,5 @@
 -- LocalScript
+-- v63: autoclick clica direto no botão/ClickDetector embaixo da bolinha (sem calibrar); copiar visual clona mesmo com Archivable desligado.
 -- v62: copiar visual copia TUDO (cabelo, acessórios, corpo, rosto, escala), pulo normal sem efeito, autoclick com calibração do clique + minimizar/redimensionar, sentar em jogador sem tremer a câmera.
 -- v61: sem créditos e sem efeito azul ao sentar, comandos com vários apelidos, botões novos no menu, autoclick com bolinhas, chat log maior, copiar visual com plano B, busca parcial de jogador.
 -- v38: barrinha no super velocidade (carrega mesmo mexendo a câmera), anéis dos pés só com o pé no chão, pulo infinito sem empilhar,
@@ -7139,145 +7140,84 @@ local function iniciarTeclado()
 		AC.nomeModo = { mouse = "Mouse", toque = "Toque", ferramenta = "Ferramenta" }
 		AC.corParado, AC.corRodando = Color3.fromRGB(100, 60, 230), Color3.fromRGB(70, 200, 120)
 
-		-- CALIBRAÇÃO: a posição da bolinha na tela e a posição real do clique nem sempre são a mesma (barra de cima,
-		-- entalhe do celular, escala). Você toca em 2 alvos uma vez e o script aprende a diferença (fica salvo).
-		AC.calib = nil -- { ax, bx, ay, by }: posição real = a * posição da tela + b
-		AC.extra = Vector2.zero -- ajuste fino manual em pixels (comando: ac ajuste x y)
-		AC.arquivoCalib = "autoclick_calibracao.json"
-		pcall(function()
-			if typeof(isfile) == "function" and typeof(readfile) == "function" and isfile(AC.arquivoCalib) then
-				local d = game:GetService("HttpService"):JSONDecode(readfile(AC.arquivoCalib))
-				local t = tamanhoTela()
-				if type(d) == "table" and tonumber(d.ax) and math.abs((d.w or 0) - t.X) < 3 and math.abs((d.h or 0) - t.Y) < 3 then
-					AC.calib = { ax = d.ax, bx = d.bx, ay = d.ay, by = d.by }
-					AC.extra = Vector2.new(d.ex or 0, d.ey or 0)
+		-- O clique NÃO usa mais a posição do mouse na tela (no celular ela saía deslocada). Ele é feito direto
+		-- no que está embaixo da bolinha: o botão da tela, o ClickDetector do mundo ou a ferramenta da mão.
+		function AC.garantirCalib(cb) cb() end
+
+		local GuiServiceAC = game:GetService("GuiService")
+
+		-- botão (de qualquer menu do jogo) que está embaixo do ponto c
+		function AC.acharBotao(c)
+			local melhor, melhorOrdem
+			local inset = GuiServiceAC:GetGuiInset()
+			for _, sg in ipairs(playerGui:GetChildren()) do
+				if sg:IsA("ScreenGui") and sg ~= gui and sg.Enabled then
+					local desl = sg.IgnoreGuiInset and Vector2.zero or inset
+					for _, d in ipairs(sg:GetDescendants()) do
+						if d:IsA("GuiButton") and d.Visible then
+							local pos, tam = d.AbsolutePosition + desl, d.AbsoluteSize
+							if c.X >= pos.X and c.X <= pos.X + tam.X and c.Y >= pos.Y and c.Y <= pos.Y + tam.Y then
+								local visivel = true
+								local pai = d.Parent
+								while pai and pai ~= sg do
+									if pai:IsA("GuiObject") and not pai.Visible then visivel = false break end
+									pai = pai.Parent
+								end
+								if visivel then
+									local ordem = sg.DisplayOrder * 100000 + d.ZIndex
+									if not melhorOrdem or ordem > melhorOrdem then melhor, melhorOrdem = d, ordem end
+								end
+							end
+						end
+					end
 				end
 			end
-		end)
-
-		function AC.salvarCalib()
-			pcall(function()
-				if typeof(writefile) ~= "function" then return end
-				local k = AC.calib or { ax = 1, bx = 0, ay = 1, by = 0 }
-				local t = tamanhoTela()
-				writefile(AC.arquivoCalib, game:GetService("HttpService"):JSONEncode({
-					ax = k.ax, bx = k.bx, ay = k.ay, by = k.by, ex = AC.extra.X, ey = AC.extra.Y, w = t.X, h = t.Y,
-				}))
-			end)
+			return melhor
 		end
 
-		-- posição na tela da bolinha -> posição real onde o clique tem que cair
-		function AC.mapear(c)
-			local x, y = c.X, c.Y
-			local k = AC.calib
-			if k then x, y = k.ax * x + k.bx, k.ay * y + k.by end
-			return Vector2.new(x + AC.extra.X, y + AC.extra.Y)
-		end
-
-		function AC.calibrar(depois)
-			if AC.sobre and AC.sobre.Parent then return end
-			local tela = tamanhoTela()
-			local alvos = { Vector2.new(tela.X * 0.25, tela.Y * 0.3), Vector2.new(tela.X * 0.75, tela.Y * 0.7) }
-			local capturas = {}
-			local ov = Instance.new("TextButton")
-			ov.Name = "AutoclickCalibrar"
-			ov.Size = UDim2.fromScale(1, 1)
-			ov.BackgroundColor3 = Color3.new(0, 0, 0)
-			ov.BackgroundTransparency = 0.45
-			ov.Text = ""
-			ov.AutoButtonColor = false
-			ov.ZIndex = 90
-			ov.Parent = gui
-			AC.sobre = ov
-
-			local msg = Instance.new("TextLabel")
-			msg.AnchorPoint = Vector2.new(0.5, 0)
-			msg.Position = UDim2.new(0.5, 0, 0, 14)
-			msg.Size = UDim2.new(0.9, 0, 0, 40)
-			msg.BackgroundTransparency = 1
-			msg.TextColor3 = Color3.new(1, 1, 1)
-			msg.Font = Enum.Font.GothamBold
-			msg.TextSize = 16
-			msg.TextWrapped = true
-			msg.ZIndex = 91
-			msg.Parent = ov
-
-			local alvoUi = Instance.new("Frame")
-			alvoUi.AnchorPoint = Vector2.new(0.5, 0.5)
-			alvoUi.Size = UDim2.fromOffset(40, 40)
-			alvoUi.BackgroundTransparency = 1
-			alvoUi.ZIndex = 91
-			alvoUi.Parent = ov
-			Instance.new("UICorner", alvoUi).CornerRadius = UDim.new(1, 0)
-			local anel = Instance.new("UIStroke")
-			anel.Color = Color3.fromRGB(110, 235, 150)
-			anel.Thickness = 3
-			anel.Parent = alvoUi
-			local ponto = Instance.new("Frame")
-			ponto.AnchorPoint = Vector2.new(0.5, 0.5)
-			ponto.Position = UDim2.fromScale(0.5, 0.5)
-			ponto.Size = UDim2.fromOffset(6, 6)
-			ponto.BackgroundColor3 = Color3.fromRGB(110, 235, 150)
-			ponto.ZIndex = 92
-			ponto.Parent = alvoUi
-			Instance.new("UICorner", ponto).CornerRadius = UDim.new(1, 0)
-
-			local function mostrarAlvo(i)
-				alvoUi.Position = UDim2.fromOffset(alvos[i].X, alvos[i].Y)
-				msg.Text = "Calibrar clique (" .. i .. "/2): toque no CENTRO do alvo verde"
-			end
-
-			local pular = Instance.new("TextButton")
-			pular.AnchorPoint = Vector2.new(0.5, 1)
-			pular.Position = UDim2.new(0.5, 0, 1, -14)
-			pular.Size = UDim2.fromOffset(110, 30)
-			pular.BackgroundColor3 = Color3.fromRGB(60, 60, 68)
-			pular.Text = "Pular"
-			pular.TextColor3 = Color3.new(1, 1, 1)
-			pular.Font = Enum.Font.Gotham
-			pular.TextSize = 14
-			pular.ZIndex = 92
-			pular.Parent = ov
-			Instance.new("UICorner", pular).CornerRadius = UDim.new(0, 8)
-			pular.MouseButton1Click:Connect(function()
-				AC.calibPulou = true
-				ov:Destroy()
-				if depois then depois() end
-			end)
-
-			ov.InputBegan:Connect(function(input)
-				local tipo = input.UserInputType
-				if tipo ~= Enum.UserInputType.Touch and tipo ~= Enum.UserInputType.MouseButton1 then return end
-				capturas[#capturas + 1] = Vector2.new(input.Position.X, input.Position.Y)
-				if #capturas < 2 then
-					mostrarAlvo(#capturas + 1)
-					return
+		-- aperta o botão de verdade (executor: firesignal / getconnections)
+		function AC.apertar(b)
+			local nomes = { "MouseButton1Down", "MouseButton1Click", "MouseButton1Up", "Activated" }
+			local feito = false
+			if typeof(firesignal) == "function" then
+				for _, n in ipairs(nomes) do
+					if pcall(function() firesignal(b[n]) end) then feito = true end
 				end
-				local p1, p2 = capturas[1], capturas[2]
-				local ax = (p2.X - p1.X) / (alvos[2].X - alvos[1].X)
-				local ay = (p2.Y - p1.Y) / (alvos[2].Y - alvos[1].Y)
-				if ax < 0.5 or ax > 2 then ax = 1 end
-				if ay < 0.5 or ay > 2 then ay = 1 end
-				AC.calib = { ax = ax, bx = p1.X - ax * alvos[1].X, ay = ay, by = p1.Y - ay * alvos[1].Y }
-				AC.salvarCalib()
-				ov:Destroy()
-				mostrarToast(string.format("Clique calibrado (desvio %d, %d px)", math.floor(AC.calib.bx + 0.5), math.floor(AC.calib.by + 0.5)), true)
-				if depois then depois() end
-			end)
-			mostrarAlvo(1)
-		end
-
-		function AC.garantirCalib(cb) -- calibra na primeira vez antes de começar a clicar
-			if AC.calib or AC.calibPulou then
-				cb()
-			else
-				AC.calibrar(cb)
 			end
+			if not feito and typeof(getconnections) == "function" then
+				for _, n in ipairs(nomes) do
+					pcall(function()
+						for _, con in ipairs(getconnections(b[n])) do pcall(function() con:Fire() end) end
+					end)
+				end
+				feito = true
+			end
+			return feito
 		end
 
-		-- clique de verdade no ponto (x, y) da tela
+		-- ClickDetector do mundo que está embaixo do ponto c
+		function AC.clicarMundo(c)
+			local cam = workspace.CurrentCamera
+			if not cam or typeof(fireclickdetector) ~= "function" then return false end
+			local ray = cam:ViewportPointToRay(c.X, c.Y)
+			local params = RaycastParams.new()
+			params.FilterType = Enum.RaycastFilterType.Exclude
+			params.FilterDescendantsInstances = { player.Character }
+			local r = workspace:Raycast(ray.Origin, ray.Direction * 1000, params)
+			local obj = r and r.Instance
+			while obj and obj ~= workspace do
+				local cd = obj:FindFirstChildOfClass("ClickDetector")
+				if cd then
+					pcall(fireclickdetector, cd)
+					return true
+				end
+				obj = obj.Parent
+			end
+			return false
+		end
+
 		function AC.clicar(p)
-			local c = AC.mapear(p.bolinha.AbsolutePosition + p.bolinha.AbsoluteSize / 2)
+			local c = p.bolinha.AbsolutePosition + p.bolinha.AbsoluteSize / 2
 			if p.modo == "ferramenta" then
 				local tool = player.Character and player.Character:FindFirstChildOfClass("Tool")
 				if tool then
@@ -7285,6 +7225,14 @@ local function iniciarTeclado()
 					return
 				end
 			end
+			-- 1) botão da tela embaixo da bolinha (procura de novo se a bolinha mudou de lugar)
+			if p.alvoC ~= c or not (p.alvo and p.alvo.Parent and p.alvo.Visible) or os.clock() - (p.alvoT or 0) > 1 then
+				p.alvo, p.alvoC, p.alvoT = AC.acharBotao(c), c, os.clock()
+			end
+			if p.alvo and AC.apertar(p.alvo) then return end
+			-- 2) ClickDetector no mundo
+			if AC.clicarMundo(c) then return end
+			-- 3) por último, clique virtual
 			if not AC.vim then
 				local ok, v = pcall(function() return game:GetService("VirtualInputManager") end)
 				AC.vim = ok and v or false
@@ -7304,7 +7252,6 @@ local function iniciarTeclado()
 				end
 				if ok then return end
 			end
-			-- plano B: funções do executor (movem o cursor de verdade até a bolinha)
 			if typeof(mousemoveabs) == "function" then pcall(mousemoveabs, c.X, c.Y) end
 			if typeof(mouse1click) == "function" then pcall(mouse1click) end
 		end
@@ -7629,12 +7576,9 @@ local function iniciarTeclado()
 				end)
 			end)
 			botaoTopo(0.51, 62, 0.45, "■ Parar todos", Color3.fromRGB(255, 110, 110)).MouseButton1Click:Connect(AC.pararTodos)
-			botaoTopo(0.04, 92, 0.92, "⌖ Calibrar clique", Color3.fromRGB(90, 160, 255)).MouseButton1Click:Connect(function()
-				AC.calibrar()
-			end)
 
 			local dica = Instance.new("TextLabel")
-			dica.Position = UDim2.fromOffset(10, 122)
+			dica.Position = UDim2.fromOffset(10, 92)
 			dica.Size = UDim2.new(1, -20, 0, 24)
 			dica.BackgroundTransparency = 1
 			dica.Text = "Arraste a bolinha até onde quer clicar. Cada uma tem a sua configuração."
@@ -7646,8 +7590,8 @@ local function iniciarTeclado()
 			dica.Parent = f
 
 			local lista = Instance.new("ScrollingFrame")
-			lista.Position = UDim2.new(0.03, 0, 0, 150)
-			lista.Size = UDim2.new(0.94, 0, 1, -158)
+			lista.Position = UDim2.new(0.03, 0, 0, 120)
+			lista.Size = UDim2.new(0.94, 0, 1, -128)
 			lista.BackgroundTransparency = 1
 			lista.BorderSizePixel = 0
 			lista.ScrollBarThickness = 3
@@ -7737,15 +7681,6 @@ local function iniciarTeclado()
 			elseif a1 == "limpar" or a1 == "clear" then
 				AC.limparTudo()
 				return true, "Bolinhas removidas"
-			elseif a1 == "calibrar" or a1 == "calib" or a1 == "calibrate" then
-				AC.calibrar()
-				return true, "Toque nos 2 alvos para calibrar o clique"
-			elseif a1 == "ajuste" or a1 == "ajustar" or a1 == "offset" then
-				local x, y = tonumber(args[2]), tonumber(args[3])
-				if not x or not y then return false, "Uso: ac ajuste <x> <y> em pixels (ex.: ac ajuste 0 20; ac ajuste 0 0 zera)" end
-				AC.extra = Vector2.new(x, y)
-				AC.salvarCalib()
-				return true, "Ajuste do clique: " .. x .. ", " .. y
 			end
 			local cps, modo
 			for _, a in ipairs(args) do
@@ -8703,21 +8638,54 @@ local function iniciarTeclado()
 		end
 
 		-- "foto" do visual de um personagem: clones das peças + rosto + cor de cada parte do corpo
+		-- Clone() devolve nil se o item tem Archivable desligado (muitos jogos fazem isso): liga antes de clonar
+		function CV.clonar(o)
+			pcall(function() o.Archivable = true end)
+			for _, d in ipairs(o:GetDescendants()) do pcall(function() d.Archivable = true end) end
+			local ok, c = pcall(function() return o:Clone() end)
+			return ok and c or nil
+		end
+
+		-- se o AddAccessory não soldou o acessório, solda na mão pelo Attachment com o mesmo nome
+		function CV.soldar(acc, char)
+			pcall(function()
+				local h = acc:FindFirstChild("Handle")
+				if not (h and h:IsA("BasePart")) then return end
+				for _, d in ipairs(char:GetDescendants()) do
+					if (d:IsA("JointInstance") or d:IsA("WeldConstraint")) and (d.Part1 == h or d.Part0 == h) then return end
+				end
+				local ah
+				for _, a in ipairs(h:GetChildren()) do
+					if a:IsA("Attachment") then ah = a break end
+				end
+				if not ah then return end
+				for _, parte in ipairs(char:GetChildren()) do
+					if parte:IsA("BasePart") then
+						local ap = parte:FindFirstChild(ah.Name)
+						if ap and ap:IsA("Attachment") then
+							local w = Instance.new("Weld")
+							w.Name = "AccessoryWeld"
+							w.Part0, w.Part1, w.C0, w.C1 = parte, h, ap.CFrame, ah.CFrame
+							w.Parent = h
+							return
+						end
+					end
+				end
+			end)
+		end
+
 		function CV.foto(char)
 			local f = { itens = {}, face = nil, cores = {}, corpo = {}, escalas = {}, cabecaMesh = nil, completo = true }
 			for _, o in ipairs(char:GetChildren()) do
 				if ehItem(o) then
-					local ok, c = pcall(function() return o:Clone() end)
-					if ok and c then f.itens[#f.itens + 1] = c end
+					local c = CV.clonar(o)
+					if c then f.itens[#f.itens + 1] = c end
 				elseif o:IsA("BasePart") and o.Name ~= "HumanoidRootPart" then
 					f.cores[o.Name] = o.Color
 					if o:IsA("MeshPart") then -- corpo R15: malha e textura de cada parte
 						local sa
 						local s = o:FindFirstChildOfClass("SurfaceAppearance")
-						if s then
-							local ok, c = pcall(function() return s:Clone() end)
-							sa = ok and c or nil
-						end
+						if s then sa = CV.clonar(s) end
 						f.corpo[o.Name] = { mesh = o.MeshId, textura = o.TextureID, sa = sa }
 					end
 				end
@@ -8726,10 +8694,7 @@ local function iniciarTeclado()
 			local rosto = cab and cab:FindFirstChild("face")
 			if rosto and rosto:IsA("Decal") then f.face = rosto.Texture end
 			local sm = cab and cab:FindFirstChildOfClass("SpecialMesh") -- cabeça (formato)
-			if sm then
-				local ok, c = pcall(function() return sm:Clone() end)
-				f.cabecaMesh = ok and c or nil
-			end
+			if sm then f.cabecaMesh = CV.clonar(sm) end
 			local hum = char:FindFirstChildOfClass("Humanoid") -- tamanho do corpo (altura, largura, cabeça...)
 			if hum then
 				for _, v in ipairs(hum:GetChildren()) do
@@ -8826,6 +8791,7 @@ local function iniciarTeclado()
 						local solda = h and h:FindFirstChild("AccessoryWeld")
 						if solda then solda:Destroy() end -- o Roblox cria uma nova ao colocar
 						hum:AddAccessory(novo)
+						task.defer(function() task.wait(0.2) CV.soldar(novo, char) end)
 					else
 						novo.Parent = char
 					end
@@ -8881,7 +8847,7 @@ local function iniciarTeclado()
 			local rosto = cab and cab:FindFirstChild("face")
 			if rosto and rosto:IsA("Decal") and f.face then pcall(function() rosto.Texture = f.face end) end
 			if pecas == 0 and corpoOk == 0 and not f.face then return false, "Não achei nada para copiar" end
-			return true
+			return true, pecas .. " itens, " .. corpoOk .. " do corpo"
 		end
 
 		-- o jogo tem sistema de skin/avatar? Se o personagem do jogador está "pelado" (sem roupa, sem
@@ -8928,7 +8894,7 @@ local function iniciarTeclado()
 			if okFoto then CV.copia = foto end
 			if not (okFoto or feitoDesc) then return false, erro end
 			CV.modo = feitoDesc and "desc" or "foto"
-			return true
+			return true, okFoto and erro or "só a roupa"
 		end
 
 		function CV.restaurar()
@@ -9014,7 +8980,7 @@ local function iniciarTeclado()
 					nome = nome or busca
 				end
 				local ok, msg = CV.copiar(origem)
-				mostrarToast(ok and ("Visual copiado (" .. rotulo .. "): " .. nome) or ("Não copiou: " .. tostring(msg)), ok)
+				mostrarToast(ok and ("Visual copiado (" .. rotulo .. "): " .. nome .. " [" .. tostring(msg) .. "]") or ("Não copiou: " .. tostring(msg)), ok)
 			end)
 			return true, "Copiando visual..."
 		end)
