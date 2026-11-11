@@ -741,33 +741,12 @@ do
 		f.Name = "JanelaAjuda"
 		f.Size = UDim2.fromOffset(w, h)
 		f.Position = UDim2.fromOffset((tela.X - w) / 2, math.max(10, (tela.Y - h) / 2))
-		f.BackgroundColor3 = Color3.fromRGB(24, 24, 36)
+		f.BackgroundColor3 = Color3.fromRGB(28, 14, 50) -- roxo escuro normal (sem foto)
 		f.ClipsDescendants = true
 		f.ZIndex = 30
 		f.Parent = gui
 		Instance.new("UICorner", f).CornerRadius = UDim.new(0, 8)
 		janelaAjuda = f
-
-		-- mesma foto de fundo do menu
-		local foto = Instance.new("ImageLabel")
-		foto.Size = UDim2.fromScale(1, 1)
-		foto.BackgroundTransparency = 1
-		foto.ScaleType = Enum.ScaleType.Crop
-		foto.ImageTransparency = 0.15
-		foto.ZIndex = 30
-		foto.Parent = f
-		Instance.new("UICorner", foto).CornerRadius = UDim.new(0, 8)
-		task.spawn(function()
-			for _ = 1, 20 do
-				pcall(proximaFotoFundo)
-				local fb = painel:FindFirstChild("FotoFundo")
-				if fb and fb.Image ~= "" and fb.Image ~= "rbxassetid://0" then
-					foto.Image = fb.Image
-					return
-				end
-				task.wait(0.5)
-			end
-		end)
 
 		local tit = Instance.new("TextLabel")
 		tit.Size = UDim2.new(1, -34, 0, 30)
@@ -5998,12 +5977,14 @@ local function iniciarTeclado()
 	novo("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 1) }, rolagem)
 
 	-- Toque/clique dentro do painel não pode fechar a barra (completar comando, rolar a lista)
-	painelCmd.InputBegan:Connect(function(input)
+	local function marcarToque(input)
 		local t = input.UserInputType
 		if t == Enum.UserInputType.Touch or t == Enum.UserInputType.MouseButton1 then
 			tocandoPainel = true
 		end
-	end)
+	end
+	painelCmd.InputBegan:Connect(marcarToque)
+	rolagem.InputBegan:Connect(marcarToque)
 	UserInputService.InputEnded:Connect(function(input)
 		local t = input.UserInputType
 		if tocandoPainel and (t == Enum.UserInputType.Touch or t == Enum.UserInputType.MouseButton1) then
@@ -6141,6 +6122,7 @@ local function iniciarTeclado()
 				TextXAlignment = Enum.TextXAlignment.Left,
 				TextTruncate = Enum.TextTruncate.AtEnd,
 			}, linha)
+			linha.InputBegan:Connect(marcarToque) -- tocar/arrastar numa linha (rolar a lista) não fecha a barra
 			linha.Activated:Connect(function() completarComando(a.nome) end)
 			linhasSugestao[#linhasSugestao + 1] = linha
 		end
@@ -6205,6 +6187,7 @@ local function iniciarTeclado()
 	local function fecharBarra()
 		barraAberta = false
 		pcall(function() caixaCmd:ReleaseFocus() end)
+		caixaCmd.Text = "" -- saiu da barra: o que estava digitado é apagado (não fica salvo)
 		painelCmd.Visible = false
 		icone.Visible = true
 	end
@@ -6586,6 +6569,69 @@ local function iniciarTeclado()
 		local encheVel = novo("Frame", { Size = UDim2.fromScale(0, 1), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0 }, barraVel)
 		novo("UICorner", { CornerRadius = UDim.new(1, 0) }, encheVel)
 
+		-- EFEITO DE TELA DO SUPER VELOCIDADE (diferente do super voo, que tem riscos saindo do centro):
+		-- brilho laranja nos 4 cantos, linhas horizontais correndo nas laterais e raiozinhos nos cantos.
+		local telaVel = novo("ScreenGui", { Name = "EfeitoSuperVel", ResetOnSpawn = false, IgnoreGuiInset = true, DisplayOrder = -1, Enabled = false }, playerGui)
+		local brilhosVel, linhasVel, tBoltVel = {}, {}, 0
+		for _, c in ipairs({ { 0, 0, 45 }, { 1, 0, 135 }, { 0, 1, -45 }, { 1, 1, -135 } }) do
+			local f = novo("Frame", {
+				AnchorPoint = Vector2.new(c[1], c[2]), Position = UDim2.fromScale(c[1], c[2]), Size = UDim2.fromScale(0.4, 0.4),
+				BackgroundColor3 = COR_FLASH, BackgroundTransparency = 1, BorderSizePixel = 0, Active = false,
+			}, telaVel)
+			novo("UIGradient", { Rotation = c[3], Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(1, 1) }) }, f)
+			brilhosVel[#brilhosVel + 1] = f
+		end
+		for i = 1, 16 do
+			local lado = (i % 2 == 0) and 1 or -1 -- -1 = esquerda, 1 = direita
+			local f = novo("Frame", {
+				AnchorPoint = Vector2.new(0.5, 0.5), BackgroundColor3 = (i % 3 == 0) and COR_FLASH_AMAR or COR_FLASH,
+				BackgroundTransparency = 1, BorderSizePixel = 0, Active = false,
+			}, telaVel)
+			novo("UIGradient", { Rotation = lado < 0 and 0 or 180, Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(1, 1) }) }, f)
+			linhasVel[i] = { f = f, lado = lado, p = math.random(), y = 0.1 + math.random() * 0.8, vel = 1.6 + math.random() * 1.4, comp = 0.08 + math.random() * 0.1 }
+		end
+
+		local function boltTela()
+			local cx, cy = math.random(0, 1), math.random(0, 1) -- canto: 0 = esquerda/cima, 1 = direita/baixo
+			local sx, sy = (cx == 0) and 1 or -1, (cy == 0) and 1 or -1 -- sentido "para dentro" da tela
+			local px, py = sx * (8 + math.random() * 40), sy * (8 + math.random() * 40) -- deslocamento a partir do canto (em pixels)
+			local cor = ({ COR_FLASH_AMAR, COR_FLASH, COR_FLASH_VERM })[math.random(3)]
+			local ang = math.atan2(sy, sx) + (math.random() - 0.5) * 0.8 -- anda na diagonal para dentro
+			for _ = 1, 3 do
+				local len = 22 + math.random() * 26
+				ang = ang + (math.random() - 0.5) * 1.6
+				local dx, dy = math.cos(ang) * len, math.sin(ang) * len
+				local seg = novo("Frame", {
+					AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(cx, px + dx / 2, cy, py + dy / 2),
+					Size = UDim2.fromOffset(len, 3), Rotation = math.deg(ang), BackgroundColor3 = cor,
+					BackgroundTransparency = 0.15, BorderSizePixel = 0, Active = false,
+				}, telaVel)
+				TweenService:Create(seg, TweenInfo.new(0.18), { BackgroundTransparency = 1 }):Play()
+				task.delay(0.22, function() seg:Destroy() end)
+				px, py = px + dx, py + dy
+			end
+		end
+
+		local function telaSuperVel(dt, agora, mix)
+			if MENU.cfg.flashVel == false then mix = 0 end
+			telaVel.Enabled = mix > 0.01
+			if not telaVel.Enabled then return end
+			local pulso = 0.85 + 0.15 * math.sin(agora * 9)
+			for _, f in ipairs(brilhosVel) do f.BackgroundTransparency = 1 - 0.5 * mix * pulso end
+			for _, l in ipairs(linhasVel) do
+				l.p = l.p + l.vel * dt
+				if l.p > 1 then l.p, l.y = 0, 0.08 + math.random() * 0.84 end
+				local x = 0.3 * (1 - l.p) -- vai da parte de dentro até a borda da tela
+				l.f.Position = UDim2.fromScale(l.lado < 0 and x or 1 - x, l.y)
+				l.f.Size = UDim2.new(l.comp, 0, 0, 2)
+				l.f.BackgroundTransparency = 1 - mix * 0.85 * math.sin(math.pi * l.p)
+			end
+			if mix > 0.5 and agora - tBoltVel > 0.16 then
+				tBoltVel = agora
+				boltTela()
+			end
+		end
+
 		local function peca(tam, cf, cor, transp, forma)
 			local p = Instance.new("Part")
 			p.Anchored, p.CanCollide, p.CanQuery, p.CanTouch, p.CastShadow = true, false, false, false, false
@@ -6838,6 +6884,7 @@ local function iniciarTeclado()
 				inclAlvoR, inclAlvoP = 0, 0
 				cargaVel, semFlash, superAndar, superMixVel, estado.superAndarMult = 0, 0, false, 0, 1
 				barraVel.Visible = false
+				telaVel.Enabled = false
 				return
 			end
 			if not o or o.raiz ~= raiz or not raiz.Parent then
@@ -6888,6 +6935,7 @@ local function iniciarTeclado()
 			estado.superAndarMult = superAndar and SUPER_ANDAR_MULT or 1
 			superMixVel = superMixVel + ((superAndar and 1 or 0) - superMixVel) * (1 - math.exp(-dt * 5))
 			if superMixVel < 0.01 then superMixVel = 0 end
+			telaSuperVel(dt, agora, superMixVel)
 
 			local alvoFlash = flashVis and (superAndar and 1 or 0.3) or 0
 			o.nivelFlash = o.nivelFlash + (alvoFlash - o.nivelFlash) * (1 - math.exp(-dt * 6))
@@ -8617,6 +8665,26 @@ local function iniciarTeclado()
 			barra.Active = true
 			barra.Parent = p
 			tornarMovel(barra, p)
+
+			-- Botão X no canto de cima: fecha a galeria (o comando unxv também continua fechando)
+			local bFechar = Instance.new("TextButton")
+			bFechar.Name = "FecharGaleria"
+			bFechar.AnchorPoint = Vector2.new(1, 0)
+			bFechar.Position = UDim2.new(1, -6, 0, 4)
+			bFechar.Size = UDim2.fromOffset(32, altBarra - 8)
+			bFechar.BackgroundColor3 = Color3.fromRGB(190, 55, 55)
+			bFechar.BackgroundTransparency = 0.1
+			bFechar.Text = "X"
+			bFechar.TextColor3 = Color3.new(1, 1, 1)
+			bFechar.Font = Enum.Font.GothamBold
+			bFechar.TextSize = 14
+			bFechar.ZIndex = 20
+			bFechar.Parent = p
+			Instance.new("UICorner", bFechar).CornerRadius = UDim.new(0, 8)
+			bFechar.MouseButton1Click:Connect(function()
+				g.Enabled = false
+				if G.visor then G.visor.Visible = false end
+			end)
 
 			-- Os 12 espaços (3 fileiras de 4)
 			for i = 1, COLUNAS * LINHAS do
