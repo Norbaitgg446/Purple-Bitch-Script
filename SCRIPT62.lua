@@ -1,4 +1,5 @@
 -- LocalScript
+-- v62: copiar visual copia TUDO (cabelo, acessórios, corpo, rosto, escala), pulo normal sem efeito, autoclick com calibração do clique + minimizar/redimensionar, sentar em jogador sem tremer a câmera.
 -- v61: sem créditos e sem efeito azul ao sentar, comandos com vários apelidos, botões novos no menu, autoclick com bolinhas, chat log maior, copiar visual com plano B, busca parcial de jogador.
 -- v38: barrinha no super velocidade (carrega mesmo mexendo a câmera), anéis dos pés só com o pé no chão, pulo infinito sem empilhar,
 --      anotações com rolagem/editor grande/redimensionável, ajuda completa com busca, novas opções em Config.
@@ -7138,9 +7139,145 @@ local function iniciarTeclado()
 		AC.nomeModo = { mouse = "Mouse", toque = "Toque", ferramenta = "Ferramenta" }
 		AC.corParado, AC.corRodando = Color3.fromRGB(100, 60, 230), Color3.fromRGB(70, 200, 120)
 
+		-- CALIBRAÇÃO: a posição da bolinha na tela e a posição real do clique nem sempre são a mesma (barra de cima,
+		-- entalhe do celular, escala). Você toca em 2 alvos uma vez e o script aprende a diferença (fica salvo).
+		AC.calib = nil -- { ax, bx, ay, by }: posição real = a * posição da tela + b
+		AC.extra = Vector2.zero -- ajuste fino manual em pixels (comando: ac ajuste x y)
+		AC.arquivoCalib = "autoclick_calibracao.json"
+		pcall(function()
+			if typeof(isfile) == "function" and typeof(readfile) == "function" and isfile(AC.arquivoCalib) then
+				local d = game:GetService("HttpService"):JSONDecode(readfile(AC.arquivoCalib))
+				local t = tamanhoTela()
+				if type(d) == "table" and tonumber(d.ax) and math.abs((d.w or 0) - t.X) < 3 and math.abs((d.h or 0) - t.Y) < 3 then
+					AC.calib = { ax = d.ax, bx = d.bx, ay = d.ay, by = d.by }
+					AC.extra = Vector2.new(d.ex or 0, d.ey or 0)
+				end
+			end
+		end)
+
+		function AC.salvarCalib()
+			pcall(function()
+				if typeof(writefile) ~= "function" then return end
+				local k = AC.calib or { ax = 1, bx = 0, ay = 1, by = 0 }
+				local t = tamanhoTela()
+				writefile(AC.arquivoCalib, game:GetService("HttpService"):JSONEncode({
+					ax = k.ax, bx = k.bx, ay = k.ay, by = k.by, ex = AC.extra.X, ey = AC.extra.Y, w = t.X, h = t.Y,
+				}))
+			end)
+		end
+
+		-- posição na tela da bolinha -> posição real onde o clique tem que cair
+		function AC.mapear(c)
+			local x, y = c.X, c.Y
+			local k = AC.calib
+			if k then x, y = k.ax * x + k.bx, k.ay * y + k.by end
+			return Vector2.new(x + AC.extra.X, y + AC.extra.Y)
+		end
+
+		function AC.calibrar(depois)
+			if AC.sobre and AC.sobre.Parent then return end
+			local tela = tamanhoTela()
+			local alvos = { Vector2.new(tela.X * 0.25, tela.Y * 0.3), Vector2.new(tela.X * 0.75, tela.Y * 0.7) }
+			local capturas = {}
+			local ov = Instance.new("TextButton")
+			ov.Name = "AutoclickCalibrar"
+			ov.Size = UDim2.fromScale(1, 1)
+			ov.BackgroundColor3 = Color3.new(0, 0, 0)
+			ov.BackgroundTransparency = 0.45
+			ov.Text = ""
+			ov.AutoButtonColor = false
+			ov.ZIndex = 90
+			ov.Parent = gui
+			AC.sobre = ov
+
+			local msg = Instance.new("TextLabel")
+			msg.AnchorPoint = Vector2.new(0.5, 0)
+			msg.Position = UDim2.new(0.5, 0, 0, 14)
+			msg.Size = UDim2.new(0.9, 0, 0, 40)
+			msg.BackgroundTransparency = 1
+			msg.TextColor3 = Color3.new(1, 1, 1)
+			msg.Font = Enum.Font.GothamBold
+			msg.TextSize = 16
+			msg.TextWrapped = true
+			msg.ZIndex = 91
+			msg.Parent = ov
+
+			local alvoUi = Instance.new("Frame")
+			alvoUi.AnchorPoint = Vector2.new(0.5, 0.5)
+			alvoUi.Size = UDim2.fromOffset(40, 40)
+			alvoUi.BackgroundTransparency = 1
+			alvoUi.ZIndex = 91
+			alvoUi.Parent = ov
+			Instance.new("UICorner", alvoUi).CornerRadius = UDim.new(1, 0)
+			local anel = Instance.new("UIStroke")
+			anel.Color = Color3.fromRGB(110, 235, 150)
+			anel.Thickness = 3
+			anel.Parent = alvoUi
+			local ponto = Instance.new("Frame")
+			ponto.AnchorPoint = Vector2.new(0.5, 0.5)
+			ponto.Position = UDim2.fromScale(0.5, 0.5)
+			ponto.Size = UDim2.fromOffset(6, 6)
+			ponto.BackgroundColor3 = Color3.fromRGB(110, 235, 150)
+			ponto.ZIndex = 92
+			ponto.Parent = alvoUi
+			Instance.new("UICorner", ponto).CornerRadius = UDim.new(1, 0)
+
+			local function mostrarAlvo(i)
+				alvoUi.Position = UDim2.fromOffset(alvos[i].X, alvos[i].Y)
+				msg.Text = "Calibrar clique (" .. i .. "/2): toque no CENTRO do alvo verde"
+			end
+
+			local pular = Instance.new("TextButton")
+			pular.AnchorPoint = Vector2.new(0.5, 1)
+			pular.Position = UDim2.new(0.5, 0, 1, -14)
+			pular.Size = UDim2.fromOffset(110, 30)
+			pular.BackgroundColor3 = Color3.fromRGB(60, 60, 68)
+			pular.Text = "Pular"
+			pular.TextColor3 = Color3.new(1, 1, 1)
+			pular.Font = Enum.Font.Gotham
+			pular.TextSize = 14
+			pular.ZIndex = 92
+			pular.Parent = ov
+			Instance.new("UICorner", pular).CornerRadius = UDim.new(0, 8)
+			pular.MouseButton1Click:Connect(function()
+				AC.calibPulou = true
+				ov:Destroy()
+				if depois then depois() end
+			end)
+
+			ov.InputBegan:Connect(function(input)
+				local tipo = input.UserInputType
+				if tipo ~= Enum.UserInputType.Touch and tipo ~= Enum.UserInputType.MouseButton1 then return end
+				capturas[#capturas + 1] = Vector2.new(input.Position.X, input.Position.Y)
+				if #capturas < 2 then
+					mostrarAlvo(#capturas + 1)
+					return
+				end
+				local p1, p2 = capturas[1], capturas[2]
+				local ax = (p2.X - p1.X) / (alvos[2].X - alvos[1].X)
+				local ay = (p2.Y - p1.Y) / (alvos[2].Y - alvos[1].Y)
+				if ax < 0.5 or ax > 2 then ax = 1 end
+				if ay < 0.5 or ay > 2 then ay = 1 end
+				AC.calib = { ax = ax, bx = p1.X - ax * alvos[1].X, ay = ay, by = p1.Y - ay * alvos[1].Y }
+				AC.salvarCalib()
+				ov:Destroy()
+				mostrarToast(string.format("Clique calibrado (desvio %d, %d px)", math.floor(AC.calib.bx + 0.5), math.floor(AC.calib.by + 0.5)), true)
+				if depois then depois() end
+			end)
+			mostrarAlvo(1)
+		end
+
+		function AC.garantirCalib(cb) -- calibra na primeira vez antes de começar a clicar
+			if AC.calib or AC.calibPulou then
+				cb()
+			else
+				AC.calibrar(cb)
+			end
+		end
+
 		-- clique de verdade no ponto (x, y) da tela
 		function AC.clicar(p)
-			local c = p.bolinha.AbsolutePosition + p.bolinha.AbsoluteSize / 2
+			local c = AC.mapear(p.bolinha.AbsolutePosition + p.bolinha.AbsoluteSize / 2)
 			if p.modo == "ferramenta" then
 				local tool = player.Character and player.Character:FindFirstChildOfClass("Tool")
 				if tool then
@@ -7176,6 +7313,9 @@ local function iniciarTeclado()
 			p.bolinha.BackgroundColor3 = p.ligado and AC.corRodando or AC.corParado
 			p.bolinha.Active = not p.ligado -- rodando: não segura o clique
 			pcall(function() p.bolinha.Interactable = not p.ligado end)
+			if AC.mini and AC.mini.Parent then
+				AC.mini.BackgroundColor3 = AC.algumRodando() and Color3.fromRGB(35, 110, 65) or Color3.fromRGB(25, 25, 30)
+			end
 			if p.btnLigar then
 				p.btnLigar.Text = p.ligado and "■ Parar" or "▶ Iniciar"
 				p.btnLigar.BackgroundColor3 = p.ligado and Color3.fromRGB(255, 110, 110) or Color3.fromRGB(110, 235, 150)
@@ -7379,7 +7519,7 @@ local function iniciarTeclado()
 				bModo.Text = AC.nomeModo[p.modo]
 			end)
 			p.btnLigar.MouseButton1Click:Connect(function()
-				if p.ligado then AC.parar(p) else AC.iniciar(p) end
+				if p.ligado then AC.parar(p) else AC.garantirCalib(function() AC.iniciar(p) end) end
 			end)
 			bTirar.MouseButton1Click:Connect(function() AC.remover(p) end)
 
@@ -7391,9 +7531,10 @@ local function iniciarTeclado()
 		function AC.montar()
 			local f = Instance.new("Frame")
 			f.Name = "PainelAutoclick"
-			f.AnchorPoint = Vector2.new(0, 0.5)
-			f.Position = UDim2.new(0.5, 160, 0.5, 0)
-			f.Size = UDim2.fromOffset(268, 330)
+			local telaM = tamanhoTela()
+			f.AnchorPoint = Vector2.new(0, 0)
+			f.Position = UDim2.fromOffset(math.clamp(telaM.X / 2 + 160, 0, math.max(0, telaM.X - 268)), math.max(0, (telaM.Y - 330) / 2))
+			f.Size = AC.tamanho or UDim2.fromOffset(268, 330)
 			f.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
 			f.BackgroundTransparency = 0.18
 			f.ZIndex = 30
@@ -7418,6 +7559,51 @@ local function iniciarTeclado()
 			tornarMovel(tit, f)
 			MENU.botaoFechar(f).ZIndex = 32 -- só esconde o painel; as bolinhas continuam
 
+			-- botão – : vira um botãozinho "AC" que você move; toque nele para abrir o painel de novo
+			local bMin = Instance.new("TextButton")
+			bMin.Name = "Minimizar"
+			bMin.AnchorPoint = Vector2.new(1, 0)
+			bMin.Position = UDim2.new(1, -30, 0, 4)
+			bMin.Size = UDim2.fromOffset(22, 22)
+			bMin.BackgroundColor3 = Color3.fromRGB(40, 40, 58)
+			bMin.BackgroundTransparency = 0.3
+			bMin.BorderSizePixel = 0
+			bMin.Text = "–"
+			bMin.TextColor3 = Color3.new(1, 1, 1)
+			bMin.Font = Enum.Font.GothamBold
+			bMin.TextSize = 15
+			bMin.ZIndex = 32
+			bMin.Parent = f
+			bMin.MouseButton1Click:Connect(function() AC.minimizar() end)
+
+			-- alça no canto de baixo: arraste para aumentar ou diminuir o painel
+			local alca = Instance.new("TextButton")
+			alca.Name = "AlcaRedimensionar"
+			alca.AnchorPoint = Vector2.new(1, 1)
+			alca.Position = UDim2.new(1, 0, 1, 0)
+			alca.Size = UDim2.fromOffset(26, 26)
+			alca.BackgroundColor3 = Color3.fromRGB(60, 60, 68)
+			alca.BackgroundTransparency = 0.35
+			alca.Text = "◢"
+			alca.TextColor3 = Color3.new(1, 1, 1)
+			alca.Font = Enum.Font.GothamBold
+			alca.TextSize = 15
+			alca.AutoButtonColor = false
+			alca.ZIndex = 34
+			alca.Parent = f
+			Instance.new("UICorner", alca).CornerRadius = UDim.new(0, 8)
+			local tamIni
+			ligarArrasto(alca,
+				function() tamIni = f.AbsoluteSize end,
+				function(delta)
+					local tela, pos = tamanhoTela(), f.AbsolutePosition
+					local w = math.clamp(tamIni.X + delta.X, 190, math.max(190, tela.X - pos.X))
+					local h = math.clamp(tamIni.Y + delta.Y, 150, math.max(150, tela.Y - pos.Y))
+					f.Size = UDim2.fromOffset(w, h)
+					AC.tamanho = f.Size
+				end
+			)
+
 			local function botaoTopo(x, y, w, texto, cor)
 				local b = Instance.new("TextButton")
 				b.Position = UDim2.new(x, 0, 0, y)
@@ -7436,14 +7622,19 @@ local function iniciarTeclado()
 				AC.criar()
 			end)
 			botaoTopo(0.04, 62, 0.45, "▶ Iniciar todos", Color3.fromRGB(150, 130, 255)).MouseButton1Click:Connect(function()
-				for _, p in ipairs(AC.pontos) do
-					if not p.ligado then AC.iniciar(p) end
-				end
+				AC.garantirCalib(function()
+					for _, p in ipairs(AC.pontos) do
+						if not p.ligado then AC.iniciar(p) end
+					end
+				end)
 			end)
 			botaoTopo(0.51, 62, 0.45, "■ Parar todos", Color3.fromRGB(255, 110, 110)).MouseButton1Click:Connect(AC.pararTodos)
+			botaoTopo(0.04, 92, 0.92, "⌖ Calibrar clique", Color3.fromRGB(90, 160, 255)).MouseButton1Click:Connect(function()
+				AC.calibrar()
+			end)
 
 			local dica = Instance.new("TextLabel")
-			dica.Position = UDim2.fromOffset(10, 92)
+			dica.Position = UDim2.fromOffset(10, 122)
 			dica.Size = UDim2.new(1, -20, 0, 24)
 			dica.BackgroundTransparency = 1
 			dica.Text = "Arraste a bolinha até onde quer clicar. Cada uma tem a sua configuração."
@@ -7455,8 +7646,8 @@ local function iniciarTeclado()
 			dica.Parent = f
 
 			local lista = Instance.new("ScrollingFrame")
-			lista.Position = UDim2.new(0.03, 0, 0, 120)
-			lista.Size = UDim2.new(0.94, 0, 1, -128)
+			lista.Position = UDim2.new(0.03, 0, 0, 150)
+			lista.Size = UDim2.new(0.94, 0, 1, -158)
 			lista.BackgroundTransparency = 1
 			lista.BorderSizePixel = 0
 			lista.ScrollBarThickness = 3
@@ -7473,8 +7664,45 @@ local function iniciarTeclado()
 			for _, p in ipairs(AC.pontos) do p.cartao.Parent = lista end
 		end
 
+		function AC.minimizar()
+			if not (AC.painel and AC.painel.Parent) then return end
+			if not (AC.mini and AC.mini.Parent) then
+				local m = Instance.new("TextButton")
+				m.Name = "AutoclickMini"
+				m.Size = UDim2.fromOffset(44, 44)
+				m.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+				m.BackgroundTransparency = 0.15
+				m.Text = "AC"
+				m.TextColor3 = Color3.new(1, 1, 1)
+				m.Font = Enum.Font.GothamBold
+				m.TextSize = 15
+				m.AutoButtonColor = false
+				m.ZIndex = 35
+				m.Parent = gui
+				Instance.new("UICorner", m).CornerRadius = UDim.new(1, 0)
+				local borda = Instance.new("UIStroke")
+				borda.Color = Color3.new(1, 1, 1)
+				borda.Thickness = 1.5
+				borda.Transparency = 0.4
+				borda.Parent = m
+				tornarMovel(m, m, function() AC.restaurar() end) -- arrasta para mover, toca para abrir
+				AC.mini = m
+			end
+			local pos = AC.painel.AbsolutePosition
+			AC.mini.Position = UDim2.fromOffset(pos.X, pos.Y)
+			AC.mini.BackgroundColor3 = AC.algumRodando() and Color3.fromRGB(35, 110, 65) or Color3.fromRGB(25, 25, 30)
+			AC.mini.Visible = true
+			AC.painel.Visible = false
+		end
+
+		function AC.restaurar()
+			if AC.mini then AC.mini.Visible = false end
+			if AC.painel then AC.painel.Visible = true end
+		end
+
 		function AC.mostrar()
 			if not (AC.painel and AC.painel.Parent) then AC.montar() end
+			if AC.mini then AC.mini.Visible = false end
 			AC.painel.Visible = true
 		end
 
@@ -7487,14 +7715,17 @@ local function iniciarTeclado()
 			if not ligar then
 				AC.limparTudo()
 				if AC.painel then AC.painel.Visible = false end
+				if AC.mini then AC.mini.Visible = false end
 				return true, "Autoclick desligado (bolinhas removidas)"
 			end
 			local a1 = args[1] and args[1]:lower()
 			if a1 == "iniciar" or a1 == "start" or a1 == "play" or a1 == "ligar" then
 				AC.abrir()
-				for _, p in ipairs(AC.pontos) do
-					if not p.ligado then AC.iniciar(p) end
-				end
+				AC.garantirCalib(function()
+					for _, p in ipairs(AC.pontos) do
+						if not p.ligado then AC.iniciar(p) end
+					end
+				end)
 				return true, "Autoclick iniciado"
 			elseif a1 == "parar" or a1 == "stop" or a1 == "pausar" or a1 == "pause" then
 				AC.pararTodos()
@@ -7506,6 +7737,15 @@ local function iniciarTeclado()
 			elseif a1 == "limpar" or a1 == "clear" then
 				AC.limparTudo()
 				return true, "Bolinhas removidas"
+			elseif a1 == "calibrar" or a1 == "calib" or a1 == "calibrate" then
+				AC.calibrar()
+				return true, "Toque nos 2 alvos para calibrar o clique"
+			elseif a1 == "ajuste" or a1 == "ajustar" or a1 == "offset" then
+				local x, y = tonumber(args[2]), tonumber(args[3])
+				if not x or not y then return false, "Uso: ac ajuste <x> <y> em pixels (ex.: ac ajuste 0 20; ac ajuste 0 0 zera)" end
+				AC.extra = Vector2.new(x, y)
+				AC.salvarCalib()
+				return true, "Ajuste do clique: " .. x .. ", " .. y
 			end
 			local cps, modo
 			for _, a in ipairs(args) do
@@ -8459,23 +8699,43 @@ local function iniciarTeclado()
 		local CV = { original = nil, atual = nil, copia = nil, origFoto = nil, modo = nil }
 
 		local function ehItem(o) -- o que conta como "visual" do personagem
-			return o:IsA("Accessory") or o:IsA("Shirt") or o:IsA("Pants") or o:IsA("ShirtGraphic") or o:IsA("BodyColors")
+			return o:IsA("Accessory") or o:IsA("Shirt") or o:IsA("Pants") or o:IsA("ShirtGraphic") or o:IsA("BodyColors") or o:IsA("CharacterMesh")
 		end
 
 		-- "foto" do visual de um personagem: clones das peças + rosto + cor de cada parte do corpo
 		function CV.foto(char)
-			local f = { itens = {}, face = nil, cores = {} }
+			local f = { itens = {}, face = nil, cores = {}, corpo = {}, escalas = {}, cabecaMesh = nil, completo = true }
 			for _, o in ipairs(char:GetChildren()) do
 				if ehItem(o) then
 					local ok, c = pcall(function() return o:Clone() end)
 					if ok and c then f.itens[#f.itens + 1] = c end
 				elseif o:IsA("BasePart") and o.Name ~= "HumanoidRootPart" then
 					f.cores[o.Name] = o.Color
+					if o:IsA("MeshPart") then -- corpo R15: malha e textura de cada parte
+						local sa
+						local s = o:FindFirstChildOfClass("SurfaceAppearance")
+						if s then
+							local ok, c = pcall(function() return s:Clone() end)
+							sa = ok and c or nil
+						end
+						f.corpo[o.Name] = { mesh = o.MeshId, textura = o.TextureID, sa = sa }
+					end
 				end
 			end
 			local cab = char:FindFirstChild("Head")
 			local rosto = cab and cab:FindFirstChild("face")
 			if rosto and rosto:IsA("Decal") then f.face = rosto.Texture end
+			local sm = cab and cab:FindFirstChildOfClass("SpecialMesh") -- cabeça (formato)
+			if sm then
+				local ok, c = pcall(function() return sm:Clone() end)
+				f.cabecaMesh = ok and c or nil
+			end
+			local hum = char:FindFirstChildOfClass("Humanoid") -- tamanho do corpo (altura, largura, cabeça...)
+			if hum then
+				for _, v in ipairs(hum:GetChildren()) do
+					if v:IsA("NumberValue") and v.Name:find("Scale") then f.escalas[v.Name] = v.Value end
+				end
+			end
 			return f
 		end
 
@@ -8510,6 +8770,32 @@ local function iniciarTeclado()
 					if d and d:IsA("Decal") then f.face = d.Texture end
 				end
 			end)
+			pcall(function() -- escalas do avatar
+				f.escalas = {
+					BodyHeightScale = desc.HeightScale, BodyWidthScale = desc.WidthScale, BodyDepthScale = desc.DepthScale,
+					HeadScale = desc.HeadScale, BodyTypeScale = desc.BodyTypeScale, BodyProportionScale = desc.ProportionScale,
+				}
+			end)
+			pcall(function() -- partes do corpo (cabeça, tronco, braços, pernas) pelas malhas dos pacotes
+				f.corpo = f.corpo or {}
+				for _, campo in ipairs({ "Head", "Torso", "LeftArm", "RightArm", "LeftLeg", "RightLeg" }) do
+					local id = desc[campo]
+					if type(id) == "number" and id ~= 0 then
+						local okG, r = pcall(function() return game:GetObjects("rbxassetid://" .. tostring(id)) end)
+						if okG and type(r) == "table" then
+							for _, raiz in ipairs(r) do
+								for _, d in ipairs(raiz:GetDescendants()) do
+									if d:IsA("MeshPart") then
+										f.corpo[d.Name] = { mesh = d.MeshId, textura = d.TextureID }
+									elseif d:IsA("SpecialMesh") and campo == "Head" and not f.cabecaMesh then
+										f.cabecaMesh = d:Clone()
+									end
+								end
+							end
+						end
+					end
+				end
+			end)
 			pcall(function()
 				local bc = Instance.new("BodyColors")
 				bc.HeadColor3, bc.TorsoColor3 = desc.HeadColor, desc.TorsoColor
@@ -8525,9 +8811,12 @@ local function iniciarTeclado()
 			local char = player.Character
 			local hum = char and char:FindFirstChildOfClass("Humanoid")
 			if not (char and hum and f) then return false, "Personagem indisponível" end
-			local pecas = 0
+			local pecas, corpoOk = 0, 0
+			-- tira o que você veste (só o que vai ser trocado, se a foto veio do avatar do Roblox)
+			local classes = {}
+			for _, c in ipairs(f.itens) do classes[c.ClassName] = true end
 			for _, o in ipairs(char:GetChildren()) do
-				if ehItem(o) then o:Destroy() end
+				if ehItem(o) and (f.completo or classes[o.ClassName]) then o:Destroy() end
 			end
 			for _, c in ipairs(f.itens) do
 				local ok = pcall(function()
@@ -8543,14 +8832,55 @@ local function iniciarTeclado()
 				end)
 				if ok then pecas += 1 end
 			end
-			for nome, cor in pairs(f.cores) do -- cor de cada parte (quando não veio BodyColors)
+			-- corpo: malha e textura de cada parte (R15)
+			for nome, d in pairs(f.corpo or {}) do
+				local p = char:FindFirstChild(nome)
+				if p and p:IsA("MeshPart") then
+					local feito = false
+					if d.mesh and d.mesh ~= "" and p.MeshId ~= d.mesh then
+						local ok = pcall(function() p.MeshId = d.mesh end)
+						if not ok and typeof(sethiddenproperty) == "function" then ok = pcall(sethiddenproperty, p, "MeshId", d.mesh) end
+						feito = feito or ok
+					end
+					if d.textura and p.TextureID ~= d.textura then
+						local ok = pcall(function() p.TextureID = d.textura end)
+						if not ok and typeof(sethiddenproperty) == "function" then ok = pcall(sethiddenproperty, p, "TextureID", d.textura) end
+						feito = feito or ok
+					end
+					if d.sa then
+						pcall(function()
+							local velho = p:FindFirstChildOfClass("SurfaceAppearance")
+							if velho then velho:Destroy() end
+							d.sa:Clone().Parent = p
+							feito = true
+						end)
+					end
+					if feito then corpoOk += 1 end
+				end
+			end
+			local cab = char:FindFirstChild("Head")
+			if cab and f.cabecaMesh then -- formato da cabeça (R6 / cabeça clássica)
+				pcall(function()
+					local velho = cab:FindFirstChildOfClass("SpecialMesh")
+					if velho then velho:Destroy() end
+					f.cabecaMesh:Clone().Parent = cab
+					corpoOk += 1
+				end)
+			end
+			for nome, valor in pairs(f.escalas or {}) do -- altura, largura, cabeça...
+				local v = hum:FindFirstChild(nome)
+				if v and v:IsA("NumberValue") and type(valor) == "number" then
+					pcall(function() v.Value = valor end)
+					corpoOk += 1
+				end
+			end
+			for nome, cor in pairs(f.cores or {}) do -- cor de cada parte (quando não veio BodyColors)
 				local p = char:FindFirstChild(nome)
 				if p and p:IsA("BasePart") then pcall(function() p.Color = cor end) end
 			end
-			local cab = char:FindFirstChild("Head")
 			local rosto = cab and cab:FindFirstChild("face")
 			if rosto and rosto:IsA("Decal") and f.face then pcall(function() rosto.Texture = f.face end) end
-			if pecas == 0 and not f.face then return false, "Não achei roupas nem acessórios para copiar" end
+			if pecas == 0 and corpoOk == 0 and not f.face then return false, "Não achei nada para copiar" end
 			return true
 		end
 
@@ -8583,19 +8913,21 @@ local function iniciarTeclado()
 				if ok then CV.original = d end
 				CV.origFoto = CV.foto(char)
 			end
+			-- 1) ApplyDescription: no cliente ele costuma pegar só a ROUPA, então não paramos aqui
+			local feitoDesc = false
 			if origem.desc then
-				local ok = pcall(function() hum:ApplyDescription(origem.desc) end)
-				if ok then
-					CV.atual, CV.copia, CV.modo = origem.desc, nil, "desc"
-					return true
-				end
+				feitoDesc = (pcall(function() hum:ApplyDescription(origem.desc) end))
+				if feitoDesc then CV.atual = origem.desc end
 			end
+			-- 2) cópia direta por cima (cabelo, acessórios, corpo, rosto, tamanho, cores)
 			local foto = origem.foto
 			if not foto and origem.desc then foto = CV.fotoDeDescricao(origem.desc) end
-			if not foto then return false, "Não foi possível pegar o visual" end
-			local ok, erro = CV.aplicarFoto(foto)
-			if not ok then return false, erro end
-			CV.atual, CV.copia, CV.modo = nil, foto, "foto"
+			if feitoDesc then task.wait(0.3) end
+			local okFoto, erro = false, "Não foi possível pegar o visual"
+			if foto then okFoto, erro = CV.aplicarFoto(foto) end
+			if okFoto then CV.copia = foto end
+			if not (okFoto or feitoDesc) then return false, erro end
+			CV.modo = feitoDesc and "desc" or "foto"
 			return true
 		end
 
@@ -8609,7 +8941,10 @@ local function iniciarTeclado()
 				if modo == "desc" and original then
 					feito = (pcall(function() hum:ApplyDescription(original) end))
 				end
-				if not feito and origFoto then CV.aplicarFoto(origFoto) end
+				if origFoto then
+					if feito then task.wait(0.3) end
+					CV.aplicarFoto(origFoto)
+				end
 			end)
 		end
 
@@ -8620,8 +8955,8 @@ local function iniciarTeclado()
 			char:WaitForChild("Head", 10)
 			task.wait(1.5) -- o jogo/Roblox termina de vestir o personagem antes
 			if CV.atual then
-				local ok = pcall(function() hum:ApplyDescription(CV.atual) end)
-				if ok then return end
+				pcall(function() hum:ApplyDescription(CV.atual) end)
+				task.wait(0.3)
 			end
 			if CV.copia then CV.aplicarFoto(CV.copia) end
 		end)
@@ -9160,10 +9495,7 @@ local function iniciarTeclado()
 				if forte(hum) then
 					onda(pos, n, 3.4, 0.35, COR_ONDA)
 					poeira(pos, 5, COR_POEIRA, 1.1, 7)
-				elseif raiz.Position.Y - pos.Y < hum.HipHeight + raiz.Size.Y / 2 + 2.5 then -- só no chão (pulo no ar tem efeito próprio)
-					onda(pos, n, 1.9, 0.25, COR_ONDA)
-					poeira(pos, 3, COR_POEIRA, 0.6, 4)
-				end
+				end -- pulo normal: sem efeito nenhum (só o pulo forte tem onda)
 			end)
 		end
 
@@ -10675,7 +11007,10 @@ local function iniciarTeclado()
 			ponto = function(ch, raiz)
 				local cabeca = ch:FindFirstChild("Head")
 				if not cabeca then return nil end
-				return CFrame.new(cabeca.Position + Vector3.new(0, cabeca.Size.Y / 2 + 1.1, 0)) * raiz.CFrame.Rotation
+				-- a cabeça balança com a animação dele (andar/parado): usa a altura média, senão a câmera treme
+				local alt = cabeca.Position.Y - raiz.Position.Y
+				estado.cabAltFiltrada = estado.cabAltFiltrada and (estado.cabAltFiltrada + (alt - estado.cabAltFiltrada) * 0.06) or alt
+				return CFrame.new(raiz.Position + Vector3.new(0, estado.cabAltFiltrada + cabeca.Size.Y / 2 + 1.1, 0)) * raiz.CFrame.Rotation
 			end,
 		},
 		costas = { -- carona nas costas, olhando para o mesmo lado
@@ -10685,9 +11020,8 @@ local function iniciarTeclado()
 		ombro = {
 			nome = "ombro",
 			ponto = function(ch, raiz)
-				local tronco = ch:FindFirstChild("UpperTorso") or ch:FindFirstChild("Torso") or raiz
-				local giro = raiz.CFrame.Rotation
-				return CFrame.new(tronco.Position) * giro * CFrame.new(1.35, 2.2, 0.1)
+				local giro = raiz.CFrame.Rotation -- usa a raiz (parada), não o tronco que balança com a animação
+				return CFrame.new(raiz.Position) * giro * CFrame.new(1.35, 2.3, 0.1)
 			end,
 		},
 		frente = { -- de frente para ele, no colo
@@ -10736,6 +11070,7 @@ local function iniciarTeclado()
 		if cabHum and cabHum.Parent then cabHum.Sit = false end
 		if cabRaiz and cabRaiz.Parent then cabRaiz.AssemblyLinearVelocity = Vector3.zero end
 		cabAlvo, cabAlvoChar, cabRaiz, cabHum = nil, nil, nil, nil
+		estado.cabAltFiltrada, estado.cabSuave, estado.cabUlt = nil, nil, nil
 		if aoPararSentar then aoPararSentar() end
 	end
 
@@ -10755,6 +11090,7 @@ local function iniciarTeclado()
 		if estado.fly then definirFly(false) end
 
 		cabLigada = true
+		estado.cabAltFiltrada, estado.cabSuave, estado.cabUlt = nil, nil, nil
 		cabAlvo, cabAlvoChar, cabRaiz, cabHum = alvoJogador, alvoChar, raiz, hum
 		local char = raiz.Parent
 		hum.Sit = true
@@ -10817,6 +11153,16 @@ local function iniciarTeclado()
 				cf = ponto + Vector3.new(0, math.sin(u * math.pi) * 0.7, 0)
 			end
 
+			-- depois do pop, só acompanha: suaviza o ponto para não tremer (a posição dele chega em "degraus")
+			local agoraS = os.clock()
+			local dtS = math.min(agoraS - (estado.cabUlt or agoraS), 0.1)
+			estado.cabUlt = agoraS
+			if t >= fim then
+				if estado.cabSuave then cf = estado.cabSuave:Lerp(cf, 1 - math.exp(-dtS * 40)) end
+				estado.cabSuave = cf
+			else
+				estado.cabSuave = nil
+			end
 			cabRaiz.CFrame = cf
 			cabRaiz.AssemblyLinearVelocity = Vector3.zero
 			cabRaiz.AssemblyAngularVelocity = Vector3.zero
@@ -10830,10 +11176,12 @@ local function iniciarTeclado()
 					cabColisoes[d] = true
 					d.CanCollide = false
 				end
-			end
-			acompanhar()
-		end)
-		cabConexoes[#cabConexoes + 1] = RunService.RenderStepped:Connect(acompanhar)
+				end
+			end)
+			-- posiciona logo ANTES da câmera atualizar (uma vez por quadro): era isso que fazia a câmera tremer
+			pcall(function() RunService:UnbindFromRenderStep("SentarJogadorSeguir") end)
+			RunService:BindToRenderStep("SentarJogadorSeguir", Enum.RenderPriority.Camera.Value - 1, acompanhar)
+			cabConexoes[#cabConexoes + 1] = { Disconnect = function() pcall(function() RunService:UnbindFromRenderStep("SentarJogadorSeguir") end) end }
 
 		-- pular sai
 		cabConexoes[#cabConexoes + 1] = UserInputService.JumpRequest:Connect(pararCabeca)
