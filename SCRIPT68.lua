@@ -1,4 +1,5 @@
 -- LocalScript
+-- v68: copiar visual copia a ESTRUTURA do corpo (tamanho de cada peça, juntas dos braços/pernas, ancoras, altura do chão) -> sem braços separados e com cabeça/corpo idênticos.
 -- v67: autoclick simplificado (só liga/desliga + cliques por segundo, clica em qualquer lugar e usa a ferramenta da mão), sem painel nem bolinhas.
 -- v66: copiar visual agora copia também as ANIMAÇÕES (parado, andar, correr, pulo, queda, escalar, nadar) e o TAMANHO/GROSSURA do corpo (altura, largura, profundidade, cabeça, proporção).
 -- v65: autoclick mede sozinho onde o clique cai; copiar visual limpa tudo que prende você no outro jogador (scripts, soldas, constraints).
@@ -8347,9 +8348,97 @@ local function iniciarTeclado()
 			return n
 		end
 
+
+		-- ESTRUTURA do corpo (R15/R6): tamanho de cada peça, juntas (Motor6D), âncoras (Attachment) e altura do chão.
+		-- Trocar só a malha deixava braços/pernas soltos (tamanho e junta de outro corpo); copiando tudo fica idêntico.
+		function CV.lerGeo(char)
+			local geo
+			pcall(function()
+				local hum = char:FindFirstChildOfClass("Humanoid")
+				if not hum then return end
+				local g = { rig = hum.RigType, hip = hum.HipHeight, partes = {}, juntas = {}, ancoras = {} }
+				local n = 0
+				for _, o in ipairs(char:GetChildren()) do
+					if o:IsA("BasePart") and o.Name ~= "HumanoidRootPart" then
+						g.partes[o.Name] = { size = o.Size, mat = o.Material, refl = o.Reflectance }
+						n += 1
+						for _, a in ipairs(o:GetChildren()) do
+							if a:IsA("Attachment") then g.ancoras[o.Name .. "/" .. a.Name] = a.CFrame end
+						end
+						for _, m in ipairs(o:GetChildren()) do
+							if m:IsA("Motor6D") then g.juntas[o.Name .. "/" .. m.Name] = { c0 = m.C0, c1 = m.C1 } end
+						end
+					end
+				end
+				local raiz = char:FindFirstChild("HumanoidRootPart")
+				if raiz then
+					for _, m in ipairs(raiz:GetChildren()) do
+						if m:IsA("Motor6D") then g.juntas["HumanoidRootPart/" .. m.Name] = { c0 = m.C0, c1 = m.C1 } end
+					end
+				end
+				if n > 0 then geo = g end
+			end)
+			return geo
+		end
+
+		-- acessórios acompanham as âncoras novas (a solda deles é criada uma vez só)
+		function CV.ajustarAcessorios(char)
+			for _, acc in ipairs(char:GetChildren()) do
+				if acc:IsA("Accessory") then
+					pcall(function()
+						local h = acc:FindFirstChild("Handle")
+						if not (h and h:IsA("BasePart")) then return end
+						local ah
+						for _, a in ipairs(h:GetChildren()) do
+							if a:IsA("Attachment") then ah = a break end
+						end
+						if not ah then return end
+						for _, w in ipairs(h:GetChildren()) do
+							if w:IsA("Weld") and w.Part1 == h and w.Part0 then
+								local ap = w.Part0:FindFirstChild(ah.Name)
+								if ap and ap:IsA("Attachment") then w.C0, w.C1 = ap.CFrame, ah.CFrame end
+							end
+						end
+					end)
+				end
+			end
+		end
+
+		function CV.aplicarGeo(char, hum, geo)
+			if not (char and hum and geo) or hum.RigType ~= geo.rig then return 0 end
+			local n = 0
+			for nome, d in pairs(geo.partes) do
+				local p = char:FindFirstChild(nome)
+				if p and p:IsA("BasePart") then
+					pcall(function()
+						p.Size = d.size
+						p.Material = d.mat
+						p.Reflectance = d.refl
+					end)
+					n += 1
+				end
+			end
+			for chave, cf in pairs(geo.ancoras) do
+				local pn, an = chave:match("^(.-)/(.+)$")
+				local p = pn and char:FindFirstChild(pn)
+				local a = p and p:FindFirstChild(an)
+				if a and a:IsA("Attachment") then pcall(function() a.CFrame = cf end) end
+			end
+			for chave, j in pairs(geo.juntas) do
+				local pn, jn = chave:match("^(.-)/(.+)$")
+				local p = pn and char:FindFirstChild(pn)
+				local m = p and p:FindFirstChild(jn)
+				if m and m:IsA("Motor6D") then pcall(function() m.C0, m.C1 = j.c0, j.c1 end) end
+			end
+			pcall(function() hum.HipHeight = geo.hip end)
+			CV.ajustarAcessorios(char)
+			return n
+		end
+
 		function CV.foto(char)
 			local f = { itens = {}, face = nil, cores = {}, corpo = {}, escalas = {}, cabecaMesh = nil, completo = true }
 			f.anims = CV.lerAnims(char)
+			f.geo = CV.lerGeo(char)
 			for _, o in ipairs(char:GetChildren()) do
 				if ehItem(o) then
 					local c = CV.clonar(o)
@@ -8511,7 +8600,8 @@ local function iniciarTeclado()
 					corpoOk += 1
 				end)
 			end
-			corpoOk += CV.aplicarEscalas(hum, f.escalas) -- altura, largura, grossura, cabeça...
+			if not f.geo then corpoOk += CV.aplicarEscalas(hum, f.escalas) end -- altura, largura, grossura, cabeça... (sem estrutura copiada)
+			corpoOk += CV.aplicarGeo(char, hum, f.geo) -- tamanho de cada peça + juntas + âncoras
 			local animsOk = CV.aplicarAnims(char, f.anims) -- animação de parado, andar, correr, pulo...
 			corpoOk += animsOk
 			for nome, cor in pairs(f.cores or {}) do -- cor de cada parte (quando não veio BodyColors)
@@ -8529,7 +8619,8 @@ local function iniciarTeclado()
 					local c2 = player.Character
 					local h2 = c2 and c2:FindFirstChildOfClass("Humanoid")
 					if h2 then
-						CV.aplicarEscalas(h2, f.escalas)
+						if not f.geo then CV.aplicarEscalas(h2, f.escalas) end
+						CV.aplicarGeo(c2, h2, f.geo)
 						CV.aplicarAnims(c2, f.anims)
 					end
 				end
@@ -8644,7 +8735,8 @@ local function iniciarTeclado()
 						local foto = CV.foto(alvoChar)
 						local temPecas = #foto.itens > 0
 						if ok and d and not CV.semVisualNoJogo(d, alvoChar) then
-							origem, rotulo = { desc = d, foto = temPecas and foto or nil }, "do jogo"
+							if not temPecas then foto.completo = false end -- sem roupas na foto: não tira as que o avatar colocou
+							origem, rotulo = { desc = d, foto = (temPecas or foto.geo) and foto or nil }, "do jogo"
 						elseif temPecas then
 							origem, rotulo = { foto = foto }, "do jogo"
 						else
