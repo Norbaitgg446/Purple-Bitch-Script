@@ -1,4 +1,5 @@
 -- LocalScript
+-- v72: copiar visual só mantém a troca de malha do corpo se o Roblox CONFIRMAR que a malha nova carregou (id e tamanho da malha); senão desfaz e usa só as escalas (acabou o braço voando).
 -- v71: copiar visual NÃO troca mais as peças do corpo (isso desmontava o personagem). Agora troca só a malha das suas peças, confere se todas mudaram e só então copia tamanho/juntas; se o jogo não deixar trocar a malha, usa só as escalas do corpo.
 -- v70: copiar visual não mata mais o personagem ao trocar o corpo (pescoço não obrigatório) e, se mesmo assim morrer logo depois de copiar, desliga a troca de peças sozinho (sem ciclo de morte).
 -- v69: copiar visual agora CLONA as peças reais do corpo do outro jogador (malha, tamanho, rosto) e religa as juntas -> fim do corpo esticado/braço fino e dos buracos.
@@ -8448,7 +8449,9 @@ local function iniciarTeclado()
 						local sa
 						local s = o:FindFirstChildOfClass("SurfaceAppearance")
 						if s then sa = CV.clonar(s) end
-						f.corpo[o.Name] = { mesh = o.MeshId, textura = o.TextureID, sa = sa }
+						local ms
+						pcall(function() ms = o.MeshSize end)
+						f.corpo[o.Name] = { mesh = o.MeshId, textura = o.TextureID, sa = sa, meshSize = ms }
 					end
 				end
 			end
@@ -8547,13 +8550,55 @@ local function iniciarTeclado()
 			return false
 		end
 
-		-- todas as suas peças ficaram com a malha do outro corpo?
+		function CV.numId(x) return tostring(x or ""):match("%d+") end
+
+		-- todas as suas peças ficaram com a malha do outro corpo? Espera até 2 s e confere o id E o tamanho
+		-- da malha carregada (só o id igual não basta: a malha pode não ter carregado de verdade)
 		function CV.malhasConferem(char, f)
+		local function confere()
+			local algum = false
 			for nome, d in pairs(f.corpo or {}) do
 				local p = char:FindFirstChild(nome)
-				if p and p:IsA("MeshPart") and d.mesh and d.mesh ~= "" and p.MeshId ~= d.mesh then return false end
+				if p and p:IsA("MeshPart") and d.mesh and d.mesh ~= "" then
+					algum = true
+					if CV.numId(p.MeshId) ~= CV.numId(d.mesh) then return false end
+					if d.meshSize then
+						local okT, ms = pcall(function() return p.MeshSize end)
+						if not okT or (ms - d.meshSize).Magnitude > 0.05 then return false end
+					end
+				end
 			end
-			return true
+			return algum
+		end
+			for _ = 1, 20 do
+				if confere() then return true end
+				task.wait(0.1)
+			end
+			return false
+		end
+
+		-- volta a malha, a textura e o visual da pele do SEU corpo original (quando a troca não deu certo)
+		function CV.reverterMalhas(char)
+			local o = CV.origFoto
+			if not (o and o.corpo) then return end
+			for nome, d in pairs(o.corpo) do
+				local p = char:FindFirstChild(nome)
+				if p and p:IsA("MeshPart") then
+					if d.mesh and d.mesh ~= "" and p.MeshId ~= d.mesh then
+						local ok = pcall(function() p.MeshId = d.mesh end)
+						if not ok and typeof(sethiddenproperty) == "function" then pcall(sethiddenproperty, p, "MeshId", d.mesh) end
+					end
+					if d.textura and p.TextureID ~= d.textura then
+						local ok = pcall(function() p.TextureID = d.textura end)
+						if not ok and typeof(sethiddenproperty) == "function" then pcall(sethiddenproperty, p, "TextureID", d.textura) end
+					end
+					pcall(function()
+						local velho = p:FindFirstChildOfClass("SurfaceAppearance")
+						if velho then velho:Destroy() end
+						if d.sa then d.sa:Clone().Parent = p end
+					end)
+				end
+			end
 		end
 
 		-- veste a "foto" no seu personagem (troca roupas, acessórios, cores e rosto)
@@ -8625,9 +8670,12 @@ local function iniciarTeclado()
 				end)
 			end
 			if usaGeo then
-				task.wait(0.4) -- dá tempo das malhas carregarem
-				geoOk = CV.malhasConferem(char, f) -- só copia tamanho/juntas se TODAS as malhas trocaram (senão o corpo estica)
-				if geoOk then corpoOk += CV.aplicarGeo(char, hum, f.geo) end
+				geoOk = CV.malhasConferem(char, f) -- só copia tamanho/juntas se TODAS as malhas carregaram de verdade
+				if geoOk then
+					corpoOk += CV.aplicarGeo(char, hum, f.geo)
+				elseif f ~= CV.origFoto then
+					CV.reverterMalhas(char) -- não deu certo: fica com o seu corpo (só escalas), sem braço voando
+				end
 			end
 			if not geoOk then corpoOk += CV.aplicarEscalas(hum, f.escalas) end -- plano B: escalas do corpo
 			local animsOk = CV.aplicarAnims(char, f.anims) -- animação de parado, andar, correr, pulo...
