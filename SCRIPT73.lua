@@ -1,4 +1,5 @@
 -- LocalScript
+-- v73: copiar visual agora é MODO SEGURO por padrão: NÃO troca mais a malha, o tamanho das peças, as juntas nem as âncoras do corpo e NÃO usa mais o ApplyDescription do corpo (era isso que deixava braço fino/quebrado, cabeça quadrada e corpo voltando ao normal). Copia roupa, acessórios, rosto, cores, tamanho (altura/largura/grossura/cabeça) e animações. A cópia exata do corpo (experimental) fica em CV.corpoExato = true.
 -- v72: copiar visual só mantém a troca de malha do corpo se o Roblox CONFIRMAR que a malha nova carregou (id e tamanho da malha); senão desfaz e usa só as escalas (acabou o braço voando).
 -- v71: copiar visual NÃO troca mais as peças do corpo (isso desmontava o personagem). Agora troca só a malha das suas peças, confere se todas mudaram e só então copia tamanho/juntas; se o jogo não deixar trocar a malha, usa só as escalas do corpo.
 -- v70: copiar visual não mata mais o personagem ao trocar o corpo (pescoço não obrigatório) e, se mesmo assim morrer logo depois de copiar, desliga a troca de peças sozinho (sem ciclo de morte).
@@ -8152,7 +8153,8 @@ local function iniciarTeclado()
 	-- (2) cópia direta: clona roupas, acessórios, cores e rosto do personagem dele (ou baixa os itens do avatar
 	-- do Roblox com game:GetObjects). Guarda o seu visual para o "uncv" e reaplica o copiado quando você renasce.
 	do
-		local CV = { original = nil, atual = nil, copia = nil, origFoto = nil, modo = nil }
+		local CV = { original = nil, atual = nil, copia = nil, origFoto = nil, modo = nil, tok = 0 }
+		CV.corpoExato = false -- true = jeito antigo (troca malha/tamanho/juntas do corpo; instável, deixa o corpo quebrado em muitos jogos)
 
 		local function ehItem(o) -- o que conta como "visual" do personagem
 			return o:IsA("Accessory") or o:IsA("Shirt") or o:IsA("Pants") or o:IsA("ShirtGraphic") or o:IsA("BodyColors") or o:IsA("CharacterMesh")
@@ -8240,6 +8242,8 @@ local function iniciarTeclado()
 
 		-- nomes das escalas do corpo R15 (altura, largura, grossura/profundidade, cabeça, proporção, tipo)
 		CV.NOMES_ESCALA = { "BodyHeightScale", "BodyWidthScale", "BodyDepthScale", "HeadScale", "BodyTypeScale", "BodyProportionScale" }
+		-- BodyType/Proportion esticam a malha do SEU corpo (pescoço/braço fino) quando a malha não é a do outro: só no modo exato
+		CV.NOMES_ESCALA_SEGURAS = { "BodyHeightScale", "BodyWidthScale", "BodyDepthScale", "HeadScale" }
 
 		-- escalas a partir de uma HumanoidDescription
 		function CV.escalasDeDesc(desc)
@@ -8332,7 +8336,7 @@ local function iniciarTeclado()
 			local n = 0
 			if not (hum and escalas) then return 0 end
 			if hum.RigType ~= Enum.HumanoidRigType.R15 then return 0 end
-			for _, nome in ipairs(CV.NOMES_ESCALA) do
+			for _, nome in ipairs(CV.corpoExato and CV.NOMES_ESCALA or CV.NOMES_ESCALA_SEGURAS) do
 				local valor = escalas[nome]
 				if type(valor) == "number" then
 					pcall(function()
@@ -8607,7 +8611,7 @@ local function iniciarTeclado()
 			local hum = char and char:FindFirstChildOfClass("Humanoid")
 			if not (char and hum and f) then return false, "Personagem indisponível" end
 			local pecas, corpoOk = 0, 0
-			local malhaOk = CV.podeMalha(char)
+			local malhaOk = CV.corpoExato and CV.podeMalha(char) -- modo seguro: nunca mexe na malha do corpo
 			local usaGeo = malhaOk and f.geo ~= nil and f.geo.rig == hum.RigType and next(f.corpo or {}) ~= nil
 			local geoOk = false
 			-- tira o que você veste (só o que vai ser trocado, se a foto veio do avatar do Roblox)
@@ -8661,7 +8665,7 @@ local function iniciarTeclado()
 				end
 			end
 			local cab = char:FindFirstChild("Head")
-			if cab and f.cabecaMesh then -- formato da cabeça (R6 / cabeça clássica)
+			if cab and f.cabecaMesh and not cab:IsA("MeshPart") then -- formato da cabeça (R6 / cabeça clássica)
 				pcall(function()
 					local velho = cab:FindFirstChildOfClass("SpecialMesh")
 					if velho then velho:Destroy() end
@@ -8687,9 +8691,12 @@ local function iniciarTeclado()
 			local rosto = cab and cab:FindFirstChild("face")
 			if rosto and rosto:IsA("Decal") and f.face then pcall(function() rosto.Texture = f.face end) end
 			if pecas == 0 and corpoOk == 0 and not f.face then return false, "Não achei nada para copiar" end
+			CV.tok = (CV.tok or 0) + 1
+			local meuTok = CV.tok
 			task.spawn(function() -- limpa logo e de novo depois (o jogo pode ligar de volta)
-				for _, t in ipairs({ 0.2, 1, 2.5 }) do
+				for _, t in ipairs({ 0.2, 0.8, 1.5, 2.5, 5 }) do
 					task.wait(t)
+					if CV.tok ~= meuTok then return end -- veio outra cópia/restauração: esta fila acabou
 					CV.limparGrude()
 					-- o jogo/Roblox pode ter voltado o tamanho e as animações: aplica de novo
 					local c2 = player.Character
@@ -8736,13 +8743,7 @@ local function iniciarTeclado()
 				if ok then CV.original = d end
 				CV.origFoto = CV.foto(char)
 			end
-			-- 1) ApplyDescription: no cliente ele costuma pegar só a ROUPA, então não paramos aqui
-			local feitoDesc = false
-			if origem.desc then
-				feitoDesc = (pcall(function() hum:ApplyDescription(origem.desc) end))
-				if feitoDesc then CV.atual = origem.desc end
-			end
-			-- 2) cópia direta por cima (cabelo, acessórios, corpo, rosto, tamanho, cores)
+			-- cópia direta (roupa, acessórios, rosto, cores, tamanho, animações)
 			local foto = origem.foto
 			if not foto and origem.desc then foto = CV.fotoDeDescricao(origem.desc) end
 			if foto and origem.desc then -- completa o que o jogo não mostrou (tamanho e animações) com o avatar do Roblox
@@ -8752,6 +8753,21 @@ local function iniciarTeclado()
 					if foto.escalas[nome] == nil and ed[nome] then foto.escalas[nome] = ed[nome] end
 				end
 				if not foto.anims or not next(foto.anims) then foto.anims = CV.animsDeDesc(origem.desc) end
+			end
+			-- ApplyDescription refaz as peças do corpo (no cliente sai pela metade: braço fino, cabeça quadrada).
+			-- Modo seguro: só usa como plano B (não deu pra baixar os itens) e SEM as peças do corpo.
+			local feitoDesc = false
+			if origem.desc and (CV.corpoExato or not foto or #foto.itens <= 1) then
+				local d = origem.desc
+				if not CV.corpoExato then
+					local okC, c = pcall(function() return origem.desc:Clone() end)
+					if okC and c then
+						pcall(function() c.Head, c.Torso, c.LeftArm, c.RightArm, c.LeftLeg, c.RightLeg = 0, 0, 0, 0, 0, 0 end)
+						d = c
+					end
+				end
+				feitoDesc = (pcall(function() hum:ApplyDescription(d) end))
+				if feitoDesc then CV.atual = d end
 			end
 			if feitoDesc then task.wait(0.3) end
 			local okFoto, erro = false, "Não foi possível pegar o visual"
@@ -8777,6 +8793,17 @@ local function iniciarTeclado()
 				if origFoto then
 					if feito then task.wait(0.3) end
 					CV.aplicarFoto(origFoto)
+					pcall(function() -- escalas que você não tinha antes voltam ao normal (1)
+						local c2 = player.Character
+						local h2 = c2 and c2:FindFirstChildOfClass("Humanoid")
+						if not h2 then return end
+						for _, nome in ipairs(CV.NOMES_ESCALA_SEGURAS) do
+							if (origFoto.escalas or {})[nome] == nil then
+								local v = h2:FindFirstChild(nome)
+								if v and v:IsA("NumberValue") then v.Value = 1 end
+							end
+						end
+					end)
 				end
 			end)
 		end
