@@ -1,4 +1,5 @@
 -- LocalScript
+-- v71: copiar visual NÃO troca mais as peças do corpo (isso desmontava o personagem). Agora troca só a malha das suas peças, confere se todas mudaram e só então copia tamanho/juntas; se o jogo não deixar trocar a malha, usa só as escalas do corpo.
 -- v70: copiar visual não mata mais o personagem ao trocar o corpo (pescoço não obrigatório) e, se mesmo assim morrer logo depois de copiar, desliga a troca de peças sozinho (sem ciclo de morte).
 -- v69: copiar visual agora CLONA as peças reais do corpo do outro jogador (malha, tamanho, rosto) e religa as juntas -> fim do corpo esticado/braço fino e dos buracos.
 -- v68: copiar visual copia a ESTRUTURA do corpo (tamanho de cada peça, juntas dos braços/pernas, ancoras, altura do chão) -> sem braços separados e com cabeça/corpo idênticos.
@@ -8406,59 +8407,22 @@ local function iniciarTeclado()
 			end
 		end
 
-		-- troca cada peça do seu corpo por um clone da peça do outro jogador e religa as juntas/soldas nela
-		function CV.aplicarCorpo(char, hum, f)
-			if not (f and f.pecas and next(f.pecas)) then return 0 end
-			if not (f.geo and f.geo.rig == hum.RigType) then return 0 end
-			local trabalho = {}
-			for nome, molde in pairs(f.pecas) do
-				local velho = char:FindFirstChild(nome)
-				if velho and velho:IsA("BasePart") and nome ~= "HumanoidRootPart" and velho:GetAttribute("CVFoto") ~= f.id then
-					trabalho[#trabalho + 1] = { nome, molde, velho }
-				end
-			end
-			if #trabalho == 0 then return 0 end
-			pcall(function() hum.RequiresNeck = false end) -- o Roblox mata o personagem quando a cabeça/pescoço troca de peça
-			pcall(function() hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false) end) -- não morre enquanto troca as peças
-			local t0, conMorte = os.clock(), nil
-			conMorte = hum.Died:Connect(function() -- morreu logo depois de trocar: este jogo não aceita, desliga a troca de peças
-				if os.clock() - t0 < 6 then
-					CV.corpoBloqueado = true
-					mostrarToast("Esse jogo mata ao trocar o corpo: copiando só roupas, rosto e tamanho", false)
-				end
-				if conMorte then conMorte:Disconnect() end
-			end)
-			task.delay(6, function() if conMorte then conMorte:Disconnect() end end)
-			local n = 0
-			for _, t in ipairs(trabalho) do
-				local nome, molde, velho = t[1], t[2], t[3]
-				local ok = pcall(function()
-					local novo = molde:Clone()
-					novo.Name = nome
-					novo:SetAttribute("CVFoto", f.id)
-					novo.Anchored = false
-					novo.CFrame = velho.CFrame
-					novo.Parent = char
-					for _, j in ipairs(char:GetDescendants()) do -- juntas e soldas (corpo, acessórios, ferramenta)
-						if j:IsA("JointInstance") or j:IsA("WeldConstraint") then
-							if j.Part0 == velho then j.Part0 = novo end
-							if j.Part1 == velho then j.Part1 = novo end
-						end
-					end
-					for _, j in ipairs(velho:GetChildren()) do -- as juntas que moravam na peça velha vão para a nova
-						if j:IsA("JointInstance") or j:IsA("WeldConstraint") then j.Parent = novo end
-					end
-					velho:Destroy()
-				end)
-				if ok then n += 1 end
-			end
-			task.delay(3, function() pcall(function() hum:SetStateEnabled(Enum.HumanoidStateType.Dead, true) end) end)
-			return n
-		end
-
 		function CV.aplicarGeo(char, hum, geo)
 			if not (char and hum and geo) or hum.RigType ~= geo.rig then return 0 end
 			local n = 0
+			for nome, d in pairs(geo.partes) do
+				local p = char:FindFirstChild(nome)
+				if p and p:IsA("BasePart") then
+					pcall(function() p.Size = d.size end)
+					n += 1
+				end
+			end
+			for chave, cf in pairs(geo.ancoras) do
+				local pn, an = chave:match("^(.-)/(.+)$")
+				local p = pn and char:FindFirstChild(pn)
+				local a = p and p:FindFirstChild(an)
+				if a and a:IsA("Attachment") then pcall(function() a.CFrame = cf end) end
+			end
 			for chave, j in pairs(geo.juntas) do
 				local pn, jn = chave:match("^(.-)/(.+)$")
 				local p = pn and char:FindFirstChild(pn)
@@ -8480,8 +8444,6 @@ local function iniciarTeclado()
 					if c then f.itens[#f.itens + 1] = c end
 				elseif o:IsA("BasePart") and o.Name ~= "HumanoidRootPart" then
 					f.cores[o.Name] = o.Color
-					local molde = CV.clonar(o) -- peça inteira (malha, tamanho, textura, rosto)
-					if molde then f.pecas[o.Name] = molde end
 					if o:IsA("MeshPart") then -- corpo R15: malha e textura de cada parte
 						local sa
 						local s = o:FindFirstChildOfClass("SurfaceAppearance")
@@ -8572,13 +8534,37 @@ local function iniciarTeclado()
 			return f
 		end
 
+		-- o jogo deixa trocar a malha (MeshId) das suas peças? testa numa peça, sem mudar nada de verdade
+		function CV.podeMalha(char)
+			for _, o in ipairs(char:GetChildren()) do
+				if o:IsA("MeshPart") then
+					local id = o.MeshId
+					if pcall(function() o.MeshId = id end) then return true end
+					if typeof(sethiddenproperty) == "function" and pcall(sethiddenproperty, o, "MeshId", id) then return true end
+					return false
+				end
+			end
+			return false
+		end
+
+		-- todas as suas peças ficaram com a malha do outro corpo?
+		function CV.malhasConferem(char, f)
+			for nome, d in pairs(f.corpo or {}) do
+				local p = char:FindFirstChild(nome)
+				if p and p:IsA("MeshPart") and d.mesh and d.mesh ~= "" and p.MeshId ~= d.mesh then return false end
+			end
+			return true
+		end
+
 		-- veste a "foto" no seu personagem (troca roupas, acessórios, cores e rosto)
 		function CV.aplicarFoto(f)
 			local char = player.Character
 			local hum = char and char:FindFirstChildOfClass("Humanoid")
 			if not (char and hum and f) then return false, "Personagem indisponível" end
 			local pecas, corpoOk = 0, 0
-			local usaCorpo = not CV.corpoBloqueado and f.pecas ~= nil and next(f.pecas) ~= nil and f.geo ~= nil and f.geo.rig == hum.RigType
+			local malhaOk = CV.podeMalha(char)
+			local usaGeo = malhaOk and f.geo ~= nil and f.geo.rig == hum.RigType and next(f.corpo or {}) ~= nil
+			local geoOk = false
 			-- tira o que você veste (só o que vai ser trocado, se a foto veio do avatar do Roblox)
 			local classes = {}
 			for _, c in ipairs(f.itens) do classes[c.ClassName] = true end
@@ -8604,7 +8590,7 @@ local function iniciarTeclado()
 				if ok then pecas += 1 end
 			end
 			-- corpo: malha e textura de cada parte (R15)
-			for nome, d in pairs(usaCorpo and {} or f.corpo or {}) do -- (com as peças clonadas não precisa trocar a malha)
+			for nome, d in pairs(malhaOk and f.corpo or {}) do -- (se o jogo não deixa trocar a malha, não mexe no corpo)
 				local p = char:FindFirstChild(nome)
 				if p and p:IsA("MeshPart") then
 					local feito = false
@@ -8638,12 +8624,12 @@ local function iniciarTeclado()
 					corpoOk += 1
 				end)
 			end
-			if usaCorpo then
-				corpoOk += CV.aplicarCorpo(char, hum, f) -- peças reais do outro jogador
-				CV.aplicarGeo(char, hum, f.geo) -- juntas, altura do chão, acessórios
-			else
-				corpoOk += CV.aplicarEscalas(hum, f.escalas) -- sem as peças dele: usa as escalas do avatar
+			if usaGeo then
+				task.wait(0.4) -- dá tempo das malhas carregarem
+				geoOk = CV.malhasConferem(char, f) -- só copia tamanho/juntas se TODAS as malhas trocaram (senão o corpo estica)
+				if geoOk then corpoOk += CV.aplicarGeo(char, hum, f.geo) end
 			end
+			if not geoOk then corpoOk += CV.aplicarEscalas(hum, f.escalas) end -- plano B: escalas do corpo
 			local animsOk = CV.aplicarAnims(char, f.anims) -- animação de parado, andar, correr, pulo...
 			corpoOk += animsOk
 			for nome, cor in pairs(f.cores or {}) do -- cor de cada parte (quando não veio BodyColors)
@@ -8661,8 +8647,7 @@ local function iniciarTeclado()
 					local c2 = player.Character
 					local h2 = c2 and c2:FindFirstChildOfClass("Humanoid")
 					if h2 then
-						if usaCorpo then
-							CV.aplicarCorpo(c2, h2, f)
+						if geoOk then
 							CV.aplicarGeo(c2, h2, f.geo)
 						else
 							CV.aplicarEscalas(h2, f.escalas)
@@ -8753,7 +8738,6 @@ local function iniciarTeclado()
 			local hum = char:WaitForChild("Humanoid", 10)
 			if not hum then return end
 			char:WaitForChild("Head", 10)
-			if not CV.corpoBloqueado then pcall(function() hum.RequiresNeck = false end) end
 			task.wait(1.5) -- o jogo/Roblox termina de vestir o personagem antes
 			if CV.atual then
 				pcall(function() hum:ApplyDescription(CV.atual) end)
